@@ -146,6 +146,22 @@ Every branch (sub → feature, feature → root) is integrated via a PR. No exce
 
 The agent MUST wait for automated review before merging any PR up the tree.
 
+### Wait for the complete signal before adjusting
+
+Do not react to partial results. Before making ANY fix on a PR, wait until **both** signals have
+fully finished:
+
+- **The entire CI run** — every job (including the slower `sentence-transformers` job), not just the
+  first one to report. A green fast job while another job is still running is **not** a pass.
+- **The entire Codex review** — the complete review (its emoji marker present), not the first inline
+  comment to arrive.
+
+Reacting to a partial signal is the failure mode this rule prevents: pushing a fix while CI is still
+running or the review is mid-flight wastes CI minutes on a commit that's about to change, and it
+fragments one review into several passes. Collect **all** CI failures and **all** review comments
+first, then address them in a single follow-up pass and re-request review. (Now that CI includes a
+heavier ST job, the full run takes longer — waiting for it is deliberate, not optional.)
+
 ### Detecting the Codex review
 
 - The Codex auto-review posts a review comment on the PR containing a recognizable **emoji marker** it always leaves. The agent verifies the review is complete by locating that marker on the PR.
@@ -168,7 +184,7 @@ The PR is only eligible to merge up when **both** are true: Codex thumbs-up AND 
 
 ## 7. Phase 6 — Merging Up the Tree
 
-- Merges from sub → feature and feature → root are **allowed and expected** without additional user gating, provided the Codex loop in [§6](#6-phase-5--codex-auto-review-loop) has completed.
+- Merges from sub → feature and feature → root are **allowed and expected** without additional user gating, provided **CI is green (all jobs)** and the Codex loop in [§6](#6-phase-5--codex-auto-review-loop) has completed.
 - **Use merge commits everywhere** (not squash, not rebase-and-merge). Full history is preserved so the small-commit trail up the tree stays intact and auditable.
 - After each successful merge, propose branch cleanup per [§9](#9-phase-8--branch-cleanup).
 
@@ -276,6 +292,7 @@ Per slice:
 - [ ] Opened a PR to the parent branch with a complete description.
 
 Per PR:
+- [ ] Waited for the **entire CI run** (all jobs) AND the **entire Codex review** to finish before making any fix — no reacting to partial signals.
 - [ ] Waited for the Codex auto-review emoji marker.
 - [ ] If no Codex review appeared, asked the human how to proceed.
 - [ ] Made the reasonable fixes at own discretion; declined/deferred anything that would overcomplicate (noted why).
