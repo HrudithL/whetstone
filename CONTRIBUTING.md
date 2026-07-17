@@ -164,20 +164,34 @@ heavier ST job, the full run takes longer — waiting for it is deliberate, not 
 
 ### Detecting the Codex review
 
-Codex signals its status with an **emoji reaction on the PR body** (the pull request's top-level description), left by the **`chatgpt-codex-connector[bot]`** account — not with a separate "review started" comment. The reaction is the source of truth for whether the review is done:
+Codex signals its status with an **emoji reaction** left by the **`chatgpt-codex-connector[bot]`** account — not with a separate "review started" comment. The reaction is the source of truth for whether the review is done:
 
 - **👀 (eyes)** — Codex is still reviewing/thinking. **In progress; do not proceed.** Keep waiting.
-- **👍 (`+1`, thumbs up)** — Codex has **finished** its review. A thumbs-up with no review comments or inline findings is a **clean/approving pass**. If Codex also posts a formal review or inline comments, address those per "Iterating on review feedback" below; the thumbs-up marks the review *complete*, not that there is nothing to fix.
+- **👍 (`+1`, thumbs up)** — Codex has **finished** its review. A thumbs-up with no review comments or inline findings is a **clean/approving pass**. If Codex also posts a review comment or inline findings, address those per "Iterating on review feedback" below; the thumbs-up marks the review *complete*, not that there is nothing to fix.
 
-Check the reaction directly on the raw PR:
+**Codex auto-reviews a PR only ONCE — when the PR is first opened.** On that initial pass, the reaction lands on the **PR body** (the top-level description). It does **not** re-review automatically when you push follow-up commits.
+
+**To get any re-review after new commits, you MUST request it manually** by posting a comment on the PR with exactly:
+
+```
+@codex review
+```
+
+Codex then reacts **on that request comment** (👀 while it works → 👍 when done) — so after a re-request, check the reaction on your `@codex review` comment, not on the PR body. Re-request once per round of fixes; wait for the 👍 on that comment before proceeding.
+
+Check reactions directly on the raw PR:
 
 ```sh
+# initial auto-review reaction (on the PR body):
 gh api repos/<owner>/<repo>/issues/<pr-number>/reactions
+# a re-review reaction (on the @codex review request comment):
+gh api repos/<owner>/<repo>/issues/comments/<comment-id>/reactions
 # look for content "+1" (done) or "eyes" (in progress) by chatgpt-codex-connector[bot]
 ```
 
-- Treat the review as complete **only** once the 👍 reaction is present (the 👀, if it was there, has resolved). Do not act on a PR that still shows only 👀.
-- If, after a reasonable wait, **no Codex reaction appears at all** (neither 👀 nor 👍), that means Codex has opted not to review this PR. In that case the agent MUST NOT invent a substitute — it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
+- Treat a review as complete **only** once the 👍 is present on the relevant target (PR body for the first pass; your `@codex review` comment for a re-request). Do not act while it still shows only 👀.
+- **Pushing new commits invalidates a prior 👍** — the approval covered the old diff. After any push, re-request with `@codex review` and wait for a fresh 👍.
+- If, after a reasonable wait, **no Codex reaction appears at all** (neither 👀 nor 👍) — on the initial open, or after a re-request — Codex has opted not to review. The agent MUST NOT invent a substitute — it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
 
 ### Iterating on review feedback
 
