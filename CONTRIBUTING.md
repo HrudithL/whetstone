@@ -153,8 +153,11 @@ fully finished:
 
 - **The entire CI run** — every job (including the slower `sentence-transformers` job), not just the
   first one to report. A green fast job while another job is still running is **not** a pass.
-- **The entire Codex review** — the complete review (its emoji marker present), not the first inline
-  comment to arrive.
+- **The entire Codex review** — the complete review signal, which differs by pass (see "Detecting the
+  Codex review" below): on a PR's **first, automatic** review that is the 👍 reaction on the PR body;
+  on a **requested re-review** (`@codex review`) it is the fresh bot review *comment*, not a reaction.
+  Do not treat a first-pass 👍 as covering a later commit, and after `@codex review` wait for the new
+  comment rather than a reaction that will not come.
 
 Reacting to a partial signal is the failure mode this rule prevents: pushing a fix while CI is still
 running or the review is mid-flight wastes CI minutes on a commit that's about to change, and it
@@ -179,25 +182,26 @@ It does **not** re-review automatically when you push follow-up commits.
 @codex review
 ```
 
-On a requested re-review, **Codex replies with a review COMMENT** (from `chatgpt-codex-connector[bot]`) describing what it found — specific findings to address, or a clean note like *"Codex Review: Didn't find any major issues. Delightful!"*. **The completion signal for a re-review is that new bot comment, NOT a 👍** (it may briefly show a 👀 on your request comment while working). So after `@codex review`, watch for a new bot **comment**, read it, and address any findings.
+On a requested re-review, **Codex posts a pull-request REVIEW** (from `chatgpt-codex-connector[bot]`): a review entry with a `### 💡 Codex Review` body plus any **inline review comments** on the diff — specific findings to address, or a clean note like *"Didn't find any major issues. Delightful!"*. Crucially this arrives on the **pull-request review endpoints**, NOT `issues/<pr>/comments`, and each review records the **`commit_id` it reviewed**. **The completion signal for a re-review is a new bot review whose `commit_id` matches your latest pushed HEAD, NOT a 👍** (it may briefly show a 👀 while working). So after `@codex review`, watch the review endpoints for a review of your newest commit, read the body + inline comments, and address any findings.
 
 ### Polling for the signal
 
-The signal is not pushed to you — you must **poll** for it. After the PR opens (first pass) or after each `@codex review` (later passes), check periodically until the signal lands:
+The signal is not pushed to you — you must **poll** for it. After the PR opens (first pass) or after each `@codex review` (later passes), check periodically until the signal lands. Always `--paginate` (GitHub returns 30 per page; on a busy PR the bot's entry can fall on a later page and be missed):
 
 ```sh
 # first pass — reaction on the PR body (look for "+1" / "eyes" by chatgpt-codex-connector[bot]):
-gh api repos/<owner>/<repo>/issues/<pr-number>/reactions
-# re-review — a NEW chatgpt-codex-connector[bot] comment posted after your @codex review:
-gh api repos/<owner>/<repo>/issues/<pr-number>/comments
+gh api --paginate repos/<owner>/<repo>/issues/<pr-number>/reactions
+# re-review — a new Codex REVIEW (body) for the latest commit, plus its inline comments:
+gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews    # match user==bot AND commit_id==HEAD
+gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/comments   # inline findings (path/line/body)
 ```
 
 Poll on a **modest cadence (~every 30s) within a bounded window (~15–20 min)**, ideally as a background loop that exits the moment the signal appears. Do **not** proceed until BOTH the review signal and CI are in:
 
 - **first pass:** the 👍 reaction is present on the PR body (any 👀 has resolved) **and** CI is fully green; or
-- **re-review:** a fresh `chatgpt-codex-connector[bot]` review comment has appeared for your latest request **and** CI is fully green.
+- **re-review:** a fresh `chatgpt-codex-connector[bot]` review whose `commit_id` matches your latest pushed commit has appeared **and** CI is fully green. (Match on `commit_id`, not merely "a review exists" — an older review of a prior commit is stale.)
 
-Re-request **at most once per round of fixes**. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review comment after `@codex review`), Codex has opted out — the agent MUST NOT invent a substitute; it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
+Re-request **at most once per round of fixes**. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), Codex has opted out — the agent MUST NOT invent a substitute; it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
 
 ### Iterating on review feedback
 

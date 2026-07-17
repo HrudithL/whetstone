@@ -19,20 +19,34 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("sentence_transformers")
-
-from whetstone.server import capture, recall  # noqa: E402  (after importorskip)
-from whetstone.store.index import load_entries  # noqa: E402
-from whetstone.store.layout import store_location  # noqa: E402
+from whetstone.server import capture, recall
+from whetstone.store.index import load_entries
+from whetstone.store.layout import store_location
 
 pytestmark = pytest.mark.embeddings
 
 
+@pytest.fixture(autouse=True)
+def _require_sentence_transformers():
+    # Skip at setup (NOT a module-level importorskip) so collection still finishes and the four
+    # `embeddings`-marked tests are collected. In a base/dev env without the extra, `pytest -m
+    # embeddings` then reports clean skips instead of pytest's no-tests-collected exit status.
+    pytest.importorskip("sentence_transformers")
+
+
 @pytest.fixture
 def env(tmp_path, monkeypatch):
-    """Point the server's load_config() at a temp store root and select the real ST backend."""
+    """Point the server's load_config() at a temp store root and pin the calibrated ST backend.
+
+    The cosine-margin wordings below are calibrated for ``all-MiniLM-L6-v2``, so pin both the
+    backend and the model, and isolate config (empty ``XDG_CONFIG_HOME``) so an ambient
+    ``WHETSTONE_EMBEDDING_MODEL`` / ``config.toml`` can't silently swap the model or the thresholds
+    and make these margins meaningless.
+    """
     monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
     monkeypatch.setenv("WHETSTONE_EMBEDDING_BACKEND", "sentence-transformers")
+    monkeypatch.setenv("WHETSTONE_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     return tmp_path
 
 
@@ -64,20 +78,22 @@ def test_paraphrase_dedup_reinforces(env):
 
 
 def test_distinct_preferences_stay_separate(env):
-    """Genuinely different preferences (cos ~0.11 << 0.9) are kept as separate entries, so dedup
-    never silently merges unrelated learnings."""
+    """Genuinely different preferences (cos ~0.11 << 0.9) stay separate. Both are filed under the
+    SAME scope on purpose: `_find_duplicate` skips non-overlapping scopes before comparing vectors,
+    so a differently-scoped pair would pass even if the bodies were near-identical. Same scope makes
+    the body-vector threshold this case claims to calibrate actually run."""
     a = capture(
         "gt",
         "learning",
         "Right-align currency columns and use thousands separators.",
-        "currency columns",
+        "table styling",
         "prov",
     )
     b = capture(
         "gt",
         "learning",
         "Use muted, colorblind-safe palettes for categorical fills.",
-        "color palette",
+        "table styling",
         "prov",
     )
     assert a["status"] == "committed"
@@ -108,15 +124,11 @@ def test_cross_polarity_conflict_detected(env):
 
 
 def test_recall_ranks_relevant_scope_first(env):
-    """With entries across unrelated scopes, an elaborated intent about one scope ranks that
-    scope's learning first — the retrieval relevance hashing can't be trusted to show."""
-    capture(
-        "gt",
-        "learning",
-        "Right-align currency columns and use thousands separators with two decimals.",
-        "currency columns",
-        "prov",
-    )
+    """An elaborated intent about one scope ranks that scope's learning first via real similarity
+    matching. The relevant (currency) entry is captured LAST, after two distractors, and all three
+    have equal weight — so `retrieve()`'s no-match fallback (top-weight in insertion order) would
+    surface a distractor first. Currency ranking first can therefore only come from actual
+    scope/embedding matching, not the fallback path."""
     capture(
         "gt",
         "learning",
@@ -129,6 +141,13 @@ def test_recall_ranks_relevant_scope_first(env):
         "learning",
         "Band alternating rows with a light gray fill in dense tables.",
         "row banding",
+        "prov",
+    )
+    capture(
+        "gt",
+        "learning",
+        "Right-align currency columns and use thousands separators with two decimals.",
+        "currency columns",
         "prov",
     )
 
