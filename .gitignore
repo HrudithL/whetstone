@@ -1,0 +1,25 @@
+# Agent private working notes (CONTRIBUTING.md §2) — never committed
+.planning/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local model / embedding caches
+.cache/
+*.onnx
+
+# OS / editor
+.DS_Store
