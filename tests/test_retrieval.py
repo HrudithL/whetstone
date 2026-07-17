@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import date
 
 from conftest import make_issue, make_learning, seed
 from whetstone.retrieval import retrieve
@@ -141,6 +142,30 @@ def test_weight_reflects_recurrence(store, backend, config):
         backend,
         learnings=[make_learning("L1", "Right-align currency columns.", "currency", recurrence=3)],
     )
-    learnings, _ = retrieve(store, "currency column alignment", backend, config)
-    # weight = 1 - 1/(1+3) = 0.75
+    # Decay off isolates the recurrence term: weight = r = 1 - 1/(1+3) = 0.75.
+    cfg = replace(config, learnings_decay=False)
+    learnings, _ = retrieve(store, "currency column alignment", backend, cfg)
     assert learnings[0].weight == 0.75
+
+
+def test_weight_decays_with_staleness(store, backend, config):
+    # Same recurrence, different last_seen: the fresh learning must out-weigh the stale one, and the
+    # stale one is discounted by recency (§4.4). H defaults to 180 days.
+    fresh = replace(
+        make_learning("L1", "Right-align currency columns.", "currency", recurrence=5),
+        last_seen=date(2026, 7, 1),
+    )
+    stale = replace(
+        make_learning("L2", "Drop vertical gridlines on currency.", "currency", recurrence=5),
+        last_seen=date(2025, 7, 1),
+    )
+    _prepare(store, backend, learnings=[fresh, stale])
+    today = date(2026, 7, 1)
+    learnings, _ = retrieve(store, "currency column alignment and gridlines", backend, config,
+                            today=today)
+    by_id = {x.id: x.weight for x in learnings}
+    # Fresh (Δ=0): weight = r*1 = 1 - 1/6 ≈ 0.8333.
+    assert by_id["L1"] == round(1 - 1 / 6, 4)
+    # Stale (Δ=365, H=180): recency = 0.5**(365/180) < 0.5, so its weight is well below the fresh.
+    assert by_id["L2"] < by_id["L1"]
+    assert by_id["L2"] < 0.5 * by_id["L1"]
