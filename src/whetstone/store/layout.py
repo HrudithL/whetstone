@@ -122,6 +122,20 @@ def store_write_lock(loc: StoreLocation):
         yield
 
 
+@contextmanager
+def store_events_lock(loc: StoreLocation):
+    """Serialize appends to one store's ``events.jsonl`` across calls and processes.
+
+    A whole-line append can take more than one ``os.write`` on a partial write; this lock keeps the
+    fragments contiguous so a concurrent writer can't interleave a record between them. It is a
+    *separate* lock file from :func:`store_write_lock`, so ``capture`` (which emits its event while
+    holding the write lock) can take it without self-deadlock. Lock file sits in the store root
+    (outside the per-skill git repo). A no-op where ``fcntl`` is unavailable.
+    """
+    with _file_lock(loc.path.parent / f".events-{loc.slug}.lock"):
+        yield
+
+
 def commit_store(loc: StoreLocation, message: str) -> None:
     """Stage all tracked markdown changes and commit them to the store's git repo.
 

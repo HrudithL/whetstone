@@ -170,3 +170,14 @@ def test_append_event_completes_line_on_partial_writes(tmp_path, monkeypatch):
     events = telemetry.read_events(loc)
     assert len(events) == 1
     assert events[0]["entry_id"] == "L7"
+
+
+def test_read_events_tolerates_a_torn_non_ascii_tail(store):
+    # An append interrupted mid-record (events use ensure_ascii=False) can leave a truncated UTF-8
+    # sequence at EOF; read_events must skip it, not raise UnicodeDecodeError.
+    append_event(store, {"type": "capture", "entry_id": "L1", "note": "café"})
+    with open(events_path(store), "ab") as fh:
+        fh.write('{"type":"capture","note":"café'.encode()[:-1])  # torn mid-"é", no newline
+    events = read_events(store)
+    assert len(events) == 1  # the intact first line survives; the torn tail is dropped
+    assert events[0]["entry_id"] == "L1"

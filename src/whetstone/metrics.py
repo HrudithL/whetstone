@@ -20,7 +20,7 @@ them.
 from __future__ import annotations
 
 from .store.access import load_learnings
-from .store.layout import StoreLocation
+from .store.layout import StoreLocation, store_write_lock
 from .telemetry import read_events
 
 # Notes returned for the showcase-only KPIs (§11/§12), so a dashboard shows *why* they are null.
@@ -47,7 +47,12 @@ def _mean(values: list[int]) -> float | None:
 
 def compute_metrics(loc: StoreLocation) -> dict:
     """Compute the §11 KPIs for one store from its event log and current markdown state."""
-    events = read_events(loc)
+    # Snapshot the event log and the current learnings together under the store lock, so a
+    # concurrent capture can't land between the two reads (its markdown present but its event not
+    # yet logged) and produce transient, mismatched KPIs.
+    with store_write_lock(loc):
+        events = read_events(loc)
+        present_ids = {entry.id for entry in load_learnings(loc)}
     recalls = [e for e in events if e.get("type") == "recall"]
     captures = [e for e in events if e.get("type") == "capture"]
 
@@ -77,7 +82,6 @@ def compute_metrics(loc: StoreLocation) -> dict:
     # only report a number when every currently-present learning is one telemetry recorded creating;
     # otherwise coverage is incomplete (pre-telemetry / imported markdown) and we return unknown
     # rather than a misleading figure. (Removals land in M2b; the KPI goes live once they exist.)
-    present_ids = {entry.id for entry in load_learnings(loc)}
     created_events = [
         e.get("entry_id")
         for e in captures

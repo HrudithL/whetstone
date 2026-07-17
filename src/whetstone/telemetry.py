@@ -22,7 +22,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .store.layout import StoreLocation
+from .store.layout import StoreLocation, store_events_lock
 
 EVENTS_NAME = "events.jsonl"
 
@@ -45,13 +45,18 @@ def append_event(loc: StoreLocation, event: dict) -> None:
     # (a retried capture would double-reinforce). So the append is best-effort.
     try:
         loc.path.mkdir(parents=True, exist_ok=True)
-        fd = os.open(events_path(loc), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
-        try:
-            view = memoryview(line.encode("utf-8"))
-            while view:  # os.write may accept only part of the buffer; write the rest.
-                view = view[os.write(fd, view) :]
-        finally:
-            os.close(fd)
+        # Serialize the whole-line append: a partial write completes over several os.write calls,
+        # and the lock keeps the fragments contiguous so a concurrent writer can't interleave a
+        # record between them. Separate from the store write lock, so a capture emitting while
+        # holding that lock does not self-deadlock.
+        with store_events_lock(loc):
+            fd = os.open(events_path(loc), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+            try:
+                view = memoryview(line.encode("utf-8"))
+                while view:  # os.write may accept only part of the buffer; write the rest.
+                    view = view[os.write(fd, view) :]
+            finally:
+                os.close(fd)
     except OSError:
         return
 
@@ -106,8 +111,11 @@ def read_events(loc: StoreLocation) -> list[dict]:
     path = events_path(loc)
     if not path.exists():
         return []
+    # Decode leniently: an append interrupted mid-record (events use ensure_ascii=False) can leave a
+    # truncated UTF-8 sequence at EOF; decoding bytes with errors="ignore" drops that torn tail
+    # instead of raising, so a partial final line never fails the whole read (§ best-effort).
     events: list[dict] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_bytes().decode("utf-8", errors="ignore").splitlines():
         line = line.strip()
         if not line:
             continue
