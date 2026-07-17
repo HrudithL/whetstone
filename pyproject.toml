@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "whetstone-mcp"
+version = "0.0.0"
+description = "A local MCP server that lets any skill learn from use."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Whetstone" }]
+dependencies = [
+    "mcp",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+# Heavy, optional. The default "hashing" embedding backend needs none of this; only the
+# "sentence-transformers" backend does. Install with: pip install "whetstone-mcp[embeddings]".
+embeddings = [
+    "sentence-transformers",
+]
+
+[project.scripts]
+whetstone = "whetstone.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/whetstone"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
