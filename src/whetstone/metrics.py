@@ -75,10 +75,26 @@ def compute_metrics(loc: StoreLocation) -> dict:
     # captures (reinforcements touch an existing entry, they don't create one). Removal lands in
     # M2b's revise/compaction, so today this is ~100% wherever any learning was created; it is wired
     # now so the KPI goes live the moment removals exist.
+    #
+    # This is only honest when telemetry covers every learning currently in the store. If the store
+    # holds learnings the event log never recorded creating (a pre-telemetry or manually-imported
+    # store — so present > created, or present>0 with no logged creations), the denominator is
+    # incomplete: report unknown rather than a >100% or otherwise misleading figure.
     present_learnings = len(load_learnings(loc))
-    survived_pct = (
-        round(present_learnings / learning_committed, 4) if learning_committed else None
-    )
+    if learning_committed and present_learnings <= learning_committed:
+        survived_pct = {
+            "value": round(present_learnings / learning_committed, 4),
+            "note": None,
+        }
+    else:
+        survived_pct = {
+            "value": None,
+            "note": (
+                "Incomplete telemetry coverage: the store has learnings not represented by "
+                "committed capture events (pre-telemetry or imported markdown), so % survived "
+                "cannot be computed honestly from the event log."
+            ),
+        }
 
     return {
         "runs": len(recalls),

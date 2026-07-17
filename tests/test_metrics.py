@@ -53,7 +53,7 @@ def test_feasible_kpis_on_a_fixture_log(store, config):
     assert m["repeat_correction_proxy"]["reinforcements"] == 1
     assert m["repeat_correction_proxy"]["learnings_created"] == 1
     # One learning created, one still present -> 100% survived.
-    assert m["learnings_survived_pct"] == 1.0
+    assert m["learnings_survived_pct"]["value"] == 1.0
 
 
 def test_showcase_only_kpis_are_null_with_a_note(store):
@@ -69,7 +69,7 @@ def test_empty_store_metrics(store):
     assert m["avg_learnings_applied_per_run"] is None
     assert m["captures_by_status"] == {"committed": 0, "reinforced": 0, "noop": 0}
     assert m["repeat_correction_proxy"]["reinforcement_rate"] is None
-    assert m["learnings_survived_pct"] is None
+    assert m["learnings_survived_pct"]["value"] is None
 
 
 def test_metrics_tool_for_one_skill(tmp_path, monkeypatch):
@@ -81,7 +81,7 @@ def test_metrics_tool_for_one_skill(tmp_path, monkeypatch):
     assert report["skill"] == "gt"
     assert report["runs"] == 1
     assert report["captures_by_status"]["committed"] == 1
-    assert report["learnings_survived_pct"] == 1.0
+    assert report["learnings_survived_pct"]["value"] == 1.0
     assert report["capture_rate"]["value"] is None
 
 
@@ -95,3 +95,20 @@ def test_metrics_tool_all_skills(tmp_path, monkeypatch):
     assert set(report["skills"]) == {"gt", "code-review"}
     assert report["skills"]["gt"]["runs"] == 1
     assert report["skills"]["code-review"]["captures_by_status"]["committed"] == 1
+
+
+def test_survived_pct_unknown_when_telemetry_coverage_incomplete(tmp_path, monkeypatch):
+    # A store with learnings not represented by committed capture events (e.g. imported markdown)
+    # must report % survived as unknown, never a >100% figure.
+    monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
+    # Two real learnings in the store, but no capture events recorded their creation.
+    capture("gt", "learning", "Prefer muted palettes.", "color", "prov")
+    capture("gt", "learning", "Right-align currency.", "currency", "prov")
+    from whetstone.store.layout import store_location
+    from whetstone.telemetry import events_path
+
+    events_path(store_location("gt")).unlink()  # wipe telemetry -> present(2) > committed(0)
+
+    report = metrics("gt")
+    assert report["learnings_survived_pct"]["value"] is None
+    assert "ncomplete" in report["learnings_survived_pct"]["note"]

@@ -124,3 +124,23 @@ def test_concurrent_appends_do_not_corrupt_lines(store):
     assert len(lines) == n  # every append landed on its own line, none lost or merged
     parsed = [json.loads(line) for line in lines]  # every line is intact JSON
     assert {e["run_id"] for e in parsed} == {f"r-{i}" for i in range(n)}
+
+
+def test_append_event_is_best_effort_on_write_failure(tmp_path, monkeypatch):
+    # A telemetry write failure (read-only events.jsonl, full disk, ...) must be swallowed, never
+    # raised — otherwise it would turn an already-committed capture into an apparent failure the
+    # caller retries, double-reinforcing the just-created learning.
+    from whetstone import telemetry
+    from whetstone.store.layout import ensure_store, store_location
+
+    monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
+    ensure_store("gt")
+    loc = store_location("gt")
+
+    def boom(*a, **k):
+        raise OSError("read-only events.jsonl")
+
+    monkeypatch.setattr(telemetry.os, "open", boom)
+    telemetry.append_event(loc, {"type": "capture", "entry_id": "L1"})  # must not raise
+    # And nothing was written, since the open failed.
+    assert telemetry.read_events(loc) == []

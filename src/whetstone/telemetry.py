@@ -38,12 +38,19 @@ def append_event(loc: StoreLocation, event: dict) -> None:
     """
     record = {"ts": datetime.now(UTC).isoformat(timespec="seconds"), **event}
     line = json.dumps(record, separators=(",", ":"), ensure_ascii=False) + "\n"
-    loc.path.mkdir(parents=True, exist_ok=True)
-    fd = os.open(events_path(loc), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    # Telemetry is non-critical and always downstream of the real work (the markdown is already
+    # written/committed by the time we log). A write failure — a read-only events.jsonl, a full
+    # disk — must NEVER turn a successful recall/capture into a failure the caller would retry
+    # (a retried capture would double-reinforce). So the append is best-effort.
     try:
-        os.write(fd, line.encode("utf-8"))
-    finally:
-        os.close(fd)
+        loc.path.mkdir(parents=True, exist_ok=True)
+        fd = os.open(events_path(loc), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line.encode("utf-8"))
+        finally:
+            os.close(fd)
+    except OSError:
+        return
 
 
 def emit_recall(
