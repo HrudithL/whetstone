@@ -87,7 +87,7 @@ Two base signals; everything else is derived. No per-entry "learning rate," no "
 
 **Interpretation shipped to the model (in `recall`'s `how_to_use`):** *"Each learning has a 0–1 `weight` = how firmly to apply it. Apply high-weight learnings firmly and first; treat low-weight ones as soft suggestions. Issues have no weight — every issue returned is mandatory."*
 
-**Decay is per-store configurable:** learnings decay ON but slow (default `H` = 180-day half-life); issues decay OFF (permanent). Either default can be flipped in config.
+**Decay is configurable for learnings:** ON but slow by default (`H` = 180-day half-life), and the half-life is tunable (or decay disabled) in config. **Issues do not decay** — they have no `last_seen`/`recurrence`/`weight` to decay on, so there is no issue-decay switch; an issue persists until explicit removal or softening (§6).
 
 ---
 
@@ -108,7 +108,7 @@ Per attached skill, a git-tracked store. Humans read/edit the markdown; the mode
   .git/                    ← version history of the markdown
 ```
 
-**Scope is the organizing unit.** Entries are grouped into files by `scope`. The filename is a **slug** of the scope (lowercase, spaces→`-`, path separators and `..` stripped) so a model-/user-supplied scope can never write outside `learnings/`/`issues/`; the human-readable scope phrase lives in each block's `scope:` field. Each entry block is legible and parseable:
+**Scope is the organizing unit.** Entries are grouped into files by `scope`. The filename is a **slug** of the scope (lowercase, spaces→`-`, path separators and `..` stripped) so a model-/user-supplied scope can never write outside `learnings/`/`issues/`; the human-readable scope phrase lives in each block's `scope:` field. If two distinct scopes slug to the same name (e.g. `a/b` and `ab`), a short hash suffix disambiguates, keeping the file↔scope mapping 1:1. Each entry block is legible and parseable:
 
 ```markdown
 ## L12 · Right-align currency columns
@@ -137,6 +137,7 @@ Called blindly at the start of any task that might have precedent; returns empty
 ```json
 {
   "skill": "great-tables",
+  "run_id": "r-2026-07-16-a1b2",
   "learnings": [
     { "id": "L12", "rule": "Right-align currency columns and drop vertical gridlines; prefers a clean, numeric-first look.", "scope": "currency columns", "recurrence": 4, "weight": 0.78 }
   ],
@@ -144,30 +145,32 @@ Called blindly at the start of any task that might have precedent; returns empty
     { "id": "I3", "rule": "Never apply heavy row banding to tables under 10 rows.", "scope": "small tables" }
   ],
   "how_to_use": "Learnings have a 0–1 weight = how firmly to apply. Issues have NO weight — every issue returned is MANDATORY and must be handled before you complete, regardless of anything else.",
-  "capture_contract": "When the user reviews this output and asks for a change, the moment you implement that change also record it: `capture` for something new, `revise` for something already listed above (use its id). A preference → a learning; a mistake or an 'always/never' rule → an issue."
+  "capture_contract": "When the user reviews this output and asks for a change, the moment you implement that change also record it: `capture` for something new, `revise` for something already listed above (use its id). Pass this `run_id` on that `capture`/`revise` so the correction joins this run. A preference → a learning; a mistake or an 'always/never' rule → an issue."
 }
 ```
 *Description (read by the model):* "Call at the START of any task that might use an attached skill — call it blindly; empty is fine. **Pass `intent` as a concrete, elaborated description of what you are about to produce, expanding vague requests into their specific dimensions (e.g. 'styling a table: color palette, number formatting, column alignment, row banding, density') — do NOT pass the user's raw words.** Returns learnings (preferences, weighted) and issues (mandatory constraints)."
 
-#### `capture(skill, polarity, body, scope, provenance, confirm=false)` — record NEW knowledge
+#### `capture(skill, polarity, body, scope, provenance, run_id?, confirm=false)` — record NEW knowledge
 
-Called when the model implements feedback that isn't about an entry `recall` already surfaced. Distills a scoped rule, then in code: dedups (embedding near-duplicate → increment `recurrence` + refresh `last_seen` instead of adding), detects `LEARNINGS`↔`ISSUES` conflicts, applies the supervision gate (§9), writes markdown, commits, appends an event.
+Called when the model implements feedback that isn't about an entry `recall` already surfaced. Distills a scoped rule, then in code: dedups (near-duplicate **learning** → increment `recurrence` + refresh `last_seen`; near-duplicate **issue** → `noop`, since issues have no `recurrence`), detects `LEARNINGS`↔`ISSUES` conflicts, applies the supervision gate (§9), writes markdown, commits, appends an event. Pass the `run_id` returned by `recall` (when this feedback follows a recalled run) so the correction event joins its originating run for telemetry (§11).
 
 ```json
-{ "status": "committed" | "reinforced" | "conflict" | "needs_confirmation", "entry_id": "L13", "recurrence": 1,
+{ "status": "committed" | "reinforced" | "noop" | "conflict" | "needs_confirmation", "entry_id": "L13", "recurrence": 1,
   "conflict": { "with_id": "I3", "explanation": "…" },
-  "prompt": "…returned only with needs_confirmation — ask the user this, then call `capture` again with `confirm:true`…" }
+  "prompt": "…returned only with needs_confirmation — ask the user this, then re-call `capture` with the chosen `confirm`…" }
 ```
+
+`noop` means a duplicate issue was recognized and nothing was added (optionally its provenance was refreshed) — the safeguard against issue-set bloat (§7).
 
 `needs_confirmation` is returned whenever a prompt is required *before* committing; the caller asks the returned `prompt`, then re-calls with the user's choice in `confirm`:
 - **Supervised mode** (§9) — gates every new entry **and** every dedup reinforcement (a reinforcement still changes an existing learning's `recurrence`/`last_seen`, so it is a "changed entry" per §9). Re-call with `confirm:true` to commit, or don't re-call to abort.
 - **Promotion threshold** (§6) — a dedup pushes a learning's `recurrence` to the threshold. The user's answer has two real outcomes, so the retry must carry the choice: `confirm:"promote"` (reinforce **and** move to `ISSUES`) or `confirm:"keep"` (reinforce only, stay a learning). Carrying the choice avoids silently dropping *or* accidentally promoting a repeated preference.
 
-*Description:* "Call the moment you act on user feedback about output from an attached skill, when it's something *new*. Cues: a fix ('right-align that'), a preference ('I like muted palettes'), a rejection ('no, not like that'), approval of a specific choice. Classify: taste/preference → `polarity:"learning"`; a mistake to never repeat, or an explicit 'always/never' rule → `polarity:"issue"` (word the body objectively). Generalize into a scoped rule of a few short sentences, capturing the user's *why*. If the server returns `needs_confirmation`, ask the user the returned prompt, then call again with `confirm:true`. If it concerns something `recall` already listed, use `revise` instead."
+*Description:* "Call the moment you act on user feedback about output from an attached skill, when it's something *new*. Cues: a fix ('right-align that'), a preference ('I like muted palettes'), a rejection ('no, not like that'), approval of a specific choice. Classify: taste/preference → `polarity:"learning"`; a mistake to never repeat, or an explicit 'always/never' rule → `polarity:"issue"` (word the body objectively). Generalize into a scoped rule of a few short sentences, capturing the user's *why*. If the server returns `needs_confirmation`, ask the user the returned prompt, then call again with `confirm` set to their choice — `true` to commit a supervised add/reinforcement, or `"promote"`/`"keep"` for a promotion-threshold prompt. If it concerns something `recall` already listed, use `revise` instead."
 
-#### `revise(skill, entry_id, action, confirm=false)` — edit EXISTING knowledge
+#### `revise(skill, entry_id, action, body?, scope?, run_id?, confirm=false)` — edit EXISTING knowledge
 
-Used when feedback concerns an entry `recall` already surfaced (the model has the `id`). `action` ∈:
+Used when feedback concerns an entry `recall` already surfaced (the model has the `id`). Optional `body`/`scope` supply **reworded prose** for the entry — required when the action changes how it should read (e.g. `promote` must reword a subjective learning into an objective "Never …"/"Always …" issue; conflict resolution may reword the surviving entry). If omitted, the server keeps the existing prose. `action` ∈:
 
 | action | meaning | notes |
 |---|---|---|
@@ -236,7 +239,7 @@ Our mechanism: the natural trigger is **the moment the model implements the user
 
 Captured critique → a **generalized, scoped candidate rule**, not a raw diff. Then:
 - **Dedup:** near-duplicate learning → increment `recurrence`, refresh `last_seen`. A near-duplicate **issue** has no `recurrence` to bump, so it is a **no-op** (optionally refresh provenance) rather than a second mandatory block — this keeps the uncapped issue set from bloating.
-- **Conflict:** detect contradictions and surface them as `capture`'s `conflict` status, resolved with the user via `revise`. Two cases: **`LEARNINGS`↔`ISSUES`** (a new learning wants what an issue forbids → `remove`/`demote` the issue) and **`LEARNINGS`↔`LEARNINGS`** (a new learning contradicts an existing one → route through `weaken`/`revise` instead of storing two opposing positive rules). Detection is best-effort over the same-scope embedding neighbourhood already scanned for dedup — no separate subsystem.
+- **Conflict:** detect contradictions and surface them as `capture`'s `conflict` status, resolved with the user via `revise`. Handled **symmetrically** in three cases: **new learning vs. existing issue** (the learning wants what the issue forbids → `remove`/`demote` the issue); **new issue vs. existing learning** (the mandatory rule forbids what a learning prefers → `weaken`/`remove`/`promote` the learning, so `recall` can't later return both "do X" and "never do X"); and **`LEARNINGS`↔`LEARNINGS`** (a new learning contradicts an existing one → route through `weaken`/`revise` instead of storing two opposing positive rules). Detection is best-effort over the same-scope embedding neighbourhood already scanned for dedup — no separate subsystem.
 - **Compact:** periodically dedupe, **merge overlapping scopes** (§5.4), and retire stale learnings below the weight threshold (default `weight < 0.15`). **Issues are not auto-retired**; keeping the issue catalog lean is a manual/periodic curation step (they're all mandatory, so bloat there is costly).
 
 ---

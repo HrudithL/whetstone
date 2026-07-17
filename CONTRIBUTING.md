@@ -30,7 +30,7 @@ The agent's north star: **ship small, reviewable, reversible slices; keep it sim
 - **Plan, then read your plan, then execute.** Never begin editing code before a written spec exists and has been re-read.
 - **One small feature per branch.** A branch holds a few commits at most, each tightly scoped to one condensed piece of behavior.
 - **Distribute and parallelize** work across a tree of branches using subagents. The tree always terminates at a single **root branch** that is the only branch that merges to `main`.
-- **The agent does not make subjective calls.** Anything opinion-, taste-, or policy-shaped is escalated to the human user.
+- **The agent does not make *genuine-fork* calls alone.** Product/UX, public API shape, naming, dependencies, architecture, security posture — the categories in [§10](#10-subjective-vs-objective-decisions) — are escalated. Straightforward, obviously-right fixes are made at the agent's discretion, not escalated (see [§10.1](#101-when-to-decide-vs-ask)).
 - **Automated review must pass before merging up.** Wait for the Codex auto-review, address every non-subjective comment, and get a thumbs-up before proceeding.
 - **`main` is sacred.** No direct pushes, no force pushes, no auto-merge, no shortcuts.
 
@@ -256,7 +256,7 @@ The agent MUST NOT:
 - Enable auto-merge on any PR targeting `main`.
 - Delete any branch without user approval.
 - Commit secrets, tokens, credentials, or `.env` files. If one is discovered committed, stop and alert the user.
-- Make subjective decisions on the human's behalf (see [§10](#10-subjective-vs-objective-decisions)).
+- Make a genuine-fork decision on the human's behalf — a §10 category (product/UX, public API shape, naming, deps, architecture, security posture) or a choice with multiple materially-different reasonable implementations (see [§10.1](#101-when-to-decide-vs-ask)). Straightforward fixes are the agent's to make.
 - Merge a PR up the tree before the Codex review loop completes.
 - Treat "the CI passed" as a substitute for the Codex review.
 
