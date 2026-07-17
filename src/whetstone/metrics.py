@@ -71,28 +71,33 @@ def compute_metrics(loc: StoreLocation) -> dict:
         round(reinforcements / reinforce_denom, 4) if reinforce_denom else None
     )
 
-    # % survived: learnings still present vs. all ever created. Created = committed learning
-    # captures (reinforcements touch an existing entry, they don't create one). Removal lands in
-    # M2b's revise/compaction, so today this is ~100% wherever any learning was created; it is wired
-    # now so the KPI goes live the moment removals exist.
-    #
-    # This is only honest when telemetry covers every learning currently in the store. If the store
-    # holds learnings the event log never recorded creating (a pre-telemetry or manually-imported
-    # store — so present > created, or present>0 with no logged creations), the denominator is
-    # incomplete: report unknown rather than a >100% or otherwise misleading figure.
-    present_learnings = len(load_learnings(loc))
-    if learning_committed and present_learnings <= learning_committed:
+    # % survived: of the learnings telemetry recorded creating, how many are still present.
+    # Compared by ID, not count: a count-only check is fooled by mixed stores (e.g. create L1/L2,
+    # remove them, import L99 -> present=1 <= committed=2 but L99 was never telemetry-created). We
+    # only report a number when every currently-present learning is one telemetry recorded creating;
+    # otherwise coverage is incomplete (pre-telemetry / imported markdown) and we return unknown
+    # rather than a misleading figure. (Removals land in M2b; the KPI goes live once they exist.)
+    present_ids = {entry.id for entry in load_learnings(loc)}
+    committed_learning_ids = {
+        e.get("entry_id")
+        for e in captures
+        if e.get("status") == "committed" and e.get("polarity") == "learning"
+    }
+    committed_learning_ids.discard(None)
+    if committed_learning_ids and present_ids <= committed_learning_ids:
         survived_pct = {
-            "value": round(present_learnings / learning_committed, 4),
+            "value": round(len(present_ids) / len(committed_learning_ids), 4),
             "note": None,
         }
+    elif not present_ids and not committed_learning_ids:
+        survived_pct = {"value": None, "note": "No learnings created yet."}
     else:
         survived_pct = {
             "value": None,
             "note": (
-                "Incomplete telemetry coverage: the store has learnings not represented by "
-                "committed capture events (pre-telemetry or imported markdown), so % survived "
-                "cannot be computed honestly from the event log."
+                "Incomplete telemetry coverage: the store has learnings not created via committed "
+                "capture events (pre-telemetry or imported markdown), so % survived cannot be "
+                "computed honestly from the event log."
             ),
         }
 
