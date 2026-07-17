@@ -121,3 +121,41 @@ def test_conflict_is_surfaced_regardless_of_supervision_mode(env, monkeypatch):
         "prov",
     )
     assert result["status"] == "conflict"
+
+
+def test_aligned_always_issue_is_not_a_conflict(env):
+    # An "Always X" mandate AGREES with a learning wanting X — high similarity but NOT a conflict.
+    # (Only a prohibition can conflict; an embedding can't tell "Always X" from "Never X".)
+    capture(
+        "gt",
+        "issue",
+        "Always right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+    result = capture(
+        "gt",
+        "learning",
+        "Right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+    assert result["status"] == "committed"
+    assert result["entry_id"] == "L1"
+
+
+def test_new_prohibition_issue_conflicts_but_aligned_mandate_does_not(env):
+    # Symmetric check on the new-issue side: a "Never" issue over an existing learning conflicts,
+    # while an "Always" issue over the same learning does not.
+    capture("gt", "learning", "Right-align the currency columns.", "currency columns", "prov")
+
+    aligned = capture(
+        "gt", "issue", "Always right-align the currency columns.", "currency columns", "prov"
+    )
+    assert aligned["status"] == "committed"  # aligned mandate, no conflict
+
+    forbidding = capture(
+        "gt", "issue", "Never right-align the currency columns.", "currency columns", "prov"
+    )
+    assert forbidding["status"] == "conflict"
+    assert forbidding["conflict"]["with_id"] == "L1"

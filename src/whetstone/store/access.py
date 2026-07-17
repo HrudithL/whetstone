@@ -9,6 +9,7 @@ file), so a file only ever holds entries of one scope.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import replace
 from datetime import date
@@ -24,6 +25,13 @@ from .markdown import (
 from .slug import scope_filename
 
 _MAX_TITLE = 60
+# Git-tracked, per-store monotonic id counters. Persisting the NEXT number to mint per polarity
+# means a removed/promoted/demoted id is never reissued — unlike deriving from the current markdown
+# max, which would reuse the top id after its entry leaves. Committed alongside the markdown it
+# accompanies (kept out of the store .gitignore on purpose). Self-healing: a missing/corrupt file
+# falls back to the markdown max.
+_NEXT_IDS_NAME = "next_ids.json"
+_POLARITY_PREFIX = {"learning": "L", "issue": "I"}
 
 
 def _title_from_body(body: str, fallback: str) -> str:
@@ -65,13 +73,59 @@ def _max_id_number(ids: list[str]) -> int:
     return highest
 
 
-def next_id(loc: StoreLocation, polarity: str) -> str:
-    """The next monotonic id for ``polarity`` — ``L``/``I`` + (max existing number + 1)."""
+def _next_ids_path(loc: StoreLocation):
+    return loc.path / _NEXT_IDS_NAME
+
+
+def _load_next_ids(loc: StoreLocation) -> dict[str, int]:
+    """The persisted next-number counters, or zeros if the file is missing/corrupt (self-heals)."""
+    path = _next_ids_path(loc)
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return {p: int(data.get(p, 0)) for p in _POLARITY_PREFIX}
+        except (ValueError, OSError):  # pragma: no cover - defensive against a torn/edited file
+            pass
+    return {p: 0 for p in _POLARITY_PREFIX}
+
+
+def _markdown_next(loc: StoreLocation, polarity: str) -> int:
     if polarity == "learning":
-        return f"L{_max_id_number([e.id for e in load_learnings(loc)]) + 1}"
-    if polarity == "issue":
-        return f"I{_max_id_number([e.id for e in load_issues(loc)]) + 1}"
-    raise ValueError(f"polarity must be 'learning' or 'issue', got {polarity!r}")
+        return _max_id_number([e.id for e in load_learnings(loc)]) + 1
+    return _max_id_number([e.id for e in load_issues(loc)]) + 1
+
+
+def next_id(loc: StoreLocation, polarity: str) -> str:
+    """The next monotonic id for ``polarity`` — never a reused number (see :data:`_NEXT_IDS_NAME`).
+
+    Read-only: it takes the greater of the persisted counter and (markdown max + 1). The counter is
+    advanced by :func:`record_id` on the success path, so a mint that never becomes a committed
+    entry (e.g. a rejected body) leaves no dirty state behind.
+    """
+    if polarity not in _POLARITY_PREFIX:
+        raise ValueError(f"polarity must be 'learning' or 'issue', got {polarity!r}")
+    n = max(_load_next_ids(loc).get(polarity, 0), _markdown_next(loc, polarity))
+    return f"{_POLARITY_PREFIX[polarity]}{n}"
+
+
+def record_id(loc: StoreLocation, entry_id: str) -> None:
+    """Advance the persisted counter past ``entry_id`` so its number is never reissued.
+
+    Call on the success path, right before the store commit, so ``next_ids.json`` lands in the same
+    commit as the entry it accompanies. Idempotent and monotonic (never lowers a counter).
+    """
+    prefix = entry_id[0]
+    polarity = next((p for p, pre in _POLARITY_PREFIX.items() if pre == prefix), None)
+    if polarity is None:
+        raise ValueError(f"entry id must start with 'L' or 'I', got {entry_id!r}")
+    number = _max_id_number([entry_id])
+    counters = _load_next_ids(loc)
+    if number + 1 > counters.get(polarity, 0):
+        counters[polarity] = number + 1
+        tmp = _next_ids_path(loc).with_suffix(".json.tmp")
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(json.dumps(counters, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        tmp.replace(_next_ids_path(loc))
 
 
 def save_learning(loc: StoreLocation, entry: LearningEntry) -> None:
@@ -140,6 +194,24 @@ def set_learning_recurrence(
                 write_learnings(path, entries)
                 return entries[i]
     raise KeyError(f"no learning with id {entry_id!r}")
+
+
+def update_learning_prose(
+    loc: StoreLocation, entry_id: str, *, title: str, body: str, scope: str
+) -> LearningEntry:
+    """Update ``entry_id``'s title/body/scope in place, preserving its scoring fields.
+
+    A scope change moves the entry to a different scope file, so the stale copy is removed from the
+    old file before the updated entry is written to the new one.
+    """
+    current = find_learning(loc, entry_id)
+    if current is None:
+        raise KeyError(f"no learning with id {entry_id!r}")
+    updated = replace(current, title=title, body=body, scope=scope)
+    if scope != current.scope:
+        remove_entry(loc, entry_id)
+    save_learning(loc, updated)
+    return updated
 
 
 def remove_entry(loc: StoreLocation, entry_id: str) -> bool:

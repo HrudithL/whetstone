@@ -14,9 +14,9 @@ from datetime import date
 import pytest
 
 from conftest import make_issue, make_learning, seed
-from whetstone.server import revise
+from whetstone.server import capture, revise
 from whetstone.store.access import find_issue, find_learning, load_issues, load_learnings
-from whetstone.store.layout import commit_store
+from whetstone.store.layout import commit_store, store_location
 from whetstone.telemetry import read_events
 
 
@@ -26,6 +26,13 @@ def fixed_today(monkeypatch):
     stamp = date(2026, 7, 17)
     monkeypatch.setattr("whetstone.server._today", lambda: stamp)
     return stamp
+
+
+@pytest.fixture
+def env_only(tmp_path, monkeypatch):
+    """Point the server's own load_config() at a temp store root; store is created lazily."""
+    monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
+    return tmp_path
 
 
 def _commit_count(loc) -> int:
@@ -120,6 +127,22 @@ def test_reinforce_on_an_issue_id_is_rejected(store, config):
         revise("gt", "I1", "reinforce")
 
 
+def test_reinforce_applies_supplied_body_and_scope(store, config):
+    _clean_seed(store, learnings=[_muted("L1", 1)])
+
+    result = revise(
+        "gt", "L1", "reinforce", body="Prefer deeply muted, low-saturation palettes.", scope="theme"
+    )
+
+    assert result["status"] == "reinforced"
+    entry = find_learning(store, "L1")
+    assert entry.recurrence == 2  # still reinforced
+    assert entry.body == "Prefer deeply muted, low-saturation palettes."  # prose updated
+    assert entry.scope == "theme"  # scope moved
+    # The old scope file no longer carries L1 (moved, not duplicated).
+    assert [e.id for e in load_learnings(store)] == ["L1"]
+
+
 # --------------------------------------------------------------------------- weaken
 
 
@@ -207,7 +230,20 @@ def test_promote_confirmed_without_body_asks_for_rewording(store, config):
     result = revise("gt", "L1", "promote", confirm=True)  # confirmed but no body
     assert result["status"] == "needs_confirmation"
     assert "rewording" in result["prompt"]
+    # The prompt points at revise (there is no `promote` tool).
+    assert "revise" in result["prompt"]
     assert find_learning(store, "L1") is not None  # not moved
+
+
+def test_promote_declined_with_keep_does_not_promote(store, config):
+    _clean_seed(store, learnings=[_muted("L1", 2)])
+    revise("gt", "L1", "promote", body="Never use non-muted palettes.")  # first prompt
+
+    # A declining answer must NOT be read as assent (regression: any non-empty string promoted).
+    result = revise("gt", "L1", "promote", body="Never use non-muted palettes.", confirm="keep")
+    assert result == {"status": "unchanged", "entry_id": "L1", "recurrence": 2}
+    assert find_learning(store, "L1") is not None  # still a learning
+    assert find_issue(store, "I1") is None  # nothing promoted
 
 
 # --------------------------------------------------------------------------- demote (direct)
@@ -277,3 +313,61 @@ def test_issue_contradiction_cancel_makes_no_change(store, config):
 def test_unknown_action_raises(store, config):
     with pytest.raises(ValueError, match="action must be"):
         revise("gt", "L1", "bogus")
+
+
+# --------------------------------------------------------------------------- monotonic ids
+
+
+def test_ids_are_never_reused_after_remove_promote_demote(env_only):
+    # Two learnings; remove the top one -> the next capture must NOT reuse L2.
+    assert capture("gt", "learning", "A muted blue palette.", "color", "p")["entry_id"] == "L1"
+    assert capture("gt", "learning", "Serif captions please.", "type", "p")["entry_id"] == "L2"
+    revise("gt", "L2", "remove")
+    assert capture("gt", "learning", "Bold the header row.", "header", "p")["entry_id"] == "L3"
+
+    # Promote L3 -> I1 (removes L3); a later learning must not reuse L3.
+    revise("gt", "L3", "promote", body="Never leave the header unbolded.", confirm="promote")
+    assert capture("gt", "learning", "Roomier cell padding.", "density", "p")["entry_id"] == "L4"
+
+    # Demote I1 -> a fresh learning (L5, not a reused number); a later issue must not reuse I1.
+    demoted = revise("gt", "I1", "demote", confirm=True)
+    assert demoted["entry_id"] == "L5"
+    assert capture("gt", "issue", "Never use comic sans.", "type", "p")["entry_id"] == "I2"
+
+
+def test_next_ids_is_git_tracked(env_only):
+    capture("gt", "learning", "A muted blue palette.", "color", "p")
+    loc = store_location("gt")
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=str(loc.path), check=True, capture_output=True, text=True
+    ).stdout
+    assert "next_ids.json" in tracked
+
+
+# ------------------------------------------------------------------- capture -> revise promote
+
+
+def test_capture_threshold_resolves_via_revise_promote(env_only, monkeypatch):
+    # The promotion threshold is surfaced by capture but executed only by revise (single source).
+    monkeypatch.setenv("WHETSTONE_PROMOTION_THRESHOLD", "2")
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
+    body = "Right-align the currency columns for clean tables."
+    assert capture("gt", "learning", body, "currency", "p")["status"] == "committed"
+
+    hit = capture("gt", "learning", "Please right-align the currency columns for clean tables.",
+                  "currency", "p")
+    assert hit["status"] == "needs_confirmation"
+    assert hit["recurrence"] == 2
+    assert "revise" in hit["prompt"] and "promote" in hit["prompt"]
+    # The reinforcement is committed even though promotion is deferred.
+    assert find_learning(store_location("gt"), hit["entry_id"]).recurrence == 2
+
+    # Resolve the promotion via revise with a reworded objective body — runs against the id, never a
+    # re-dedup of the reworded text.
+    done = revise("gt", hit["entry_id"], "promote",
+                  body="Always right-align currency columns.", confirm="promote")
+    assert done["status"] == "promoted"
+    assert find_learning(store_location("gt"), hit["entry_id"]) is None
+    assert find_issue(store_location("gt"), done["entry_id"]).body == (
+        "Always right-align currency columns."
+    )

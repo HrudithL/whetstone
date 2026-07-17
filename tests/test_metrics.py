@@ -114,6 +114,48 @@ def test_survived_pct_unknown_when_telemetry_coverage_incomplete(tmp_path, monke
     assert "ncomplete" in report["learnings_survived_pct"]["note"]
 
 
+def test_revise_reinforcements_count_in_the_repeat_metric(store, config):
+    # Reinforcements now usually arrive via revise(action=reinforce), not capture; they must feed
+    # the repeat-correction proxy alongside capture 'reinforced' events.
+    from conftest import make_learning
+    from whetstone.store.access import save_learning
+
+    save_learning(store, make_learning("L1", "Right-align currency.", "currency"))
+    _seed_events(
+        store,
+        [
+            {"type": "capture", "run_id": "r1", "entry_id": "L1",
+             "polarity": "learning", "status": "committed"},
+            {"type": "revise", "run_id": "r2", "entry_id": "L1",
+             "action": "reinforce", "status": "reinforced"},
+            {"type": "revise", "run_id": "r3", "entry_id": "L1",
+             "action": "reinforce", "status": "reinforced"},
+        ],
+    )
+    m = compute_metrics(store)
+    # 2 revise reinforcements, 1 capture-committed learning -> 2 / (1 + 2) = 0.6667.
+    assert m["repeat_correction_proxy"]["reinforcements"] == 2
+    assert m["repeat_correction_proxy"]["reinforcement_rate"] == round(2 / 3, 4)
+
+
+def test_demoted_learning_counts_as_a_creation_for_survival(store, config):
+    # A revise demote mints a new learning (L2 from an issue). It is a "created" learning, so a
+    # store holding only that learning should report 100% survived, not 'incomplete coverage'.
+    from conftest import make_learning
+    from whetstone.store.access import save_learning
+
+    save_learning(store, make_learning("L2", "Prefer avoiding neon.", "color"))
+    _seed_events(
+        store,
+        [
+            {"type": "revise", "run_id": "r1", "entry_id": "L2",
+             "action": "demote", "status": "demoted"},
+        ],
+    )
+    m = compute_metrics(store)
+    assert m["learnings_survived_pct"]["value"] == 1.0
+
+
 def test_survived_pct_unknown_when_a_learning_id_is_reused(store):
     # If a learning id appears in two creation events (removed, then id reused), the set-based
     # coverage check would collapse them; survival must be reported as unknown instead.
