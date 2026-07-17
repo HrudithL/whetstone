@@ -1,0 +1,123 @@
+"""Cross-polarity conflict detection in `capture` (§7).
+
+A new entry whose text is >= conflict_similarity to an existing OPPOSITE-polarity entry in an
+overlapping scope is surfaced as `{status: "conflict"}` and NOT committed — the user resolves it
+with `revise`. Both directions are covered; learning<->learning conflicts are a documented
+limitation and are not asserted here. The Always/Never pair used here scores ~0.91 on the hashing
+backend, above the default 0.85 conflict cutoff, so no override is needed.
+"""
+
+from __future__ import annotations
+
+import subprocess
+
+import pytest
+
+from whetstone.server import capture
+from whetstone.store.access import load_issues, load_learnings
+from whetstone.store.layout import store_location
+
+
+@pytest.fixture
+def env(tmp_path, monkeypatch):
+    monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
+    return tmp_path
+
+
+def _commit_count(root, slug) -> int:
+    out = subprocess.run(
+        ["git", "rev-list", "--count", "HEAD"],
+        cwd=str(root / slug),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return int(out.stdout.strip())
+
+
+def test_new_learning_conflicts_with_existing_issue(env):
+    capture(
+        "gt",
+        "issue",
+        "Never right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+    slug = store_location("gt").slug
+    before = _commit_count(env, slug)
+
+    result = capture(
+        "gt",
+        "learning",
+        "Right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+
+    assert result["status"] == "conflict"
+    assert result["entry_id"] is None
+    assert result["conflict"]["with_id"] == "I1"
+    assert result["conflict"]["explanation"]
+    # The conflicting learning was NOT committed.
+    assert load_learnings(store_location("gt")) == []
+    assert _commit_count(env, slug) == before
+
+
+def test_new_issue_conflicts_with_existing_learning(env):
+    capture(
+        "gt",
+        "learning",
+        "Right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+    slug = store_location("gt").slug
+    before = _commit_count(env, slug)
+
+    result = capture(
+        "gt",
+        "issue",
+        "Never right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+
+    assert result["status"] == "conflict"
+    assert result["conflict"]["with_id"] == "L1"
+    assert load_issues(store_location("gt")) == []
+    assert _commit_count(env, slug) == before
+
+
+def test_unrelated_opposite_polarity_entry_is_not_a_conflict(env):
+    capture("gt", "issue", "Never band tables under ten rows.", "small tables", "prov")
+
+    result = capture(
+        "gt",
+        "learning",
+        "Use a muted blue color palette for the table.",
+        "color palette",
+        "prov",
+    )
+
+    # Different scope and dissimilar text -> a normal commit, no conflict.
+    assert result["status"] == "committed"
+    assert result["entry_id"] == "L1"
+
+
+def test_conflict_is_surfaced_regardless_of_supervision_mode(env, monkeypatch):
+    monkeypatch.setenv("WHETSTONE_SUPERVISION", "autonomous")
+    capture(
+        "gt",
+        "issue",
+        "Never right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+    result = capture(
+        "gt",
+        "learning",
+        "Right-align the currency columns.",
+        "currency columns",
+        "prov",
+    )
+    assert result["status"] == "conflict"
