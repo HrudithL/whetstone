@@ -156,6 +156,10 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
     # creates; the loser re-observes a finished store inside the lock and returns it as existing.
     with _file_lock(root / f".create-{loc.slug}.lock"):
         if is_store(loc.path):
+            # Repair scaffolding: an existing store that lost its scope dirs still gets them back,
+            # so `attach`/lazy-create always leaves learnings/ and issues/ present.
+            loc.learnings_dir.mkdir(parents=True, exist_ok=True)
+            loc.issues_dir.mkdir(parents=True, exist_ok=True)
             _register(loc, config)
             return EnsureResult(location=loc, created=False)
 

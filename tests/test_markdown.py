@@ -188,3 +188,16 @@ def test_body_with_version_like_heading_round_trips():
     back = parse_learnings(serialize_learnings([_learning(body=body)]))
     assert len(back) == 1
     assert back[0].body == body
+
+
+def test_id_polarity_is_enforced():
+    # An I* id in a learnings file (or L* in an issues file) must fail early, not flip polarity.
+    issue_shaped = (
+        "## I5 · x\n- recurrence: 1\n- first_seen: 2026-01-01\n- last_seen: 2026-01-01\n"
+        "- scope: s\n- provenance: p\n\nbody\n"
+    )
+    with pytest.raises(MarkdownParseError, match="must start with 'L'"):
+        parse_learnings(issue_shaped)
+    learning_shaped = "## L5 · x\n- scope: s\n- provenance: p\n\nbody\n"
+    with pytest.raises(MarkdownParseError, match="must start with 'I'"):
+        parse_issues(learning_shaped)

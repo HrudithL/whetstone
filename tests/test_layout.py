@@ -125,3 +125,19 @@ def test_concurrent_ensure_store_is_idempotent(cfg):
     assert sum(1 for r in results if r.created) == 1  # exactly one creator
     loc = store_location("concurrent", cfg)
     assert _git_log_count(loc.path) == 1  # exactly one baseline commit
+
+
+def test_ensure_store_repairs_missing_scope_dirs(cfg):
+    ensure_store("repairme", cfg)
+    loc = store_location("repairme", cfg)
+    # Simulate a store that lost its scope directories.
+    import shutil
+
+    shutil.rmtree(loc.learnings_dir)
+    shutil.rmtree(loc.issues_dir)
+    assert not loc.learnings_dir.exists()
+
+    result = ensure_store("repairme", cfg)
+    assert result.created is False  # still an existing store, just repaired
+    assert loc.learnings_dir.is_dir()
+    assert loc.issues_dir.is_dir()

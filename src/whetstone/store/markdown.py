@@ -99,11 +99,22 @@ def _require(metadata: dict[str, str], keys: tuple[str, ...], entry_id: str) -> 
         raise MarkdownParseError(f"entry {entry_id!r} is missing metadata: {', '.join(missing)}")
 
 
+def _require_prefix(entry_id: str, prefix: str, kind: str) -> None:
+    """The ``L``/``I`` id prefix encodes store polarity; a learnings file must hold only ``L*`` ids
+    and an issues file only ``I*`` ids, so a mislabeled/migrated block fails early instead of
+    silently flipping polarity."""
+    if not entry_id.startswith(prefix):
+        raise MarkdownParseError(
+            f"{kind} entry id must start with {prefix!r}, got {entry_id!r}"
+        )
+
+
 def parse_learnings(text: str) -> list[LearningEntry]:
     """Parse the text of a ``learnings/<scope>.md`` file into :class:`LearningEntry` objects."""
     entries: list[LearningEntry] = []
     for block in _split_blocks(text):
         entry_id, title, meta, body = _parse_block(block)
+        _require_prefix(entry_id, "L", "learning")
         _require(meta, _LEARNING_KEYS, entry_id)
         try:
             recurrence = int(meta["recurrence"])
@@ -131,6 +142,7 @@ def parse_issues(text: str) -> list[IssueEntry]:
     entries: list[IssueEntry] = []
     for block in _split_blocks(text):
         entry_id, title, meta, body = _parse_block(block)
+        _require_prefix(entry_id, "I", "issue")
         _require(meta, _ISSUE_KEYS, entry_id)
         entries.append(
             IssueEntry(
