@@ -206,3 +206,40 @@ def test_new_never_issue_does_not_conflict_with_an_avoidance_learning(env, monke
         "gt", "issue", "Never right-align the currency columns.", "currency columns", "prov"
     )
     assert result["status"] == "committed"  # both forbid -> agree, not a conflict
+
+
+def test_new_never_issue_conflicts_with_existing_always_issue(env, monkeypatch):
+    # issue<->issue contradiction: a new prohibiting "Never X" over an existing mandating "Always X"
+    # in the same scope. Reliably detectable because the prohibition heuristic separates the two.
+    # The Always/Never pair scores ~0.82 on the hashing backend; lower the cutoff so it clears (the
+    # separation here is the prohibition WORDING, not embedding distance).
+    monkeypatch.setenv("WHETSTONE_CONFLICT_SIMILARITY", "0.6")
+    capture(
+        "gt", "issue", "Always right-align the currency columns.", "currency columns", "prov"
+    )
+    slug = store_location("gt").slug
+    before = _commit_count(env, slug)
+
+    result = capture(
+        "gt", "issue", "Never right-align the currency columns.", "currency columns", "prov"
+    )
+
+    assert result["status"] == "conflict"
+    assert result["entry_id"] is None
+    assert result["conflict"]["with_id"] == "I1"
+    assert result["conflict"]["explanation"]
+    # The contradicting issue was NOT committed; only the original I1 remains.
+    assert [e.id for e in load_issues(store_location("gt"))] == ["I1"]
+    assert _commit_count(env, slug) == before
+
+
+def test_aligned_always_always_issues_do_not_conflict(env):
+    # Two "Always X" issues agree (same prohibition-polarity) -> dedup noop, never a conflict.
+    capture(
+        "gt", "issue", "Always right-align the currency columns.", "currency columns", "prov"
+    )
+    result = capture(
+        "gt", "issue", "Always right-align the currency columns.", "currency columns", "prov"
+    )
+    assert result["status"] == "noop"  # near-duplicate mandate, not a contradiction
+    assert result["entry_id"] == "I1"

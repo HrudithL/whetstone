@@ -305,24 +305,42 @@ def rebuild_index_if_stale(loc: StoreLocation, backend: EmbeddingBackend) -> Non
     rebuild_index(loc, backend)
 
 
-def load_scopes(loc: StoreLocation, polarity: str) -> list[ScopeVectors]:
-    """Every scope's centroid + phrase vectors for ``polarity``."""
-    conn = sqlite3.connect(str(index_path(loc)))
+def load_scopes(
+    loc: StoreLocation, polarity: str, conn: sqlite3.Connection | None = None
+) -> list[ScopeVectors]:
+    """Every scope's centroid + phrase vectors for ``polarity``.
+
+    Pass ``conn`` to read from an already-open connection so several loads share ONE consistent
+    snapshot (an open handle keeps reading its inode across an ``os.replace`` index rebuild); when
+    omitted this opens and closes its own connection.
+    """
+    close = conn is None
+    if conn is None:
+        conn = sqlite3.connect(str(index_path(loc)))
     try:
         rows = conn.execute(
             "SELECT scope, centroid, phrase FROM scopes WHERE polarity = ?", (polarity,)
         ).fetchall()
     finally:
-        conn.close()
+        if close:
+            conn.close()
     return [
         ScopeVectors(scope, _unpack(centroid), _unpack(phrase))
         for scope, centroid, phrase in rows
     ]
 
 
-def load_entries(loc: StoreLocation, polarity: str) -> list[IndexedEntry]:
-    """Every entry (with its vector + surfaced fields) for ``polarity``."""
-    conn = sqlite3.connect(str(index_path(loc)))
+def load_entries(
+    loc: StoreLocation, polarity: str, conn: sqlite3.Connection | None = None
+) -> list[IndexedEntry]:
+    """Every entry (with its vector + surfaced fields) for ``polarity``.
+
+    Pass ``conn`` to share one snapshot across loads (see :func:`load_scopes`); omitted opens its
+    own connection.
+    """
+    close = conn is None
+    if conn is None:
+        conn = sqlite3.connect(str(index_path(loc)))
     try:
         rows = conn.execute(
             "SELECT id, polarity, scope, vector, recurrence, title, body, last_seen "
@@ -330,7 +348,8 @@ def load_entries(loc: StoreLocation, polarity: str) -> list[IndexedEntry]:
             (polarity,),
         ).fetchall()
     finally:
-        conn.close()
+        if close:
+            conn.close()
     return [
         IndexedEntry(
             id=row[0],

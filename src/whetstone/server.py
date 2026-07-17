@@ -220,6 +220,12 @@ def capture(
         conflict = _find_conflict(
             loc, "issue", scope, title, body, candidate_vec, scope_vec, config
         )
+        # Also detect a new issue contradicting an EXISTING issue (issue<->issue): same/close scope,
+        # high similarity, opposite prohibition-polarity (new `Never X` vs existing `Always X`).
+        if conflict is None:
+            conflict = _find_issue_conflict(
+                loc, scope, title, body, candidate_vec, scope_vec, config
+            )
         if conflict is not None:
             return _conflict_result(loc, run_id, "issue", conflict)
         if duplicate is not None:
@@ -791,6 +797,50 @@ def _find_conflict(
             f"New issue overlaps learning {best.id} in scope {scope!r}: the mandatory rule forbids "
             f"what that learning prefers. Resolve with `revise` — weaken/remove/promote {best.id}."
         )
+    return best, explanation
+
+
+def _find_issue_conflict(
+    loc,
+    scope: str,
+    candidate_title: str,
+    candidate_body: str,
+    candidate_vec: list[float],
+    scope_vec: list[float],
+    config,
+) -> tuple[IndexedEntry, str] | None:
+    """The nearest EXISTING issue in an overlapping scope that CONTRADICTS the new issue (§7).
+
+    A contradiction is high similarity (>= ``conflict_similarity``) AND opposite prohibition-
+    polarity — one forbids what the other mandates (a new ``Never X`` over an existing ``Always X``,
+    or vice versa). Unlike learning<->learning, this is reliably detectable: :func:`_is_prohibition`
+    heuristic separates ``Always`` from ``Never``, so a same-polarity near-duplicate (two ``Always
+    X``) is left to dedup while only true opposite-polarity clashes surface as a conflict.
+    "Overlapping scope" mirrors dedup: same scope, or the other issue's scope phrase within
+    ``conflict_similarity`` of the candidate's scope.
+    """
+    candidate_is_prohibition = _is_prohibition(candidate_title, candidate_body)
+    scope_phrase = {s.scope: s.phrase for s in index.load_scopes(loc, "issue")}
+    best: IndexedEntry | None = None
+    best_sim = config.conflict_similarity
+    for entry in index.load_entries(loc, "issue"):
+        if entry.scope != scope:
+            phrase = scope_phrase.get(entry.scope)
+            if phrase is None or cosine(scope_vec, phrase) < config.conflict_similarity:
+                continue
+        # Opposite prohibition-polarity only: two mandates (or two prohibitions) agree/dedup.
+        if _is_prohibition(entry.title, entry.body) == candidate_is_prohibition:
+            continue
+        sim = cosine(candidate_vec, entry.vector)
+        if sim >= best_sim:
+            best_sim = sim
+            best = entry
+    if best is None:
+        return None
+    explanation = (
+        f"New issue contradicts issue {best.id} in scope {scope!r}: one forbids what the other "
+        f"mandates. Resolve with `revise` — remove/soften {best.id}, or drop the new rule."
+    )
     return best, explanation
 
 

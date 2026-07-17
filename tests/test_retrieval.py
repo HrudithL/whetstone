@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import replace
 from datetime import date
 
@@ -134,6 +135,28 @@ def test_empty_store_retrieves_empty(store, backend, config):
     learnings, issues = retrieve(store, "anything at all", backend, config)
     assert learnings == []
     assert issues == []
+
+
+def test_load_helpers_share_one_snapshot_across_a_rebuild(store, backend):
+    # retrieve() reads all rows through ONE open connection so a concurrent index rebuild (atomic
+    # os.replace) cannot straddle it. An already-open connection keeps reading its inode across the
+    # replace, so it sees a single consistent snapshot; a fresh connection sees the new file.
+    _prepare(store, backend, learnings=[make_learning("L1", "First learning.", "styling")])
+
+    conn = sqlite3.connect(str(index.index_path(store)))
+    try:
+        before = index.load_entries(store, "learning", conn)
+        assert {e.id for e in before} == {"L1"}
+
+        # Rebuild with a second entry (os.replace swaps the file to a new inode).
+        seed(store, learnings=[make_learning("L2", "Second learning.", "styling")])
+        index.rebuild_index(store, backend)
+
+        # The still-open connection reads its original snapshot; a fresh one sees the rebuild.
+        assert {e.id for e in index.load_entries(store, "learning", conn)} == {"L1"}
+        assert {e.id for e in index.load_entries(store, "learning")} == {"L1", "L2"}
+    finally:
+        conn.close()
 
 
 def test_weight_reflects_recurrence(store, backend, config):
