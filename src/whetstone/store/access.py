@@ -262,7 +262,9 @@ def promote_learning_to_issue(
     learning = find_learning(loc, entry_id)
     if learning is None:
         raise KeyError(f"no learning with id {entry_id!r}")
-    new_body = body.strip() if body else learning.body
+    # A blank/whitespace-only body counts as omitted — keep the source prose, never store an empty
+    # rule.
+    new_body = body.strip() if (body and body.strip()) else learning.body
     issue = IssueEntry(
         id=new_id,
         title=_title_from_body(new_body, learning.title),
@@ -294,7 +296,9 @@ def demote_issue_to_learning(
     issue = find_issue(loc, entry_id)
     if issue is None:
         raise KeyError(f"no issue with id {entry_id!r}")
-    new_body = body.strip() if body else issue.body
+    # A blank/whitespace-only body counts as omitted — keep the issue's prose, never store an empty
+    # rule.
+    new_body = body.strip() if (body and body.strip()) else issue.body
     learning = LearningEntry(
         id=new_id,
         title=_title_from_body(new_body, issue.title),

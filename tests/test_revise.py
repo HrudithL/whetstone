@@ -138,6 +138,20 @@ def test_reinforce_confirm_keep_stays_a_learning(store, config, monkeypatch, fix
     assert find_learning(store, "L1").recurrence == 4
 
 
+def test_reinforce_confirm_keep_below_threshold_actually_reinforces(store, config, monkeypatch):
+    # Out-of-context "keep" (no threshold prompt pending) must NOT report a phantom reinforcement
+    # — it falls through to a real bump + commit.
+    monkeypatch.setenv("WHETSTONE_PROMOTION_THRESHOLD", "4")
+    _clean_seed(store, learnings=[_muted("L1", 1)])
+    before = _commit_count(store)
+
+    result = revise("gt", "L1", "reinforce", confirm="keep")
+
+    assert result == {"status": "reinforced", "entry_id": "L1", "recurrence": 2}
+    assert find_learning(store, "L1").recurrence == 2  # actually bumped
+    assert _commit_count(store) == before + 1  # actually committed
+
+
 def test_reinforce_confirm_promote_below_threshold_does_not_promote(store, config, monkeypatch):
     # confirm:"promote" is only valid when a threshold prompt was pending. On a low-recurrence
     # learning it must NOT bypass promote's always-confirm — it falls through to a normal reinforce.
@@ -376,6 +390,17 @@ def test_demote_on_a_learning_id_is_rejected(store, config):
     _clean_seed(store, learnings=[_muted("L1")])
     with pytest.raises(ValueError, match="issues"):
         revise("gt", "L1", "demote")
+
+
+def test_demote_blank_body_keeps_the_issue_prose(store, config):
+    # A whitespace-only body is treated as omitted — the demoted learning keeps the issue's prose,
+    # never an empty rule.
+    _clean_seed(store, issues=[make_issue("I1", "Never use neon colors here.", "color")])
+
+    result = revise("gt", "I1", "demote", body="   ", confirm=True)
+
+    assert result["status"] == "demoted"
+    assert find_learning(store, result["entry_id"]).body == "Never use neon colors here."
 
 
 # --------------------------------------------------------------------------- issue contradiction

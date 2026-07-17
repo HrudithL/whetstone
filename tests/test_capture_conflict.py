@@ -175,3 +175,34 @@ def test_conflict_wins_over_same_polarity_issue_dedup_noop(env, monkeypatch):
     )
     assert forbidding["status"] == "conflict"  # not "noop"
     assert forbidding["conflict"]["with_id"] == "L1"
+
+
+def test_aligned_negative_learning_is_not_a_conflict_but_affirmative_is(env, monkeypatch):
+    # A conflict needs one side to AFFIRM what the other FORBIDS. An avoidance learning agrees with
+    # a prohibiting issue, so it must not be flagged — even though it clears the (lowered) cutoff;
+    # only its prohibition phrasing excludes it. An affirmative learning still conflicts.
+    monkeypatch.setenv("WHETSTONE_CONFLICT_SIMILARITY", "0.6")
+    capture("gt", "issue", "Never right-align the currency columns.", "currency columns", "prov")
+
+    aligned = capture(
+        "gt", "learning", "Avoid right-aligning the currency columns.", "currency columns", "prov"
+    )
+    assert aligned["status"] == "committed"  # both forbid -> agree, not a conflict
+
+    affirmative = capture(
+        "gt", "learning", "Right-align the currency columns.", "currency columns", "prov"
+    )
+    assert affirmative["status"] == "conflict"
+    assert affirmative["conflict"]["with_id"] == "I1"
+
+
+def test_new_never_issue_does_not_conflict_with_an_avoidance_learning(env, monkeypatch):
+    # Symmetric direction: a new prohibiting issue over an EXISTING avoidance learning is agreement.
+    monkeypatch.setenv("WHETSTONE_CONFLICT_SIMILARITY", "0.6")
+    capture(
+        "gt", "learning", "Avoid right-aligning the currency columns.", "currency columns", "prov"
+    )
+    result = capture(
+        "gt", "issue", "Never right-align the currency columns.", "currency columns", "prov"
+    )
+    assert result["status"] == "committed"  # both forbid -> agree, not a conflict

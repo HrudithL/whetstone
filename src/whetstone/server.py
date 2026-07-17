@@ -354,7 +354,16 @@ def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, conf
         current = find_learning(loc, entry_id)
         if current is None:
             _reject_missing_learning(loc, entry_id, "reinforce")
-        return {"status": "reinforced", "entry_id": current.id, "recurrence": current.recurrence}
+        # Only treat "keep" as the answer to a pending promotion prompt (recurrence has reached the
+        # threshold, so the +1 already happened on that call). Below the threshold there was no
+        # prompt, so this is an out-of-context keep — fall through to an actual reinforcement rather
+        # than reporting a phantom "reinforced" that never bumped/committed.
+        if current.recurrence >= config.promotion_threshold:
+            return {
+                "status": "reinforced",
+                "entry_id": current.id,
+                "recurrence": current.recurrence,
+            }
 
     learning = find_learning(loc, entry_id)
     if learning is None:
@@ -730,13 +739,19 @@ def _find_conflict(
     NOT detected here — an embedding cannot reliably separate "duplicate" from "contradiction" for
     same-polarity text, so beyond dedup they are left as a documented limitation (§7) rather than a
     brittle detector. "Overlapping scope" mirrors dedup: same scope, or the other entry's scope
-    phrase within ``conflict_similarity`` of the candidate's scope. Only the ISSUE side's phrasing
-    is checked for prohibition (:func:`_is_prohibition`), so an ``Always …`` mandate that AGREES
-    with a learning is not flagged.
+    phrase within ``conflict_similarity`` of the candidate's scope. A conflict requires the ISSUE
+    side to FORBID what the LEARNING side AFFIRMS (both checked with :func:`_is_prohibition`): an
+    ``Always …`` mandate agreeing with a learning is not flagged, and neither is an avoidance
+    learning ("Prefer avoiding neon") lining up with a ``Never …`` issue — both forbid, so agree.
     """
     other = "issue" if polarity == "learning" else "learning"
-    # When the new entry is the issue, only a prohibiting issue can conflict with any learning.
-    if polarity == "issue" and not _is_prohibition(candidate_title, candidate_body):
+    # A conflict requires the ISSUE side to FORBID what the LEARNING side AFFIRMS. Check the
+    # candidate's own side: a new issue must be a prohibition; a new learning must NOT be one (an
+    # avoidance learning agrees with a prohibiting issue rather than conflicting with it).
+    candidate_is_prohibition = _is_prohibition(candidate_title, candidate_body)
+    if polarity == "issue" and not candidate_is_prohibition:
+        return None
+    if polarity == "learning" and candidate_is_prohibition:
         return None
     scope_phrase = {s.scope: s.phrase for s in index.load_scopes(loc, other)}
     best: IndexedEntry | None = None
@@ -746,8 +761,12 @@ def _find_conflict(
             phrase = scope_phrase.get(entry.scope)
             if phrase is None or cosine(scope_vec, phrase) < config.conflict_similarity:
                 continue
-        # When the new entry is the learning, the existing issue must be a prohibition to conflict.
-        if polarity == "learning" and not _is_prohibition(entry.title, entry.body):
+        # The existing entry's side too: an existing issue must forbid; an existing learning must
+        # affirm (an existing avoidance learning agrees with the new prohibiting issue).
+        entry_is_prohibition = _is_prohibition(entry.title, entry.body)
+        if polarity == "learning" and not entry_is_prohibition:
+            continue
+        if polarity == "issue" and entry_is_prohibition:
             continue
         sim = cosine(candidate_vec, entry.vector)
         if sim >= best_sim:
