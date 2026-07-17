@@ -30,6 +30,10 @@ from .layout import StoreLocation, store_write_lock
 from .markdown import parse_issues, parse_learnings
 
 INDEX_NAME = "index.sqlite"
+# Bumped whenever the derived-row shape changes (independent of the markdown/backend), so an index
+# built by an older schema is treated as stale and rebuilt rather than read with a missing column.
+# v2 added the per-entry ``last_seen`` column (the recency input, §4.4).
+_SCHEMA_VERSION = 2
 
 
 @dataclass
@@ -52,6 +56,9 @@ class IndexedEntry:
     recurrence: int | None
     title: str
     body: str
+    # The recency input (§4.4), ISO date string. None for issues (they don't decay) and for a
+    # learning with no recorded date (defensive — the parser always supplies one).
+    last_seen: str | None
 
 
 def index_path(loc: StoreLocation) -> Path:
@@ -97,6 +104,7 @@ def _fingerprint_of(
     built the rows from, so the stored fingerprint can't advertise fresh over stale vectors.
     """
     hasher = hashlib.sha1()
+    hasher.update(f"v{_SCHEMA_VERSION}\0".encode())
     hasher.update(f"{type(backend).__name__}:{backend.model_id}:{backend.dim}\0".encode())
     for files in (learning_files, issue_files):
         for name, data in files:
@@ -163,7 +171,7 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
 
     dim = backend.dim
     scope_rows: list[tuple[str, str, bytes, bytes]] = []
-    entry_rows: list[tuple[str, str, str, bytes, int | None, str, str]] = []
+    entry_rows: list[tuple[str, str, str, bytes, int | None, str, str, str | None]] = []
 
     _collect(
         "learning", learnings, learn_vecs, learn_phrase, dim, scope_rows, entry_rows
@@ -188,8 +196,9 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
                 scope_rows,
             )
             conn.executemany(
-                "INSERT INTO entries (id, polarity, scope, vector, recurrence, title, body) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO entries "
+                "(id, polarity, scope, vector, recurrence, title, body, last_seen) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 entry_rows,
             )
             conn.execute(
@@ -213,14 +222,24 @@ def _collect(
     phrase_by_scope: dict[str, list[float]],
     dim: int,
     scope_rows: list[tuple[str, str, bytes, bytes]],
-    entry_rows: list[tuple[str, str, str, bytes, int | None, str, str]],
+    entry_rows: list[tuple[str, str, str, bytes, int | None, str, str, str | None]],
 ) -> None:
     by_scope: dict[str, list[list[float]]] = {}
     for entry, vec in zip(entries, entry_vecs, strict=True):
         by_scope.setdefault(entry.scope, []).append(vec)
         recurrence = getattr(entry, "recurrence", None)
+        last_seen = getattr(entry, "last_seen", None)
         entry_rows.append(
-            (entry.id, polarity, entry.scope, _pack(vec), recurrence, entry.title, entry.body)
+            (
+                entry.id,
+                polarity,
+                entry.scope,
+                _pack(vec),
+                recurrence,
+                entry.title,
+                entry.body,
+                last_seen.isoformat() if last_seen is not None else None,
+            )
         )
     for scope, vecs in by_scope.items():
         centroid = _centroid(vecs, dim)
@@ -246,7 +265,8 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             vector     BLOB NOT NULL,
             recurrence INTEGER,
             title      TEXT NOT NULL,
-            body       TEXT NOT NULL
+            body       TEXT NOT NULL,
+            last_seen  TEXT
         );
         """
     )
@@ -305,7 +325,7 @@ def load_entries(loc: StoreLocation, polarity: str) -> list[IndexedEntry]:
     conn = sqlite3.connect(str(index_path(loc)))
     try:
         rows = conn.execute(
-            "SELECT id, polarity, scope, vector, recurrence, title, body "
+            "SELECT id, polarity, scope, vector, recurrence, title, body, last_seen "
             "FROM entries WHERE polarity = ?",
             (polarity,),
         ).fetchall()
@@ -320,6 +340,7 @@ def load_entries(loc: StoreLocation, polarity: str) -> list[IndexedEntry]:
             recurrence=row[4],
             title=row[5],
             body=row[6],
+            last_seen=row[7],
         )
         for row in rows
     ]
