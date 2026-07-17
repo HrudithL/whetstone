@@ -182,7 +182,12 @@ It does **not** re-review automatically when you push follow-up commits.
 @codex review
 ```
 
-On a requested re-review, **Codex posts a pull-request REVIEW** (from `chatgpt-codex-connector[bot]`): a review entry with a `### 💡 Codex Review` body plus any **inline review comments** on the diff — specific findings to address, or a clean note like *"Didn't find any major issues. Delightful!"*. Crucially this arrives on the **pull-request review endpoints**, NOT `issues/<pr>/comments`, and each review records the **`commit_id` it reviewed**. **The completion signal for a re-review is a new bot review whose `commit_id` matches your latest pushed HEAD, NOT a 👍** (it may briefly show a 👀 while working). So after `@codex review`, watch the review endpoints for a review of your newest commit, read the body + inline comments, and address any findings.
+On a requested re-review, `chatgpt-codex-connector[bot]` responds through **one of two channels depending on the outcome**, and **both embed the reviewed commit SHA** — that SHA (matched to your latest HEAD), not a 👍, is the completion signal:
+
+- **Findings** → a **pull-request review** on `pulls/<pr>/reviews` (a `### 💡 Codex Review` body) plus **inline review comments** on the diff, with the review's **`commit_id`** set to the reviewed commit.
+- **Clean** → an **issue comment** on `issues/<pr>/comments` like *"Codex Review: Didn't find any major issues…"* containing a **`Reviewed commit: <sha>`** line. A clean pass does **not** post a `pulls/reviews` entry, so watching only the review endpoint will miss it (and a stale first-pass 👍 may sit on the PR body meanwhile — ignore it).
+
+So after `@codex review`, poll **both** channels for the reviewed-commit SHA equal to your latest HEAD; if it's a `pulls/reviews` entry, read that review's inline comments and address findings; if it's the clean issue comment, the re-review passed.
 
 ### Polling for the signal
 
@@ -191,17 +196,19 @@ The signal is not pushed to you — you must **poll** for it. After the PR opens
 ```sh
 # first pass — reaction on the PR body (look for "+1" / "eyes" by chatgpt-codex-connector[bot]):
 gh api --paginate repos/<owner>/<repo>/issues/<pr-number>/reactions
-# re-review — find the bot REVIEW whose commit_id == your latest HEAD, then read ONLY that review's
-# inline comments (the PR-wide comments list also contains stale findings from earlier passes):
+# re-review, FINDINGS channel — a bot review whose commit_id == your latest HEAD, then that
+# review's own inline comments (the PR-wide list also holds earlier passes' stale findings):
 gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews   # pick user==bot AND commit_id==HEAD -> review_id
 gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews/<review_id>/comments   # this review's findings
+# re-review, CLEAN channel — a bot issue comment whose "Reviewed commit:" line == your latest HEAD:
+gh api --paginate repos/<owner>/<repo>/issues/<pr-number>/comments   # look for "Didn't find any major issues" + Reviewed commit
 ```
 
-Read only the inline comments belonging to the matched review (via `pulls/<pr>/reviews/<review_id>/comments`, or by filtering the PR-wide `pulls/<pr>/comments` to `commit_id == HEAD`). The PR-wide list keeps every earlier pass's comments, so treating all of them as "the fresh review" makes you re-address already-fixed findings or read a clean re-review as still failing.
+A re-review is complete when the reviewed-commit SHA equals your latest HEAD in **either** channel. Read only the inline comments of the matched review (via `pulls/<pr>/reviews/<review_id>/comments`, or by filtering PR-wide `pulls/<pr>/comments` to `commit_id == HEAD`); the PR-wide list keeps every earlier pass's comments, so treating all of them as "the fresh review" makes you re-address already-fixed findings.
 
 Poll on a **modest cadence (~every 30s) within a bounded window (~15–20 min)**, ideally as a background loop that exits the moment the signal appears. Two distinct gates use different bars:
 
-- **To begin the FIX pass** — proceed once the **full CI run has completed (green OR red)** *and* the review signal is in (first-pass 👍 on the PR body / any 👀 resolved; or a fresh bot review whose `commit_id` matches your latest commit). You need CI *finished*, not passing, so you can collect and fix its failures. Match the review on `commit_id`, not merely "a review exists" — an older review of a prior commit is stale.
+- **To begin the FIX pass** — proceed once the **full CI run has completed (green OR red)** *and* the review signal is in (first-pass 👍 on the PR body / any 👀 resolved; or a re-review referencing your latest commit — a `pulls/reviews` entry with findings, or the clean issue comment). You need CI *finished*, not passing, so you can collect and fix its failures. Match on the **reviewed-commit SHA**, not merely "a review exists" — a review of a prior commit is stale.
 - **To MERGE up** — CI must be **fully green** (all jobs) in addition to a clean review signal (see [§7](#7-phase-6--merging-up-the-tree)).
 
 Re-request **at most once per round of fixes**. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), Codex has opted out — the agent MUST NOT invent a substitute; it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
