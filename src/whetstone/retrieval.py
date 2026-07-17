@@ -14,6 +14,7 @@ Given the model's *elaborated intent* (never the raw prompt — that closes the 
 
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
@@ -159,10 +160,17 @@ def retrieve(
 
     query = backend.embed([intent])[0]
 
-    learning_scopes = index.load_scopes(loc, "learning")
-    issue_scopes = index.load_scopes(loc, "issue")
-    learnings = index.load_entries(loc, "learning")
-    issues = index.load_entries(loc, "issue")
+    # All four reads share ONE open connection so a concurrent capture/revise index rebuild (atomic
+    # os.replace) can't straddle them — the open handle keeps reading its snapshot's inode, so every
+    # query sees a single consistent index version rather than a mix of pre-/post-rebuild rows.
+    conn = sqlite3.connect(str(index.index_path(loc)))
+    try:
+        learning_scopes = index.load_scopes(loc, "learning", conn)
+        issue_scopes = index.load_scopes(loc, "issue", conn)
+        learnings = index.load_entries(loc, "learning", conn)
+        issues = index.load_entries(loc, "issue", conn)
+    finally:
+        conn.close()
 
     matched_learning = _matched_scopes(query, learning_scopes, config.learnings_cutoff)
     matched_issue = _matched_scopes(query, issue_scopes, config.issues_cutoff)
