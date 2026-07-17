@@ -35,6 +35,12 @@ class Config:
     embedding_backend: str = "hashing"
     # Vector width for the hashing backend (ignored by sentence-transformers, whose model fixes it).
     embedding_dim: int = 384
+    # All similarity thresholds below (cutoffs, dedup, conflict, scope-merge ε) are tuned for the
+    # **sentence-transformers backend** — the intended production embedder. The default `hashing`
+    # backend is a light, offline stand-in with weaker semantic resolution, so similar/opposed
+    # phrases score lower under it and these thresholds fire less readily; install the
+    # `[embeddings]` extra for real retrieval/dedup/conflict quality.
+    #
     # Retrieval cutoffs (§5.4). PROVISIONAL / UNCALIBRATED defaults: the real values come from
     # calibration against a labeled (elaborated-intent -> relevant-scopes) set (future work). Issues
     # use the lower cutoff on purpose — erring toward including a mandatory "don't do X" is cheap.
