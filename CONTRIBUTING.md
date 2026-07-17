@@ -224,7 +224,7 @@ For each Codex comment, apply the [§10.1](#101-when-to-decide-vs-ask) test:
 3. **Decline what would overcomplicate.** A suggestion that adds scope, abstraction, or infrastructure beyond what the spec needs may be declined or deferred — briefly note why on the PR. Keeping it simple (§1) outranks satisfying every suggestion.
 4. Repeat until Codex issues a clean/approving pass **and** any genuinely-escalated fork has a human answer.
 
-The PR is only eligible to merge up when **both** are true: a **clean Codex review signal** for your latest commit (a first-pass 👍 on the PR body, or a clean requested re-review whose `commit_id` matches HEAD — NOT necessarily a 👍, since re-reviews signal via a comment) AND any escalated forks resolved by the human.
+The PR is only eligible to merge up when **both** are true: a **clean Codex review signal** for your latest commit (a first-pass 👍 on the PR body, or a clean requested re-review — the `issues/<pr>/comments` note whose `Reviewed commit` SHA equals HEAD — NOT necessarily a 👍, since a clean re-review signals via that comment and posts no `pulls/reviews` entry) AND any escalated forks resolved by the human.
 
 ---
 
@@ -339,7 +339,7 @@ Per slice:
 
 Per PR:
 - [ ] Waited for the **entire CI run** (completed, green or red) AND the **entire Codex review** to finish before making any fix — no reacting to partial signals.
-- [ ] Detected the pass-aware Codex signal: first-pass 👍 on the PR body, or (after `@codex review`) a fresh bot review whose `commit_id` matches HEAD.
+- [ ] Detected the pass-aware Codex signal for HEAD: first-pass 👍 on the PR body, or (after `@codex review`) a re-review referencing HEAD — a findings review (`pulls/reviews` `commit_id`) or the clean issue comment (`Reviewed commit` SHA).
 - [ ] If no Codex signal appeared, asked the human how to proceed.
 - [ ] Made the reasonable fixes at own discretion; declined/deferred anything that would overcomplicate (noted why).
 - [ ] Escalated only genuine forks (multiple reasonable implementations, or a §10 decision); recorded the human's answer.
