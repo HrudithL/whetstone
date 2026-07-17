@@ -10,13 +10,14 @@ from .markdown import (
     write_issues,
     write_learnings,
 )
-from .slug import base_slug, scope_filename
+from .slug import base_slug, safe_component, scope_filename
 
 __all__ = [
     "IssueEntry",
     "LearningEntry",
     "MarkdownParseError",
     "base_slug",
+    "safe_component",
     "scope_filename",
     "parse_issues",
     "parse_learnings",

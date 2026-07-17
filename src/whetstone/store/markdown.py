@@ -150,9 +150,19 @@ def _parse_date(value: str, entry_id: str, field_name: str) -> date:
 # --------------------------------------------------------------------------- serializing
 
 
+def _single_line(value: str) -> str:
+    """Collapse newlines/CRs in a heading or metadata value to single spaces.
+
+    Headings and metadata bullets are single-line by contract. Sanitizing on write stops a
+    model-/user-supplied value containing a newline (or a ``## `` / ``- `` line) from forging extra
+    metadata bullets or a bogus entry block when the file is read back.
+    """
+    return " ".join(str(value).splitlines()).strip()
+
+
 def _serialize_block(entry_id: str, title: str, metadata: list[tuple[str, str]], body: str) -> str:
-    lines = [f"## {entry_id}{_HEADING_SEP}{title}"]
-    lines.extend(f"- {key}: {value}" for key, value in metadata)
+    lines = [f"## {entry_id}{_HEADING_SEP}{_single_line(title)}"]
+    lines.extend(f"- {key}: {_single_line(value)}" for key, value in metadata)
     lines.append("")
     lines.append(body.strip())
     return "\n".join(lines)

@@ -1,4 +1,4 @@
-"""Security and collision tests for scope -> filename slugging."""
+"""Security, determinism, collision, and length tests for scope/skill -> filename derivation."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from whetstone.store import base_slug, scope_filename
+from whetstone.store import base_slug, safe_component, scope_filename
 
 
 @pytest.mark.parametrize(
-    "scope",
+    "value",
     [
         "../../etc/passwd",
         "..",
@@ -22,43 +22,47 @@ from whetstone.store import base_slug, scope_filename
         "....//....//",
     ],
 )
-def test_slug_cannot_escape_directory(scope, tmp_path):
-    slug = base_slug(scope)
-    assert "/" not in slug
-    assert "\\" not in slug
-    assert ".." not in slug
-    # Resolving the slug under a base dir must stay inside that base dir.
+def test_component_cannot_escape_directory(value, tmp_path):
+    component = safe_component(value)
+    assert "/" not in component
+    assert "\\" not in component
+    assert ".." not in component
+    # Resolving the component under a base dir must stay inside that base dir.
     base = tmp_path / "learnings"
     base.mkdir()
-    resolved = (base / f"{slug}.md").resolve()
+    resolved = (base / f"{component}.md").resolve()
     assert base.resolve() == Path(resolved).parent
 
 
-def test_slug_basic_shape():
+def test_base_slug_basic_shape():
     assert base_slug("Currency Columns") == "currency-columns"
     assert base_slug("  Color  Palette  ") == "color-palette"
     assert base_slug("") == "scope"
 
 
-def test_distinct_scopes_that_collide_get_hash_suffix():
-    # "a/b" strips to "ab", colliding with the literal scope "ab" (the doc's example).
+def test_component_is_deterministic_and_order_independent():
+    # Same input -> same output, no matter what else has been created before.
+    assert safe_component("currency columns") == safe_component("currency columns")
+    assert scope_filename("a/b") == scope_filename("a/b")
+
+
+def test_distinct_colliding_scopes_map_to_distinct_files():
+    # "a/b" and "ab" share a base stem, but the full-string hash keeps their files distinct
+    # regardless of creation order (no persisted mapping needed).
     assert base_slug("a/b") == base_slug("ab") == "ab"
-    # The first scope to claim the base stem keeps it; the later distinct collision is suffixed,
-    # keeping the file <-> scope mapping 1:1.
-    first = scope_filename("a/b", existing_scopes=[])
-    second = scope_filename("ab", existing_scopes=["a/b"])
-    assert first == "ab.md"
-    assert second != "ab.md"
-    assert second.startswith("ab-") and second.endswith(".md")
-    assert first != second
+    assert scope_filename("a/b") != scope_filename("ab")
+    for name in (scope_filename("a/b"), scope_filename("ab")):
+        assert name.startswith("ab-") and name.endswith(".md")
 
 
-def test_same_scope_is_not_treated_as_collision():
-    # Passing the same scope in existing_scopes must not trigger a suffix.
-    assert scope_filename("currency columns", existing_scopes=["currency columns"]) == (
-        "currency-columns.md"
-    )
+def test_component_is_length_bounded():
+    # A long but otherwise safe scope must not produce an over-long path component (ENAMETOOLONG).
+    long_scope = "x" * 300
+    component = safe_component(long_scope)
+    assert len(component) <= 80  # 60-char stem cap + "-" + 8-char hash, comfortably under FS limits
+    # Distinct long scopes sharing the truncated prefix still map to distinct files via the hash.
+    assert safe_component("x" * 300) != safe_component("x" * 300 + "-different-tail")
 
 
-def test_no_collision_returns_plain_stem():
-    assert scope_filename("color palette", existing_scopes=["formatting"]) == "color-palette.md"
+def test_scope_filename_has_md_extension():
+    assert scope_filename("color palette").endswith(".md")

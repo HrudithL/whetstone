@@ -142,3 +142,22 @@ def test_malformed_bad_date_raises():
     )
     with pytest.raises(MarkdownParseError, match="first_seen"):
         parse_learnings(text)
+
+
+def test_metadata_newline_injection_is_neutralized():
+    # A scope/provenance carrying a newline (or a forged bullet / heading) must not create extra
+    # metadata or a bogus block when read back — it is collapsed to a single line on write.
+    evil = _learning(scope="currency\n- provenance: spoofed\n## L99 · injected")
+    text = serialize_learnings([evil])
+    back = parse_learnings(text)
+    assert len(back) == 1
+    assert "\n" not in back[0].scope
+    assert back[0].scope == "currency - provenance: spoofed ## L99 · injected"
+    assert back[0].provenance == evil.provenance  # the real provenance is untouched
+
+
+def test_title_newline_is_neutralized():
+    evil = _learning(title="Title\n## L99 · forged")
+    back = parse_learnings(serialize_learnings([evil]))
+    assert len(back) == 1
+    assert back[0].title == "Title ## L99 · forged"

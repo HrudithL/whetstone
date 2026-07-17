@@ -62,13 +62,13 @@ def test_skill_slug_isolates_store_dir(cfg):
 def test_attach_returns_summary_and_registers(cfg):
     summary = attach_skill("great-tables", skill_path="/skills/great-tables", config=cfg)
     assert summary["skill"] == "great-tables"
-    assert summary["slug"] == "great-tables"
+    assert summary["slug"].startswith("great-tables-")
     assert summary["created"] is True
     assert summary["status"] == "attached"
 
     registry = read_registry(cfg)
     assert "great-tables" in registry
-    assert registry["great-tables"]["slug"] == "great-tables"
+    assert registry["great-tables"]["slug"].startswith("great-tables-")
     assert registry["great-tables"]["skill_path"] == "/skills/great-tables"
     assert "attached_at" in registry["great-tables"]
 

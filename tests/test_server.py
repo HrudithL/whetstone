@@ -20,7 +20,8 @@ def test_attach_tool_creates_a_git_backed_store(tmp_path, monkeypatch):
     result = attach("great-tables", path="/skills/great-tables")
 
     assert result["status"] == "attached"
-    store = tmp_path / "great-tables"
+    store = tmp_path / result["slug"]  # slug is bounded + hash-suffixed for collision safety
+    assert store.parent == tmp_path
     assert (store / "learnings").is_dir()
     assert (store / "issues").is_dir()
     assert (store / ".git").is_dir()

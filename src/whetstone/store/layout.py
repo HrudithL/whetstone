@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..config import Config, load_config
-from .slug import base_slug
+from .slug import safe_component
 
 _REGISTRY_NAME = "registry.json"
 # Commit identity + settings applied per-command so a store commit never depends on (or mutates)
@@ -60,8 +60,12 @@ def resolve_store_root(config: Config | None = None) -> Path:
 
 
 def skill_slug(skill: str) -> str:
-    """Slug a skill name to a safe single directory component (reuses the scope slugger)."""
-    return base_slug(skill)
+    """A safe, bounded, collision-free directory component for a skill name.
+
+    Uses :func:`safe_component` so two distinct skill names (e.g. ``a/b`` and ``ab``, or many
+    non-ASCII names) can never resolve to the same store directory.
+    """
+    return safe_component(skill)
 
 
 def store_location(skill: str, config: Config | None = None) -> StoreLocation:
