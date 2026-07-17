@@ -25,6 +25,18 @@ _HYPHENS = re.compile(r"-{2,}")
 _MAX_STEM = 60  # readable portion cap; final component stays well under filesystem limits
 
 
+def normalize_scope(scope: str) -> str:
+    """Canonical form of a scope phrase: strip ends and collapse internal whitespace/newlines to
+    single spaces.
+
+    Applied at the tool boundary so the SAME string is used for the filename hash, the stored
+    ``scope:`` field, and the dedup embedding. Without it, a scope with stray whitespace/newlines
+    would hash to one filename while the markdown writer stored a normalized ``scope:`` — a later
+    lookup with the clean scope would compute a different filename and miss the entry.
+    """
+    return " ".join(scope.split())
+
+
 def base_slug(value: str) -> str:
     """Readable, bounded, single safe component (no extension, no separators, no ``..``)."""
     s = value.strip().lower()
