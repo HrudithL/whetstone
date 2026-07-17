@@ -1,8 +1,10 @@
 """The Whetstone MCP server.
 
 Milestone M1 adds the in-loop pair to M0's ``attach``: ``recall`` (embedding scope retrieval over
-the markdown store) and ``capture`` (distill feedback into a scoped, deduped, committed entry). The
-still-to-come ``revise``/``metrics`` tools land in M2. ``main()`` runs the server over stdio.
+the markdown store) and ``capture`` (distill feedback into a scoped, deduped, committed entry).
+Milestone M2a adds the measurement layer: recall/capture append to ``events.jsonl`` and the
+out-of-band ``metrics`` tool reports the §11 KPIs. The still-to-come ``revise`` tool lands in M2b.
+``main()`` runs the server over stdio.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 
 from .config import load_config
 from .embeddings import cosine, get_backend
+from .metrics import compute_metrics
 from .retrieval import retrieve
 from .store import index
 from .store.access import (
@@ -30,9 +33,11 @@ from .store.layout import (
     attach_skill,
     commit_store,
     ensure_store,
+    read_registry,
     store_location,
     store_write_lock,
 )
+from .telemetry import emit_capture, emit_recall
 
 mcp = FastMCP("whetstone")
 
@@ -91,9 +96,13 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     index.ensure_index(loc, backend)
 
     learnings, issues = retrieve(loc, intent, backend, config, learnings_k)
+    run_id = _new_run_id()
+    # Append the per-run event (§5.2, §11): the ids returned are the only per-run denominator for
+    # application-rate metrics, since a run the user simply accepts produces no follow-up capture.
+    emit_recall(loc, run_id, intent, [x.id for x in learnings], [x.id for x in issues])
     return {
         "skill": skill,
-        "run_id": _new_run_id(),
+        "run_id": run_id,
         "learnings": [asdict(x) for x in learnings],
         "issues": [asdict(x) for x in issues],
         "how_to_use": _HOW_TO_USE,
@@ -154,6 +163,7 @@ def capture(
                 commit_store(
                     loc, f"capture: reinforce {updated.id} (recurrence {updated.recurrence})"
                 )
+                emit_capture(loc, run_id, updated.id, polarity, "reinforced")
                 return {
                     "status": "reinforced",
                     "entry_id": updated.id,
@@ -176,10 +186,12 @@ def capture(
             )
             index.rebuild_index(loc, backend)
             commit_store(loc, f"capture: add {entry_id} ({scope})")
+            emit_capture(loc, run_id, entry_id, polarity, "committed")
             return {"status": "committed", "entry_id": entry_id, "recurrence": 1}
 
         # polarity == "issue"
         if duplicate is not None:
+            emit_capture(loc, run_id, duplicate.id, polarity, "noop")
             return {"status": "noop", "entry_id": duplicate.id}
         entry_id = next_id(loc, "issue")
         save_issue(
@@ -194,7 +206,33 @@ def capture(
         )
         index.rebuild_index(loc, backend)
         commit_store(loc, f"capture: add {entry_id} ({scope})")
+        emit_capture(loc, run_id, entry_id, polarity, "committed")
         return {"status": "committed", "entry_id": entry_id, "recurrence": None}
+
+
+@mcp.tool()
+def metrics(skill: str | None = None) -> dict:
+    """Reporting only — never call during normal work.
+
+    Computes the §11 KPIs for the dashboard from each store's ``events.jsonl`` and current state:
+    runs, average learnings-applied-per-run, capture counts by status, a repeat-correction proxy
+    (reinforcement rate — the "money metric"), and %-survived. KPIs that need a known denominator or
+    a labeled/calibration set — capture-rate, regressions-prevented, retrieval-precision — are
+    returned as ``{"value": null, "note": ...}`` (they are computed only by the M3 showcase harness,
+    never faked).
+
+    Pass ``skill`` for one skill's report; omit it to report every attached skill under ``skills``.
+    """
+    config = load_config()
+    if skill is not None:
+        loc = store_location(skill, config)
+        return {"skill": skill, **compute_metrics(loc)}
+    return {
+        "skills": {
+            name: compute_metrics(store_location(name, config))
+            for name in sorted(read_registry(config))
+        }
+    }
 
 
 # --------------------------------------------------------------------------- helpers

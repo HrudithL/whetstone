@@ -8,10 +8,10 @@ import subprocess
 from whetstone.server import attach, mcp
 
 
-def test_m1_tools_are_registered_on_the_server():
+def test_tools_are_registered_on_the_server():
     names = [t.name for t in asyncio.run(mcp.list_tools())]
-    # M0's attach plus the M1 recall/capture loop. (revise/metrics arrive in M2.)
-    assert set(names) == {"attach", "recall", "capture"}
+    # M0's attach, the M1 recall/capture loop, and M2a's out-of-band metrics. (revise: M2b.)
+    assert set(names) == {"attach", "recall", "capture", "metrics"}
 
 
 def test_attach_tool_creates_a_git_backed_store(tmp_path, monkeypatch):
