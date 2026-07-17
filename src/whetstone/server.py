@@ -210,14 +210,17 @@ def capture(
             return {"status": "committed", "entry_id": entry_id, "recurrence": 1}
 
         # polarity == "issue"
-        if duplicate is not None:
-            emit_capture(loc, run_id, duplicate.id, polarity, "noop")
-            return {"status": "noop", "entry_id": duplicate.id}
+        # Cross-polarity conflict is checked BEFORE same-polarity dedup: a new prohibiting "Never X"
+        # issue must surface its conflict with an existing "X" learning rather than be silently
+        # nooped against a similar (aligned) "Always X" issue (§7).
         conflict = _find_conflict(
             loc, "issue", scope, title, body, candidate_vec, scope_vec, config
         )
         if conflict is not None:
             return _conflict_result(loc, run_id, "issue", conflict)
+        if duplicate is not None:
+            emit_capture(loc, run_id, duplicate.id, polarity, "noop")
+            return {"status": "noop", "entry_id": duplicate.id}
         if _supervised_hold(config, confirm):
             return _needs_confirmation(
                 None,
@@ -338,10 +341,16 @@ def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, conf
     ``confirm:"promote"``/``"keep"`` answer a prior threshold prompt (the +1 already committed), so
     they resolve the promotion without bumping again."""
     if confirm == "promote":
-        if find_learning(loc, entry_id) is None:
+        current = find_learning(loc, entry_id)
+        if current is None:
             _reject_missing_learning(loc, entry_id, "promote")
-        return _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id)
-    if confirm == "keep":
+        # Only honor a "promote" answer when a threshold prompt was actually pending (recurrence has
+        # reached the threshold). Otherwise `revise(action="reinforce", confirm="promote")` on a
+        # low-recurrence learning would bypass promote's always-confirm; fall through to a normal
+        # reinforce instead (an explicit promotion must use `action="promote"`).
+        if current.recurrence >= config.promotion_threshold:
+            return _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id)
+    elif confirm == "keep":
         current = find_learning(loc, entry_id)
         if current is None:
             _reject_missing_learning(loc, entry_id, "reinforce")
@@ -386,9 +395,19 @@ def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
             )
         raise ValueError(f"no entry with id {entry_id!r}")
 
-    # Answers to a prior below-0 prompt (only reachable once recurrence has bottomed out).
+    # Answers to a prior below-0 prompt. Guard against a STALE answer: the prompt was issued at the
+    # bottom (recurrence 0). If a concurrent call reinforced the learning since (recurrence > 0),
+    # the user is answering about a learning that has since been reinstated — do not delete/reset
+    # it; report the current state and let the caller re-issue.
+    if confirm in ("keep", "remove"):
+        if learning.recurrence > 0:
+            return {"status": "unchanged", "entry_id": entry_id, "recurrence": learning.recurrence}
     if confirm == "keep":
+        # A conflict-resolution "keep with rewording" updates the prose too; validate up front.
+        prose = _prepare_prose(entry_id, learning, body, scope)
         set_learning_recurrence(loc, entry_id, 1)
+        if prose is not None:
+            update_learning_prose(loc, entry_id, **prose)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: keep {entry_id} (recurrence 1)")
         emit_revise(loc, run_id, entry_id, "weaken", "revised")
@@ -626,10 +645,12 @@ def _supervised_hold(config: Config, confirm: bool | str) -> bool:
     """Whether the supervision dial (§9) must gate this routine change before it commits.
 
     Only ``supervised`` mode holds; ``balanced``/``autonomous`` commit routine changes silently.
-    Promotion and issue-contradiction removals prompt independently of this gate (§6), so they never
-    route through here.
+    Approval must be EXPLICIT: only the boolean ``True`` releases the hold. A non-empty confirm
+    string (e.g. ``"cancel"``/``"no"``) is NOT assent — any prompt-specific accepted choice is
+    recognized by the calling branch before it reaches this gate, so here anything other than
+    ``True`` keeps the hold. Promotion and issue-contradiction removals prompt independently (§6).
     """
-    return config.supervision == "supervised" and not _confirmed(confirm)
+    return config.supervision == "supervised" and confirm is not True
 
 
 def _needs_confirmation(entry_id: str | None, prompt: str) -> dict:

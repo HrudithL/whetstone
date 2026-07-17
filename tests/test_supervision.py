@@ -108,3 +108,14 @@ def test_learning_remove_follows_the_dial(store, config, monkeypatch, mode):
         assert find_learning(store, "L1") is not None
     else:
         assert result == {"status": "removed", "entry_id": "L1"}
+
+
+def test_supervised_confirm_cancel_does_not_perform_the_mutation(store, config, monkeypatch):
+    # A non-empty confirm string is NOT blanket assent — a supervised remove with confirm:"cancel"
+    # must still hold, not proceed. Only confirm:true releases the supervision gate.
+    monkeypatch.setenv("WHETSTONE_SUPERVISION", "supervised")
+    _clean_seed(store, learnings=[make_learning("L1", "Prefer muted palettes.", "color")])
+
+    result = revise("gt", "L1", "remove", confirm="cancel")
+    assert result["status"] == "needs_confirmation"
+    assert find_learning(store, "L1") is not None  # not removed

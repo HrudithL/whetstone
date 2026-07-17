@@ -138,6 +138,20 @@ def test_reinforce_confirm_keep_stays_a_learning(store, config, monkeypatch, fix
     assert find_learning(store, "L1").recurrence == 4
 
 
+def test_reinforce_confirm_promote_below_threshold_does_not_promote(store, config, monkeypatch):
+    # confirm:"promote" is only valid when a threshold prompt was pending. On a low-recurrence
+    # learning it must NOT bypass promote's always-confirm — it falls through to a normal reinforce.
+    monkeypatch.setenv("WHETSTONE_PROMOTION_THRESHOLD", "4")
+    _clean_seed(store, learnings=[_muted("L1", 1)])
+
+    result = revise("gt", "L1", "reinforce", confirm="promote")
+
+    assert result["status"] == "reinforced"  # a normal reinforce, not a promotion
+    assert result["recurrence"] == 2
+    assert find_learning(store, "L1") is not None  # still a learning
+    assert find_issue(store, "I1") is None  # nothing promoted
+
+
 def test_reinforce_on_an_issue_id_is_rejected(store, config):
     _clean_seed(store, issues=[make_issue("I1", "Never use neon.", "color")])
     with pytest.raises(ValueError, match="learnings"):
@@ -239,6 +253,36 @@ def test_weaken_below_zero_confirm_remove_deletes(store, config):
     removed = revise("gt", "L1", "weaken", confirm="remove")
     assert removed == {"status": "removed", "entry_id": "L1"}
     assert find_learning(store, "L1") is None
+
+
+def test_weaken_below_zero_keep_applies_rewording(store, config):
+    _clean_seed(store, learnings=[_muted("L1", 0)])
+    revise("gt", "L1", "weaken")  # below-0 prompt
+
+    kept = revise(
+        "gt", "L1", "weaken", confirm="keep",
+        body="Muted palettes only when no brand color is set.", scope="theme",
+    )
+    assert kept == {"status": "revised", "entry_id": "L1", "recurrence": 1}
+    entry = find_learning(store, "L1")
+    assert entry.body == "Muted palettes only when no brand color is set."  # reworded survivor
+    assert entry.scope == "theme"
+
+
+def test_stale_below_zero_confirm_after_reinforce_is_ignored(store, config):
+    # The below-0 prompt fires at recurrence 0. If a concurrent reinforce reinstates the learning
+    # before the confirm arrives, the stale keep/remove answer must NOT delete or reset it.
+    _clean_seed(store, learnings=[_muted("L1", 0)])
+    revise("gt", "L1", "weaken")  # below-0 prompt issued at recurrence 0
+    revise("gt", "L1", "reinforce")  # concurrent reinstatement -> recurrence 1
+
+    stale_remove = revise("gt", "L1", "weaken", confirm="remove")
+    assert stale_remove == {"status": "unchanged", "entry_id": "L1", "recurrence": 1}
+    assert find_learning(store, "L1") is not None  # not deleted
+
+    stale_keep = revise("gt", "L1", "weaken", confirm="keep")
+    assert stale_keep == {"status": "unchanged", "entry_id": "L1", "recurrence": 1}
+    assert find_learning(store, "L1").recurrence == 1  # not reset to 1 by the stale answer
 
 
 # --------------------------------------------------------------------------- remove

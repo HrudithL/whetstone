@@ -159,3 +159,19 @@ def test_new_prohibition_issue_conflicts_but_aligned_mandate_does_not(env):
     )
     assert forbidding["status"] == "conflict"
     assert forbidding["conflict"]["with_id"] == "L1"
+
+
+def test_conflict_wins_over_same_polarity_issue_dedup_noop(env, monkeypatch):
+    # A prohibiting "Never X" issue that is a near-duplicate of an aligned "Always X" issue must
+    # surface its conflict with an existing "X" learning, not be silently nooped by dedup. Lowering
+    # the dedup cutoff makes the Always/Never pair a dedup candidate, so this fails without the
+    # conflict-before-dedup ordering.
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
+    capture("gt", "learning", "Right-align the currency columns.", "currency columns", "prov")
+    capture("gt", "issue", "Always right-align the currency columns.", "currency columns", "prov")
+
+    forbidding = capture(
+        "gt", "issue", "Never right-align the currency columns.", "currency columns", "prov"
+    )
+    assert forbidding["status"] == "conflict"  # not "noop"
+    assert forbidding["conflict"]["with_id"] == "L1"
