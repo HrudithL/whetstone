@@ -51,6 +51,15 @@ class Config:
     promotion_threshold: int = 4
     # Recurrence a demoted issue-turned-learning is seeded with (§5.2 `revise` demote).
     demote_seed_recurrence: int = 3
+    # Compaction thresholds (§7, §5.4, §15). All PROVISIONAL / UNCALIBRATED — like the retrieval
+    # cutoffs, the real values come from calibration (future work).
+    # A learning whose derived §4.4 weight (at compaction time) falls below this is retired (§15).
+    # Issues are NEVER auto-retired (§7).
+    retire_weight_threshold: float = 0.15
+    # Two same-polarity scopes are merged (anti-fragmentation, §5.4) when their centroids are within
+    # ε_c (cosine >= this) OR their name/phrase embeddings are within ε_n (cosine >= this).
+    scope_merge_centroid_eps: float = 0.9
+    scope_merge_name_eps: float = 0.9
     store_root: Path = field(default_factory=default_store_root)
 
     def __post_init__(self) -> None:
@@ -97,6 +106,9 @@ _FIELD_TYPES: dict[str, type] = {
     "conflict_similarity": float,
     "promotion_threshold": int,
     "demote_seed_recurrence": int,
+    "retire_weight_threshold": float,
+    "scope_merge_centroid_eps": float,
+    "scope_merge_name_eps": float,
     "store_root": Path,
 }
 
