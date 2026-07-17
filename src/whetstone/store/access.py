@@ -22,7 +22,7 @@ from .markdown import (
     write_issues,
     write_learnings,
 )
-from .slug import scope_filename
+from .slug import normalize_scope, scope_filename
 
 _MAX_TITLE = 60
 # Git-tracked, per-store monotonic id counters. Persisting the NEXT number to mint per polarity
@@ -137,6 +137,7 @@ def record_id(loc: StoreLocation, entry_id: str) -> None:
 
 def save_learning(loc: StoreLocation, entry: LearningEntry) -> None:
     """Insert or replace ``entry`` in its scope file (matched by id), leaving siblings intact."""
+    entry = replace(entry, scope=normalize_scope(entry.scope))  # filename hash == stored scope
     path = loc.learnings_dir / scope_filename(entry.scope)
     existing = parse_learnings(path.read_text(encoding="utf-8")) if path.exists() else []
     existing = [e for e in existing if e.id != entry.id]
@@ -146,6 +147,7 @@ def save_learning(loc: StoreLocation, entry: LearningEntry) -> None:
 
 def save_issue(loc: StoreLocation, entry: IssueEntry) -> None:
     """Insert or replace ``entry`` in its scope file (matched by id), leaving siblings intact."""
+    entry = replace(entry, scope=normalize_scope(entry.scope))  # filename hash == stored scope
     path = loc.issues_dir / scope_filename(entry.scope)
     existing = parse_issues(path.read_text(encoding="utf-8")) if path.exists() else []
     existing = [e for e in existing if e.id != entry.id]
@@ -214,6 +216,7 @@ def update_learning_prose(
     current = find_learning(loc, entry_id)
     if current is None:
         raise KeyError(f"no learning with id {entry_id!r}")
+    scope = normalize_scope(scope)  # so the scope-move check compares canonical forms
     updated = replace(current, title=title, body=body, scope=scope)
     if scope != current.scope:
         remove_entry(loc, entry_id)
