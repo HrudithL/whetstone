@@ -51,6 +51,7 @@ from .store.layout import (
     store_write_lock,
 )
 from .store.markdown import validate_body
+from .store.slug import normalize_scope
 from .telemetry import emit_capture, emit_recall, emit_revise
 
 mcp = FastMCP("whetstone")
@@ -159,6 +160,7 @@ def capture(
     if polarity not in ("learning", "issue"):
         raise ValueError(f"polarity must be 'learning' or 'issue', got {polarity!r}")
 
+    scope = normalize_scope(scope)  # same string for filename hash, stored scope, and embedding
     title = _title_from_body(body)
 
     config = load_config()
@@ -317,6 +319,8 @@ def revise(
             "action must be one of reinforce|weaken|remove|promote|demote, "
             f"got {action!r}"
         )
+    if scope is not None:
+        scope = normalize_scope(scope)  # keep reworded scope consistent with filename + storage
     config = load_config()
     ensure_store(skill, config)
     loc = store_location(skill, config)
@@ -610,7 +614,7 @@ def _today():
 
 
 def _new_run_id() -> str:
-    return f"r-{_today().isoformat()}-{secrets.token_hex(2)}"
+    return f"r-{_today().isoformat()}-{secrets.token_hex(8)}"
 
 
 def _title_from_body(body: str) -> str:

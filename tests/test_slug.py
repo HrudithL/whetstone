@@ -66,3 +66,13 @@ def test_component_is_length_bounded():
 
 def test_scope_filename_has_md_extension():
     assert scope_filename("color palette").endswith(".md")
+
+
+def test_normalize_scope_collapses_whitespace():
+    from whetstone.store.slug import normalize_scope
+
+    assert normalize_scope("  currency \n columns ") == "currency columns"
+    assert normalize_scope("color\t\tpalette") == "color palette"
+    # A normalized scope and its clean form must map to the same file.
+    messy = normalize_scope("  currency  columns ")
+    assert scope_filename(messy) == scope_filename("currency columns")

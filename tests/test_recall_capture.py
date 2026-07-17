@@ -212,3 +212,31 @@ def test_recall_honors_configured_learnings_k(env, monkeypatch):
     # No explicit learnings_k -> the configured default (3) applies, not the old hard-coded 12.
     result = recall("gt", "styling a table well")
     assert len(result["learnings"]) == 3
+
+
+def test_capture_normalizes_scope_for_consistent_files(env, monkeypatch):
+    # A messy scope (stray whitespace/newlines) must store + file under the SAME canonical form as
+    # its clean version, so a follow-up capture dedups against it instead of forking a new file.
+    from whetstone.server import capture
+    from whetstone.store.access import load_learnings
+    from whetstone.store.layout import store_location
+
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
+    r1 = capture("gt", "learning", "Right-align currency columns.", "  currency \n columns ", "p")
+    r2 = capture(
+        "gt", "learning", "Right-align the currency columns please.", "currency columns", "p"
+    )
+    assert r1["status"] == "committed"
+    assert r2["status"] == "reinforced"  # matched the same normalized scope + near-dup body
+    learnings = load_learnings(store_location("gt"))
+    assert all(le.scope == "currency columns" for le in learnings)  # stored normalized
+    # Exactly one learnings file (no fork from the messy scope).
+    assert len(list(store_location("gt").learnings_dir.glob("*.md"))) == 1
+
+
+def test_run_id_has_high_entropy(env):
+    from whetstone.server import recall
+
+    run_id = recall("gt", "styling a table")["run_id"]
+    suffix = run_id.rsplit("-", 1)[-1]
+    assert len(suffix) == 16  # 64-bit token_hex(8), not the old 4-char/16-bit suffix
