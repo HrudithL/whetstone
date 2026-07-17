@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Cancel superseded runs on the same ref so only the latest push is validated.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast, deterministic job on the default `hashing` backend — no torch, no network. Runs on every
+  # push and is the primary signal. Excludes the sentence-transformers calibration tests.
+  test:
+    name: test (hashing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install (base + dev)
+        run: pip install -e '.[dev]'
+      - name: Lint
+        run: ruff check .
+      - name: Test (hashing backend)
+        run: pytest -m "not embeddings" -q
+
+  # Separate job on the real sentence-transformers backend: verifies the semantic behavior
+  # (dedup-by-paraphrase, conflict detection, retrieval relevance) that the thresholds are
+  # calibrated for. Heavier (installs torch, downloads the model) so pip + the Hugging Face model
+  # cache keep warm runs fast; it never gates the fast `test` job above.
+  test-embeddings:
+    name: test (sentence-transformers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Cache the sentence-transformers model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-all-MiniLM-L6-v2
+      - name: Install (base + dev + embeddings)
+        run: pip install -e '.[dev,embeddings]'
+      - name: Test (sentence-transformers backend)
+        run: pytest -m embeddings -q

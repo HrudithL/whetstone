@@ -41,3 +41,9 @@ select = ["E", "F", "I", "W", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    # Backend-sensitive checks that need the real sentence-transformers model (the [embeddings]
+    # extra). Run as a separate CI job: `pytest -m embeddings`. The fast default job excludes them
+    # with `pytest -m "not embeddings"`, and they self-skip when the extra is not installed.
+    "embeddings: requires the sentence-transformers backend ([embeddings] extra)",
+]
