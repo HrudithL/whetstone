@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,9 +24,16 @@ from pathlib import Path
 from ..config import Config, load_config
 from .slug import safe_component
 
+try:  # POSIX file locking (macOS/Linux, the XDG target). No-op fallback elsewhere.
+    import fcntl
+except ImportError:  # pragma: no cover - non-POSIX
+    fcntl = None
+
 _REGISTRY_NAME = "registry.json"
-# Commit identity + settings applied per-command so a store commit never depends on (or mutates)
-# the user's global git config, and never blocks on GPG signing.
+# Applied per-command so a store commit never depends on (or mutates) the user's global git config:
+# a fixed identity, no GPG signing, and no user hooks (a global core.hooksPath / template hook must
+# not be able to fail Whetstone's internal bookkeeping commits). This disables hooks via config
+# rather than the prohibited --no-verify flag.
 _GIT_CONFIG = [
     "-c",
     "user.name=Whetstone",
@@ -33,6 +41,8 @@ _GIT_CONFIG = [
     "user.email=whetstone@localhost",
     "-c",
     "commit.gpgsign=false",
+    "-c",
+    "core.hooksPath=/dev/null",
 ]
 
 
@@ -86,8 +96,21 @@ def _git(args: list[str], cwd: Path) -> None:
 
 
 def is_store(path: Path) -> bool:
-    """True if ``path`` is an initialized Whetstone store (has a git repo)."""
-    return (path / ".git").exists()
+    """True if ``path`` is a *fully* initialized store: a git repo with a baseline commit.
+
+    Checking ``HEAD`` (not just ``.git``) means a store left half-created by an interrupted
+    ``ensure_store`` (``.git`` present but no commit yet) is treated as not-yet-a-store, so the next
+    call finishes initialization instead of registering an empty repo.
+    """
+    if not (path / ".git").exists():
+        return False
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "HEAD"],
+        cwd=str(path),
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
 
 
 @dataclass
@@ -138,25 +161,43 @@ def read_registry(config: Config | None = None) -> dict[str, dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+@contextmanager
+def _registry_lock(config: Config | None):
+    """Serialize the registry read-modify-write so concurrent attaches can't drop each other's
+    records. POSIX ``flock``; a no-op where ``fcntl`` is unavailable."""
+    root = resolve_store_root(config)
+    root.mkdir(parents=True, exist_ok=True)
+    if fcntl is None:  # pragma: no cover - non-POSIX
+        yield
+        return
+    with open(root / ".registry.lock", "w") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
 def _register(loc: StoreLocation, config: Config | None, skill_path: str | None = None) -> None:
     path = registry_path(config)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    registry = read_registry(config)
-    record = registry.get(loc.skill, {})
-    record.update(
-        {
-            "slug": loc.slug,
-            "path": str(loc.path),
-            "attached_at": record.get("attached_at")
-            or datetime.now(UTC).isoformat(timespec="seconds"),
-        }
-    )
-    if skill_path is not None:
-        record["skill_path"] = skill_path
-    registry[loc.skill] = record
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    with _registry_lock(config):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        registry = read_registry(config)
+        record = registry.get(loc.skill, {})
+        record.update(
+            {
+                "slug": loc.slug,
+                "path": str(loc.path),
+                "attached_at": record.get("attached_at")
+                or datetime.now(UTC).isoformat(timespec="seconds"),
+            }
+        )
+        if skill_path is not None:
+            record["skill_path"] = skill_path
+        registry[loc.skill] = record
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        tmp.replace(path)
 
 
 def attach_skill(

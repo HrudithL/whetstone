@@ -22,6 +22,7 @@ Writes are atomic (temp file + rename), and parse -> serialize -> parse is stabl
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 from datetime import date
 from pathlib import Path
@@ -31,6 +32,11 @@ from .entries import IssueEntry, LearningEntry
 _HEADING_SEP = " · "
 _LEARNING_KEYS = ("recurrence", "first_seen", "last_seen", "scope", "provenance")
 _ISSUE_KEYS = ("scope", "provenance")
+# A new block starts ONLY at a genuine entry heading: ``## <id> · <title>`` where the id is
+# ``<letters><digits>`` (e.g. ``L12``, ``I3``). Ordinary prose in a body that happens to start with
+# ``## `` (e.g. ``## Summary``) is therefore NOT treated as a delimiter, keeping bodies round-trip
+# safe for normal markdown.
+_HEADING_LINE = re.compile(r"^## [A-Za-z]+[0-9]+ · .")
 
 
 class MarkdownParseError(ValueError):
@@ -45,14 +51,14 @@ def _split_blocks(text: str) -> list[list[str]]:
     blocks: list[list[str]] = []
     current: list[str] | None = None
     for line in text.splitlines():
-        if line.startswith("## "):
+        if _HEADING_LINE.match(line):
             current = [line]
             blocks.append(current)
         elif current is not None:
             current.append(line)
         elif line.strip():
             raise MarkdownParseError(
-                f"content before first '## ' heading: {line!r}"
+                f"content before first entry heading ('## <id> · <title>'): {line!r}"
             )
     return blocks
 

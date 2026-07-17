@@ -59,7 +59,7 @@ def test_component_is_length_bounded():
     # A long but otherwise safe scope must not produce an over-long path component (ENAMETOOLONG).
     long_scope = "x" * 300
     component = safe_component(long_scope)
-    assert len(component) <= 80  # 60-char stem cap + "-" + 8-char hash, comfortably under FS limits
+    assert len(component) <= 80  # 60-char stem + "-" + 16-char hash, comfortably under FS limits
     # Distinct long scopes sharing the truncated prefix still map to distinct files via the hash.
     assert safe_component("x" * 300) != safe_component("x" * 300 + "-different-tail")
 

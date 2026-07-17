@@ -10,6 +10,7 @@ from whetstone.config import Config
 from whetstone.store.layout import (
     attach_skill,
     ensure_store,
+    is_store,
     read_registry,
     store_location,
 )
@@ -83,3 +84,18 @@ def test_attach_twice_is_idempotent(cfg):
     # Registry keeps a single record and a stable attached_at timestamp.
     registry = read_registry(cfg)
     assert list(registry) == ["great-tables"]
+
+
+def test_partial_store_is_recovered(cfg):
+    # Simulate an interruption after `git init` but before the baseline commit (.git, no HEAD).
+    loc = store_location("interrupted", cfg)
+    loc.path.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=str(loc.path), check=True, capture_output=True)
+    assert (loc.path / ".git").exists()
+    assert not is_store(loc.path)  # no baseline commit yet
+
+    result = ensure_store("interrupted", cfg)
+    assert result.created is True
+    assert is_store(loc.path)  # now has a baseline commit
+    assert (loc.path / "learnings").is_dir()
+    assert _git_log_count(loc.path) == 1

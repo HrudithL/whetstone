@@ -113,8 +113,10 @@ def test_atomic_write_round_trip(tmp_path):
     assert parse_issues(ipath.read_text(encoding="utf-8")) == [_issue()]
 
 
-def test_malformed_no_heading_separator_raises():
-    with pytest.raises(MarkdownParseError, match="heading must be"):
+def test_line_without_heading_separator_is_not_a_heading():
+    # A "## " line lacking the " · " separator is not a valid entry heading, so as the sole
+    # content it is rejected as pre-heading text (the same rule that lets bodies contain "## ").
+    with pytest.raises(MarkdownParseError, match="before first entry heading"):
         parse_learnings("## L1 just a title without separator\n- scope: x\n")
 
 
@@ -161,3 +163,19 @@ def test_title_newline_is_neutralized():
     back = parse_learnings(serialize_learnings([evil]))
     assert len(back) == 1
     assert back[0].title == "Title ## L99 · forged"
+
+
+def test_body_with_markdown_heading_round_trips():
+    # A body that quotes markdown (a line starting with "## ") must NOT be parsed as a new entry;
+    # only genuine "## <id> · <title>" headings delimit blocks.
+    body = "Prefer this layout.\n\n## Summary\n\nUse muted palettes and ## hashes inline too."
+    entry = _learning(body=body)
+    back = parse_learnings(serialize_learnings([entry]))
+    assert len(back) == 1
+    assert back[0].body == body
+
+
+def test_two_entries_still_split_on_real_headings():
+    text = serialize_learnings([_learning(id="L1"), _learning(id="L2", title="Second")])
+    back = parse_learnings(text)
+    assert [e.id for e in back] == ["L1", "L2"]

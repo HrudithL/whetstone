@@ -37,7 +37,9 @@ def base_slug(value: str) -> str:
 
 
 def _hash(value: str) -> str:
-    return hashlib.sha1(value.encode("utf-8")).hexdigest()[:8]
+    # 64 bits: distinct values that share the bounded stem still get distinct components with an
+    # astronomically small collision probability at any realistic store size.
+    return hashlib.sha1(value.encode("utf-8")).hexdigest()[:16]
 
 
 def safe_component(value: str) -> str:
