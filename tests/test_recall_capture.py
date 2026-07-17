@@ -159,3 +159,56 @@ def test_capture_rejects_unknown_polarity(env):
 def test_capture_rejects_empty_body(env):
     with pytest.raises(ValueError, match="non-empty body"):
         capture("gt", "learning", "   ", "scope", "prov")
+
+
+def test_capture_rejects_delimiter_like_body_and_leaves_store_clean(env):
+    from whetstone.embeddings import HashingBackend
+    from whetstone.store import index
+
+    capture("gt", "learning", "A real, harmless preference about tables.", "tables", "prov")
+    slug = store_location("gt").slug
+    commits_before = _commit_count(env, slug)
+
+    # A body containing an entry-heading delimiter line would corrupt the store on the next parse.
+    from whetstone.store.markdown import MarkdownParseError
+
+    with pytest.raises(MarkdownParseError, match="entry-heading delimiter"):
+        capture(
+            "gt",
+            "learning",
+            "Prefer muted palettes.\n\n## L99 · Example\n\nsneaky.",
+            "color palette",
+            "prov",
+        )
+
+    # No new entry, no new commit, working tree clean, and the index still loads.
+    loc = store_location("gt")
+    assert {e.id for e in index.load_entries(loc, "learning")} == {"L1"}
+    assert _commit_count(env, slug) == commits_before
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(env / slug),
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert status == ""  # store not left dirty
+    index.rebuild_index_if_stale(loc, HashingBackend(dim=384))  # still loads / rebuilds cleanly
+
+
+def test_recall_honors_configured_learnings_k(env, monkeypatch):
+    monkeypatch.setenv("WHETSTONE_LEARNINGS_K", "3")
+    # Six DISTINCT styling preferences (in one scope) so none dedups into another.
+    bodies = [
+        "Use a muted blue color palette for the table.",
+        "Right-align every numeric currency column.",
+        "Add subtle horizontal row banding.",
+        "Increase the cell padding for a roomier layout.",
+        "Bold the header row and underline it.",
+        "Use a serif typeface for the table caption.",
+    ]
+    for body in bodies:
+        capture("gt", "learning", body, "styling", "prov")
+    # No explicit learnings_k -> the configured default (3) applies, not the old hard-coded 12.
+    result = recall("gt", "styling a table well")
+    assert len(result["learnings"]) == 3

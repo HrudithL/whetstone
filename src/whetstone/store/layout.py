@@ -98,11 +98,25 @@ def _git(args: list[str], cwd: Path) -> None:
     )
 
 
-def _ensure_store_gitignore(loc: StoreLocation) -> None:
-    """Write the per-store ``.gitignore`` if missing/outdated so derived files stay uncommitted."""
+def _has_uncommitted_changes(path: Path) -> bool:
+    """True if the store's working tree has staged/unstaged changes (ignored files don't count)."""
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(path),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return bool(result.stdout.strip())
+
+
+def _ensure_store_gitignore(loc: StoreLocation) -> bool:
+    """Write the per-store ``.gitignore`` if missing/outdated; return True iff the file changed."""
     path = loc.path / ".gitignore"
     if not path.exists() or path.read_text(encoding="utf-8") != _STORE_GITIGNORE:
         path.write_text(_STORE_GITIGNORE, encoding="utf-8")
+        return True
+    return False
 
 
 @contextmanager
@@ -196,7 +210,11 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
             # learnings/, issues/, and the .gitignore present.
             loc.learnings_dir.mkdir(parents=True, exist_ok=True)
             loc.issues_dir.mkdir(parents=True, exist_ok=True)
-            _ensure_store_gitignore(loc)
+            # An upgraded M0 store predates the .gitignore. If we just added/updated it, commit that
+            # bookkeeping now (guarded on a real change, so no empty commits) so the repo isn't left
+            # dirty for the next operation.
+            if _ensure_store_gitignore(loc) and _has_uncommitted_changes(loc.path):
+                commit_store(loc, "Add derived-artifact .gitignore")
             _register(loc, config)
             return EnsureResult(location=loc, created=False)
 

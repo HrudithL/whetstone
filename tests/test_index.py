@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+
 import pytest
 
 from conftest import make_issue, make_learning, seed
@@ -85,6 +87,24 @@ def test_ensure_index_rebuilds_when_stale(store, backend):
     seed(store, learnings=[make_learning("L2", "Second learning.", "scope-b")])
     index.ensure_index(store, backend)
     assert {e.id for e in index.load_entries(store, "learning")} == {"L1", "L2"}
+
+
+def test_rebuild_temp_name_and_index_are_gitignored(store, backend):
+    seed(store, learnings=[make_learning("L1", "A preference.", "scope-a")])
+    index.rebuild_index(store, backend)
+
+    # The live index and any crash-leftover temp (index.sqlite-*.tmp) match the store .gitignore,
+    # so a rebuild never surfaces a tracked/untracked index file in git status.
+    status = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=str(store.path), check=True,
+        capture_output=True, text=True,
+    ).stdout
+    assert "index.sqlite" not in status
+    for name in ("index.sqlite", "index.sqlite-abc123.tmp"):
+        ignored = subprocess.run(
+            ["git", "check-ignore", name], cwd=str(store.path), capture_output=True, text=True
+        )
+        assert ignored.returncode == 0, f"{name} should be gitignored"
 
 
 def test_empty_store_builds_empty_index(store, backend):

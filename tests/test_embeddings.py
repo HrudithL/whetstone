@@ -7,7 +7,7 @@ import math
 import pytest
 
 from whetstone.config import Config
-from whetstone.embeddings import HashingBackend, cosine, make_backend
+from whetstone.embeddings import HashingBackend, cosine, get_backend, make_backend
 
 
 def test_hashing_backend_is_deterministic():
@@ -59,3 +59,19 @@ def test_factory_respects_embedding_dim():
     backend = make_backend(Config(embedding_dim=64))
     assert isinstance(backend, HashingBackend)
     assert backend.dim == 64
+
+
+def test_get_backend_caches_per_config_identity():
+    # Same identity (backend, model, dim) -> the same instance is reused (no per-call rebuild).
+    a = get_backend(Config(embedding_dim=128))
+    b = get_backend(Config(embedding_dim=128))
+    assert a is b
+    # A different dimensionality is a different key -> a distinct instance.
+    c = get_backend(Config(embedding_dim=64))
+    assert c is not a
+    assert c.dim == 64
+
+
+def test_hashing_backend_model_id_encodes_dim():
+    assert HashingBackend(dim=64).model_id == "hashing:64"
+    assert HashingBackend(dim=384).model_id != HashingBackend(dim=64).model_id

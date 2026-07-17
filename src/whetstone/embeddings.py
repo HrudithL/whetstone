@@ -159,3 +159,19 @@ def make_backend(config: Config) -> EmbeddingBackend:
     if config.embedding_backend == "sentence-transformers":
         return SentenceTransformerBackend(config.embedding_model)
     raise ValueError(f"unknown embedding_backend: {config.embedding_backend!r}")
+
+
+# Process-lifetime cache keyed by the fields that determine the backend's identity/vectors. Building
+# a backend per recall/capture would reload the sentence-transformers model (tens/hundreds of MB)
+# every call; caching keeps it resident for the life of the process. Cleared only by process exit.
+_BACKEND_CACHE: dict[tuple[str, str, int], EmbeddingBackend] = {}
+
+
+def get_backend(config: Config) -> EmbeddingBackend:
+    """Return a cached embedding backend for ``config`` (process-lifetime cache; see note above)."""
+    key = (config.embedding_backend, config.embedding_model, config.embedding_dim)
+    backend = _BACKEND_CACHE.get(key)
+    if backend is None:
+        backend = make_backend(config)
+        _BACKEND_CACHE[key] = backend
+    return backend

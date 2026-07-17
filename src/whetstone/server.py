@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from mcp.server.fastmcp import FastMCP
 
 from .config import load_config
-from .embeddings import cosine, make_backend
+from .embeddings import cosine, get_backend
 from .retrieval import retrieve
 from .store import index
 from .store.access import (
@@ -67,7 +67,7 @@ def attach(skill: str, path: str | None = None) -> dict:
 
 
 @mcp.tool()
-def recall(skill: str, intent: str, learnings_k: int = 12) -> dict:
+def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     """Call at the START of any task that might use an attached skill — call it blindly; empty is
     fine.
 
@@ -81,12 +81,13 @@ def recall(skill: str, intent: str, learnings_k: int = 12) -> dict:
     Returns learnings (preferences, each with a 0-1 ``weight``) and issues (mandatory constraints,
     unweighted), plus ``how_to_use`` and a ``capture_contract`` you must honor, and a ``run_id`` to
     pass back on any follow-up ``capture``. An empty/unlearned store returns empty lists — never an
-    error.
+    error. ``learnings_k`` caps the number of (MMR-diversified) learnings returned; leave it unset
+    to use the configured default (``learnings_k`` in config / ``WHETSTONE_LEARNINGS_K``).
     """
     config = load_config()
     ensure_store(skill, config)
     loc = store_location(skill, config)
-    backend = make_backend(config)
+    backend = get_backend(config)
     index.ensure_index(loc, backend)
 
     learnings, issues = retrieve(loc, intent, backend, config, learnings_k)
@@ -134,7 +135,7 @@ def capture(
     config = load_config()
     ensure_store(skill, config)
     loc = store_location(skill, config)
-    backend = make_backend(config)
+    backend = get_backend(config)
 
     # The whole critical section runs under the per-store write lock so concurrent captures for the
     # same skill can't race on next_id (duplicate ids / lost entries) or interleave index rebuilds.

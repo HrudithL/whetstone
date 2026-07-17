@@ -146,7 +146,9 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
     # Build into a UNIQUE temp file, then atomically swap it in. A reader (a concurrent recall) must
     # never observe a missing/half-written index.sqlite — os.replace is atomic and the live DB is
     # never unlinked first.
-    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=INDEX_NAME, suffix=".tmp")
+    # Temp name matches the per-store .gitignore ("index.sqlite-*") so a crash leftover stays
+    # untracked.
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix="index.sqlite-", suffix=".tmp")
     os.close(fd)  # sqlite opens its own handle to the path
     try:
         conn = sqlite3.connect(tmp_name)

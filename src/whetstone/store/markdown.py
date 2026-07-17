@@ -178,7 +178,26 @@ def _single_line(value: str) -> str:
     return " ".join(str(value).splitlines()).strip()
 
 
+def _validate_body(entry_id: str, body: str) -> None:
+    """Reject a body that contains a line matching the entry-heading delimiter.
+
+    Bodies are written verbatim (unlike titles/metadata, which are collapsed to one line), so a body
+    line like ``## L99 · Example`` would be re-parsed as a separate bogus block on the next read.
+    We reject rather than escape: bodies are short prose and realistically never contain an entry
+    heading, and a clean failure BEFORE the atomic write beats corrupting the store. Validating here
+    (the single serialize path, ahead of every write) means ``capture`` surfaces the error cleanly
+    and the store stays clean.
+    """
+    for line in body.splitlines():
+        if _HEADING_LINE.match(line):
+            raise MarkdownParseError(
+                f"entry {entry_id!r} body contains a line matching the entry-heading delimiter "
+                f"('## <id> · <title>'), which would corrupt the store: {line!r}"
+            )
+
+
 def _serialize_block(entry_id: str, title: str, metadata: list[tuple[str, str]], body: str) -> str:
+    _validate_body(entry_id, body)
     lines = [f"## {entry_id}{_HEADING_SEP}{_single_line(title)}"]
     lines.extend(f"- {key}: {_single_line(value)}" for key, value in metadata)
     lines.append("")

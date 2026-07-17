@@ -127,6 +127,48 @@ def test_concurrent_ensure_store_is_idempotent(cfg):
     assert _git_log_count(loc.path) == 1  # exactly one baseline commit
 
 
+def test_new_store_commits_the_gitignore(cfg):
+    result = ensure_store("gt", cfg)
+    loc = result.location
+    gitignore = (loc.path / ".gitignore").read_text(encoding="utf-8")
+    assert "index.sqlite" in gitignore
+    assert "index.sqlite-*" in gitignore
+    assert "events.jsonl" in gitignore
+    # The initial commit already tracks it; the working tree is clean.
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=str(loc.path), check=True, capture_output=True, text=True
+    ).stdout
+    assert ".gitignore" in tracked
+
+
+def test_upgraded_m0_store_gets_gitignore_committed(cfg):
+    # Simulate a pre-M1 store: created, then its .gitignore removed and the removal committed.
+    result = ensure_store("legacy", cfg)
+    loc = result.location
+    (loc.path / ".gitignore").unlink()
+    subprocess.run(["git", "rm", "-q", ".gitignore"], cwd=str(loc.path), check=True,
+                   capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "drop ignore"],
+        cwd=str(loc.path), check=True, capture_output=True,
+    )
+    commits_before = _git_log_count(loc.path)
+
+    # Re-ensuring restores the .gitignore AND commits it (guarded on a real change).
+    ensure_store("legacy", cfg)
+    assert (loc.path / ".gitignore").exists()
+    assert _git_log_count(loc.path) == commits_before + 1
+    status = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=str(loc.path), check=True,
+        capture_output=True, text=True,
+    ).stdout
+    assert status == ""  # clean, no leftover dirt
+
+    # A subsequent ensure makes no further commit (no empty commits).
+    ensure_store("legacy", cfg)
+    assert _git_log_count(loc.path) == commits_before + 1
+
+
 def test_ensure_store_repairs_missing_scope_dirs(cfg):
     ensure_store("repairme", cfg)
     loc = store_location("repairme", cfg)
