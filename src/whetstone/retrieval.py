@@ -117,6 +117,9 @@ def retrieve(
     """Retrieve the learnings and issues relevant to ``intent`` (assumes the index is fresh)."""
     if learnings_k is None:
         learnings_k = config.learnings_k
+    # Clamp so a negative cap (a bad caller or WHETSTONE_LEARNINGS_K=-1) can't hit Python's
+    # negative-slice semantics on the fallback path and flood the payload.
+    learnings_k = max(0, learnings_k)
 
     query = backend.embed([intent])[0]
 

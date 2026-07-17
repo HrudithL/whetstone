@@ -61,6 +61,27 @@ def test_learnings_k_caps_the_count(store, backend, config):
     assert len(got) == 4
 
 
+def test_negative_learnings_k_is_clamped_on_the_matched_path(store, backend, config):
+    learnings = [
+        make_learning(f"L{i}", f"Styling preference number {i} for tables.", "styling")
+        for i in range(1, 6)
+    ]
+    _prepare(store, backend, learnings=learnings)
+    # A negative cap must not hit Python negative-slice semantics; it clamps to an empty result.
+    got, _ = retrieve(store, "styling preference for tables", backend, config, learnings_k=-1)
+    assert got == []
+
+
+def test_negative_learnings_k_does_not_flood_the_fallback(store, backend, config):
+    learnings = [
+        make_learning(f"L{i}", f"Preference {i}.", f"scope-{i}", recurrence=i) for i in range(1, 6)
+    ]
+    _prepare(store, backend, learnings=learnings)
+    # Off-topic intent -> fallback path, where a naive [:-1] slice would return all-but-one.
+    got, _ = retrieve(store, "writing a bash script to parse logs", backend, config, learnings_k=-1)
+    assert got == []
+
+
 def test_issues_are_uncapped(store, backend, config):
     issues = [
         make_issue(f"I{i}", f"Never do the forbidden styling thing number {i}.", "styling")

@@ -63,6 +63,34 @@ def test_stored_entry_vector_matches_backend_embedding(store, backend):
     assert stored == pytest.approx(expected, abs=1e-6)
 
 
+def _stored_fingerprint(store) -> str:
+    import sqlite3
+
+    conn = sqlite3.connect(str(index.index_path(store)))
+    try:
+        return conn.execute("SELECT value FROM meta WHERE key = 'fingerprint'").fetchone()[0]
+    finally:
+        conn.close()
+
+
+def test_stored_fingerprint_is_derived_from_the_indexed_snapshot(store, backend):
+    seed(store, learnings=[make_learning("L1", "Right-align currency columns.", "currency")])
+    index.rebuild_index(store, backend)
+
+    # The fingerprint written into the index reflects the exact files that produced its rows: it
+    # equals the fingerprint of the current on-disk snapshot, so a follow-up staleness check matches
+    # and does NOT rebuild.
+    assert _stored_fingerprint(store) == index._fingerprint(store, backend)
+
+    # An out-of-band markdown edit changes the on-disk fingerprint away from the stored one, so the
+    # staleness check detects it and ensure_index rebuilds with the new content.
+    seed(store, learnings=[make_learning("L2", "Bold the totals.", "totals")])
+    assert _stored_fingerprint(store) != index._fingerprint(store, backend)
+    index.ensure_index(store, backend)
+    assert {e.id for e in index.load_entries(store, "learning")} == {"L1", "L2"}
+    assert _stored_fingerprint(store) == index._fingerprint(store, backend)
+
+
 def test_centroid_is_mean_of_entry_vectors(store, backend):
     seed(
         store,

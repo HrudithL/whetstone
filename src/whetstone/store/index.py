@@ -25,9 +25,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..embeddings import EmbeddingBackend
-from .access import load_issues, load_learnings
 from .entries import IssueEntry, LearningEntry
 from .layout import StoreLocation, store_write_lock
+from .markdown import parse_issues, parse_learnings
 
 INDEX_NAME = "index.sqlite"
 
@@ -79,21 +79,38 @@ def _unpack(blob: bytes) -> list[float]:
 # --------------------------------------------------------------------------- fingerprint
 
 
-def _fingerprint(loc: StoreLocation, backend: EmbeddingBackend) -> str:
-    """A hash of the markdown plus backend identity; changes iff the index would differ.
+def _snapshot(directory: Path) -> list[tuple[str, bytes]]:
+    """Read every ``*.md`` file's bytes once, in filename order: a point-in-time snapshot."""
+    return [(p.name, p.read_bytes()) for p in sorted(directory.glob("*.md"))]
+
+
+def _fingerprint_of(
+    backend: EmbeddingBackend,
+    learning_files: list[tuple[str, bytes]],
+    issue_files: list[tuple[str, bytes]],
+) -> str:
+    """Hash the backend identity + the given file snapshot; changes iff the index would differ.
 
     ``model_id`` is included (not just class + dim) so switching to a different embedding model of
     the same dimensionality invalidates the index instead of silently reusing incompatible vectors.
+    Taking the file bytes as an argument lets ``rebuild_index`` fingerprint the EXACT snapshot it
+    built the rows from, so the stored fingerprint can't advertise fresh over stale vectors.
     """
     hasher = hashlib.sha1()
     hasher.update(f"{type(backend).__name__}:{backend.model_id}:{backend.dim}\0".encode())
-    for directory in (loc.learnings_dir, loc.issues_dir):
-        for path in sorted(directory.glob("*.md")):
-            hasher.update(path.name.encode("utf-8"))
+    for files in (learning_files, issue_files):
+        for name, data in files:
+            hasher.update(name.encode("utf-8"))
             hasher.update(b"\0")
-            hasher.update(path.read_bytes())
+            hasher.update(data)
             hasher.update(b"\0")
     return hasher.hexdigest()
+
+
+def _fingerprint(loc: StoreLocation, backend: EmbeddingBackend) -> str:
+    """The current-on-disk fingerprint, used by the staleness check to compare against the stored
+    one. A fresh read here is correct: it detects any change since the index was built."""
+    return _fingerprint_of(backend, _snapshot(loc.learnings_dir), _snapshot(loc.issues_dir))
 
 
 # --------------------------------------------------------------------------- build
@@ -111,9 +128,21 @@ def _centroid(vectors: list[list[float]], dim: int) -> list[float]:
 
 
 def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
-    """Regenerate ``index.sqlite`` from the markdown store (fully idempotent)."""
-    learnings = load_learnings(loc)
-    issues = load_issues(loc)
+    """Regenerate ``index.sqlite`` from the markdown store (fully idempotent).
+
+    The parsed entries AND the stored fingerprint are both derived from a single file snapshot, so
+    if the markdown is edited (outside Whetstone) mid-rebuild the published fingerprint can never
+    advertise fresh over the stale vectors that were actually indexed.
+    """
+    learning_files = _snapshot(loc.learnings_dir)
+    issue_files = _snapshot(loc.issues_dir)
+    learnings: list[LearningEntry] = [
+        e for _, data in learning_files for e in parse_learnings(data.decode("utf-8"))
+    ]
+    issues: list[IssueEntry] = [
+        e for _, data in issue_files for e in parse_issues(data.decode("utf-8"))
+    ]
+    fingerprint = _fingerprint_of(backend, learning_files, issue_files)
 
     learning_scopes = sorted({e.scope for e in learnings})
     issue_scopes = sorted({e.scope for e in issues})
@@ -165,7 +194,7 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
             )
             conn.execute(
                 "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
-                (_fingerprint(loc, backend),),
+                (fingerprint,),
             )
             conn.commit()
         finally:

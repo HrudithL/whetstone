@@ -98,18 +98,6 @@ def _git(args: list[str], cwd: Path) -> None:
     )
 
 
-def _has_uncommitted_changes(path: Path) -> bool:
-    """True if the store's working tree has staged/unstaged changes (ignored files don't count)."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=str(path),
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return bool(result.stdout.strip())
-
-
 def _ensure_store_gitignore(loc: StoreLocation) -> bool:
     """Write the per-store ``.gitignore`` if missing/outdated; return True iff the file changed."""
     path = loc.path / ".gitignore"
@@ -142,6 +130,26 @@ def commit_store(loc: StoreLocation, message: str) -> None:
     """
     _git(["add", "-A"], cwd=loc.path)
     _git(["commit", "-q", "-m", message], cwd=loc.path)
+
+
+def commit_paths(loc: StoreLocation, paths: list[str], message: str) -> None:
+    """Commit ONLY the given paths, leaving any other working-tree changes untouched.
+
+    Used for internal bookkeeping commits (e.g. a repaired ``.gitignore``) so a ``recall`` or
+    ``attach`` can never sweep unrelated untracked/modified markdown into it. Staging then
+    committing is scoped to ``paths``; if that stages no actual change, nothing is committed (no
+    empty commits).
+    """
+    _git(["add", "--", *paths], cwd=loc.path)
+    staged = subprocess.run(
+        ["git", "diff", "--cached", "--quiet", "--", *paths],
+        cwd=str(loc.path),
+        capture_output=True,
+        text=True,
+    )
+    if staged.returncode == 0:  # 0 == no staged diff for these paths
+        return
+    _git(["commit", "-q", "-m", message, "--", *paths], cwd=loc.path)
 
 
 @contextmanager
@@ -213,8 +221,8 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
             # An upgraded M0 store predates the .gitignore. If we just added/updated it, commit that
             # bookkeeping now (guarded on a real change, so no empty commits) so the repo isn't left
             # dirty for the next operation.
-            if _ensure_store_gitignore(loc) and _has_uncommitted_changes(loc.path):
-                commit_store(loc, "Add derived-artifact .gitignore")
+            if _ensure_store_gitignore(loc):
+                commit_paths(loc, [".gitignore"], "Add derived-artifact .gitignore")
             _register(loc, config)
             return EnsureResult(location=loc, created=False)
 

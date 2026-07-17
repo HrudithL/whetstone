@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
+import threading
 from typing import Protocol, runtime_checkable
 
 from .config import Config
@@ -119,6 +120,7 @@ class SentenceTransformerBackend:
         self._model_name = model_name
         self._model = None
         self._dim: int | None = None
+        self._init_lock = threading.Lock()
 
     @property
     def model_id(self) -> str:
@@ -126,18 +128,25 @@ class SentenceTransformerBackend:
         return f"sentence-transformers:{self._model_name}"
 
     def _ensure_model(self) -> None:
+        # Double-checked locking so concurrent cold starts load the model exactly once. The model
+        # is published to ``self._model`` only AFTER ``self._dim`` is set, so another thread that
+        # sees ``_model is not None`` never observes a half-initialized state where ``dim`` is None.
         if self._model is not None:
             return
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError as exc:  # pragma: no cover - exercised only without the extra
-            raise RuntimeError(
-                "The 'sentence-transformers' embedding backend requires the optional dependency. "
-                "Install it with: pip install 'whetstone-mcp[embeddings]', or set "
-                "WHETSTONE_EMBEDDING_BACKEND=hashing (or embedding_backend='hashing' in config)."
-            ) from exc
-        self._model = SentenceTransformer(self._model_name)
-        self._dim = int(self._model.get_sentence_embedding_dimension())
+        with self._init_lock:
+            if self._model is not None:
+                return
+            try:
+                from sentence_transformers import SentenceTransformer
+            except ImportError as exc:  # pragma: no cover - exercised only without the extra
+                raise RuntimeError(
+                    "The 'sentence-transformers' embedding backend requires the optional "
+                    "dependency. Install it with: pip install 'whetstone-mcp[embeddings]', or set "
+                    "WHETSTONE_EMBEDDING_BACKEND=hashing (embedding_backend='hashing' in config)."
+                ) from exc
+            model = SentenceTransformer(self._model_name)
+            self._dim = int(model.get_sentence_embedding_dimension())
+            self._model = model  # publish last: dim is guaranteed set before _model is visible
 
     @property
     def dim(self) -> int:

@@ -169,6 +169,38 @@ def test_upgraded_m0_store_gets_gitignore_committed(cfg):
     assert _git_log_count(loc.path) == commits_before + 1
 
 
+def test_gitignore_repair_commit_leaves_unrelated_changes_uncommitted(cfg):
+    # A pre-M1 store with the .gitignore dropped, PLUS an unrelated uncommitted markdown edit.
+    result = ensure_store("legacy2", cfg)
+    loc = result.location
+    (loc.path / ".gitignore").unlink()
+    subprocess.run(["git", "rm", "-q", ".gitignore"], cwd=str(loc.path), check=True,
+                   capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "drop ignore"],
+        cwd=str(loc.path), check=True, capture_output=True,
+    )
+    # An unrelated, uncommitted markdown file the repair commit must NOT sweep in.
+    unrelated = loc.learnings_dir / "unrelated.md"
+    unrelated.write_text("## L1 · x\n- recurrence: 1\n- first_seen: 2026-01-01\n"
+                         "- last_seen: 2026-01-01\n- scope: s\n- provenance: p\n\nbody\n",
+                         encoding="utf-8")
+
+    ensure_store("legacy2", cfg)
+
+    # The repair commit contains ONLY .gitignore; the unrelated markdown stays untracked.
+    last_commit_files = subprocess.run(
+        ["git", "show", "--name-only", "--pretty=format:", "HEAD"],
+        cwd=str(loc.path), check=True, capture_output=True, text=True,
+    ).stdout.split()
+    assert last_commit_files == [".gitignore"]
+    status = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=str(loc.path), check=True,
+        capture_output=True, text=True,
+    ).stdout
+    assert "unrelated.md" in status  # still uncommitted, not swept into the bookkeeping commit
+
+
 def test_ensure_store_repairs_missing_scope_dirs(cfg):
     ensure_store("repairme", cfg)
     loc = store_location("repairme", cfg)
