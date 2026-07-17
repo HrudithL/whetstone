@@ -26,9 +26,9 @@ some-skill/
 ```
 
 - **Retrieval** is model-judgment: the model reads the index (`LEARNINGS.md`), sees the categories/scopes, and loads only the relevant subfiles — the on-demand pattern skills already use for `references/`. Semantic routing for free, **no embeddings**. (The MCP's centroid+phrase embedding retrieval is replaced by the model reading an index and choosing.)
-- **Capture** is the model editing the markdown directly with its native file tools, under the same distill/reconcile rules and the same schema (`recurrence`/`weight` for learnings; nothing for issues) — maintained by hand rather than by server code.
+- **Capture** is the model editing the markdown directly with its native file tools, under the same distill/reconcile rules and the same schema as the main doc (§4.3): for learnings, `recurrence` + `first_seen`/`last_seen` are **stored** and `weight` is **derived on read, never stored**; issues carry no scoring fields — maintained by hand rather than by server code.
 - **Apply-at-recall, mandatory issues, promotion/demotion, contradiction flows** — identical semantics to the MCP, but executed as model behavior + file edits instead of tool calls.
-- **No `index.sqlite`, no `events.jsonl`.** Telemetry comes from **git history**.
+- **No `index.sqlite`, no `events.jsonl`.** In normal operation telemetry comes from **git history**. For the A/B showcase, the shared harness emits its own per-run event log for this arm too (§5), so run-level facts git can't see — runs that applied learnings but changed no file, and correction turns that should have been captured but were missed — are still recorded.
 - **Organization for the skill may differ from the MCP** and is to be detailed when this is picked up (the MCP uses scope-vector files; the skill may prefer a flatter, index-driven layout for legibility). **TBD.**
 
 Deliberately minimal: two index files + two subfolders. Legibility maximal; infra zero. Claude-Code-only (skills are not portable across runtimes).
@@ -63,6 +63,8 @@ Which failure mode bites harder is **empirical** — which is exactly why we mea
 Run the same showcase harness **twice** — once through the MCP server, once through the skill — under one **hold-constant rule**: identical target skills, identical scripted critique sequences, identical blinded judge rubric, identical supervision mode. The *only* variable is file-native-model vs. tool-native-server.
 
 **Comparison metrics, locked before either is tuned:** repeat-correction rate, application-rate, capture-rate, context cost per run, rubric-quality delta, retrieval precision.
+
+**Instrumentation held constant.** Both arms emit an identical **per-run event log** from the shared harness (the MCP arm already has `events.jsonl`; the file-native arm gets an equivalent from the harness — see §2). Git history alone cannot reconstruct application-rate (a run may read/apply learnings yet change no file) or capture-rate (a correction turn may be missed entirely), so these denominators come from the event log, not the commit trail — measured the same way on both sides.
 
 Whichever wins, the choice is provable: if the skill wins, the product is radically simple; if the server wins, its complexity is justified by data.
 

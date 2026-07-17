@@ -79,7 +79,7 @@ The learned layer has two stores with **opposite polarity and fundamentally diff
 Two base signals; everything else is derived. No per-entry "learning rate," no "severity."
 
 - **`recurrence`** *(stored int)* → interpreted as **trust/stability**: high = a repeated, reliable signal.
-- **`recency`** *(derived 0–1)* → `recency = exp(−Δdays / τ)`, Δ = days since `last_seen`. Interpreted as **freshness**.
+- **`recency`** *(derived 0–1)* → `recency = exp(−ln2 · Δdays / H)`, Δ = days since `last_seen`, `H` = the configured **half-life** in days (so `recency = 0.5` exactly when `Δ = H`). Interpreted as **freshness**.
 - **`weight`** *(derived 0–1, surfaced to the model)*:
   - `r = 1 − 1/(1 + max(recurrence, 0))` — saturating map of the count.
   - **Decay ON (learnings default, slow):** `weight = r × recency`.
@@ -87,7 +87,7 @@ Two base signals; everything else is derived. No per-entry "learning rate," no "
 
 **Interpretation shipped to the model (in `recall`'s `how_to_use`):** *"Each learning has a 0–1 `weight` = how firmly to apply it. Apply high-weight learnings firmly and first; treat low-weight ones as soft suggestions. Issues have no weight — every issue returned is mandatory."*
 
-**Decay is per-store configurable:** learnings decay ON but slow (default τ ≈ 180-day half-life); issues decay OFF (permanent). Either default can be flipped in config.
+**Decay is per-store configurable:** learnings decay ON but slow (default `H` = 180-day half-life); issues decay OFF (permanent). Either default can be flipped in config.
 
 ---
 
@@ -149,15 +149,19 @@ Called blindly at the start of any task that might have precedent; returns empty
 ```
 *Description (read by the model):* "Call at the START of any task that might use an attached skill — call it blindly; empty is fine. **Pass `intent` as a concrete, elaborated description of what you are about to produce, expanding vague requests into their specific dimensions (e.g. 'styling a table: color palette, number formatting, column alignment, row banding, density') — do NOT pass the user's raw words.** Returns learnings (preferences, weighted) and issues (mandatory constraints)."
 
-#### `capture(skill, polarity, body, scope, provenance)` — record NEW knowledge
+#### `capture(skill, polarity, body, scope, provenance, confirm=false)` — record NEW knowledge
 
 Called when the model implements feedback that isn't about an entry `recall` already surfaced. Distills a scoped rule, then in code: dedups (embedding near-duplicate → increment `recurrence` + refresh `last_seen` instead of adding), detects `LEARNINGS`↔`ISSUES` conflicts, applies the supervision gate (§9), writes markdown, commits, appends an event.
 
 ```json
-{ "status": "committed" | "reinforced" | "conflict", "entry_id": "L13", "recurrence": 1,
-  "conflict": { "with_id": "I3", "explanation": "…" } }
+{ "status": "committed" | "reinforced" | "conflict" | "needs_confirmation", "entry_id": "L13", "recurrence": 1,
+  "conflict": { "with_id": "I3", "explanation": "…" },
+  "prompt": "…returned only with needs_confirmation — ask the user this, then call `capture` again with `confirm:true`…" }
 ```
-*Description:* "Call the moment you act on user feedback about output from an attached skill, when it's something *new*. Cues: a fix ('right-align that'), a preference ('I like muted palettes'), a rejection ('no, not like that'), approval of a specific choice. Classify: taste/preference → `polarity:"learning"`; a mistake to never repeat, or an explicit 'always/never' rule → `polarity:"issue"` (word the body objectively). Generalize into a scoped rule of a few short sentences, capturing the user's *why*. If it concerns something `recall` already listed, use `revise` instead."
+
+`needs_confirmation` is returned when a prompt is required *before* committing: in **supervised** mode (confirm every new entry, §9), or when a dedup increments `recurrence` to the **promotion threshold** (§6). The caller asks the returned `prompt`, then re-calls with `confirm:true`.
+
+*Description:* "Call the moment you act on user feedback about output from an attached skill, when it's something *new*. Cues: a fix ('right-align that'), a preference ('I like muted palettes'), a rejection ('no, not like that'), approval of a specific choice. Classify: taste/preference → `polarity:"learning"`; a mistake to never repeat, or an explicit 'always/never' rule → `polarity:"issue"` (word the body objectively). Generalize into a scoped rule of a few short sentences, capturing the user's *why*. If the server returns `needs_confirmation`, ask the user the returned prompt, then call again with `confirm:true`. If it concerns something `recall` already listed, use `revise` instead."
 
 #### `revise(skill, entry_id, action, confirm=false)` — edit EXISTING knowledge
 
@@ -320,7 +324,7 @@ Defined defaults chosen for now (confirm/tune during build):
 - **Promotion threshold:** learning `recurrence` = **4**.
 - **Learning contradiction:** `weaken` −1; below 0 → ask keep (retain at 1) / remove.
 - **Issue softening:** demote → learning seeded at **recurrence 3**.
-- **Decay:** learnings ON, τ ≈ **180-day** half-life; issues OFF.
+- **Decay:** learnings ON, half-life `H` = **180 days**; issues OFF.
 - **Compaction retire:** learning `weight < 0.15`.
 - **Retrieval:** `learnings_k = 12`; MMR `λ = 0.7`; issues uncapped.
 - **Cutoffs (learnings, issues) and merge thresholds (ε_c, ε_n):** by calibration against a labeled set; issues lower than learnings.
