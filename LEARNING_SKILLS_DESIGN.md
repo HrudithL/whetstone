@@ -101,14 +101,14 @@ Per attached skill, a git-tracked store. Humans read/edit the markdown; the mode
 
 ```
 <server-data>/<skill>/
-  learnings/<scope>.md     ← source of truth (prose + metadata), grouped by scope
-  issues/<scope>.md        ← source of truth, grouped by scope
-  index.sqlite             ← derived: per-scope vectors (centroid + phrase), entry metadata (rebuildable)
+  learnings/<scope-slug>.md ← source of truth (prose + metadata), grouped by scope
+  issues/<scope-slug>.md    ← source of truth, grouped by scope
+  index.sqlite             ← derived: per-scope vectors (centroid + phrase), per-entry vectors, entry metadata (rebuildable)
   events.jsonl             ← append-only telemetry (§11)
   .git/                    ← version history of the markdown
 ```
 
-**Scope is the organizing unit.** Entries are grouped into files by `scope`. Each entry block is legible and parseable:
+**Scope is the organizing unit.** Entries are grouped into files by `scope`. The filename is a **slug** of the scope (lowercase, spaces→`-`, path separators and `..` stripped) so a model-/user-supplied scope can never write outside `learnings/`/`issues/`; the human-readable scope phrase lives in each block's `scope:` field. Each entry block is legible and parseable:
 
 ```markdown
 ## L12 · Right-align currency columns
@@ -130,7 +130,7 @@ Five tools. **Two are in the task loop** (`recall`, `capture`); **`revise`** edi
 
 #### `recall(skill, intent, learnings_k=12)` — start of task
 
-Called blindly at the start of any task that might have precedent; returns empty if nothing is learned.
+Called blindly at the start of any task that might have precedent; returns empty if nothing is learned. It also appends a **per-run event** (run id, `intent`, and the learning/issue ids it returned) to `events.jsonl` — this is the only per-run denominator §11 has for application-rate and regressions-prevented, since a run the user simply accepts produces no follow-up `capture`/`revise`.
 
 - **`intent` is the retrieval query and must be the model's *elaborated* description of what it is about to do — NOT the user's raw prompt.** This is enforced in the description and `how_to_use` because it is the linchpin of retrieval quality (§5.4).
 
@@ -159,7 +159,9 @@ Called when the model implements feedback that isn't about an entry `recall` alr
   "prompt": "…returned only with needs_confirmation — ask the user this, then call `capture` again with `confirm:true`…" }
 ```
 
-`needs_confirmation` is returned when a prompt is required *before* committing: in **supervised** mode (confirm every new entry, §9), or when a dedup increments `recurrence` to the **promotion threshold** (§6). The caller asks the returned `prompt`, then re-calls with `confirm:true`.
+`needs_confirmation` is returned whenever a prompt is required *before* committing; the caller asks the returned `prompt`, then re-calls with the user's choice in `confirm`:
+- **Supervised mode** (§9) — gates every new entry **and** every dedup reinforcement (a reinforcement still changes an existing learning's `recurrence`/`last_seen`, so it is a "changed entry" per §9). Re-call with `confirm:true` to commit, or don't re-call to abort.
+- **Promotion threshold** (§6) — a dedup pushes a learning's `recurrence` to the threshold. The user's answer has two real outcomes, so the retry must carry the choice: `confirm:"promote"` (reinforce **and** move to `ISSUES`) or `confirm:"keep"` (reinforce only, stay a learning). Carrying the choice avoids silently dropping *or* accidentally promoting a repeated preference.
 
 *Description:* "Call the moment you act on user feedback about output from an attached skill, when it's something *new*. Cues: a fix ('right-align that'), a preference ('I like muted palettes'), a rejection ('no, not like that'), approval of a specific choice. Classify: taste/preference → `polarity:"learning"`; a mistake to never repeat, or an explicit 'always/never' rule → `polarity:"issue"` (word the body objectively). Generalize into a scoped rule of a few short sentences, capturing the user's *why*. If the server returns `needs_confirmation`, ask the user the returned prompt, then call again with `confirm:true`. If it concerns something `recall` already listed, use `revise` instead."
 
@@ -199,7 +201,7 @@ Computes the KPIs (§11) for the dashboard. *"Reporting only — never call duri
 The mechanism, end to end:
 
 1. **Elaborated query (the linchpin).** The model passes `intent` = a concrete description of what it's about to do, not the user's vague words. This closes the *abstraction gap*: "make a table styled well" embeds nowhere near a scope named `currency formatting`, but the model's elaboration — *"styling a table: color palette, number formatting, alignment, banding, density"* — lives in the same concrete vocabulary as the scopes, so they match. **No threshold value fixes the abstraction gap; fixing the query does.**
-2. **Scope vectors.** Each scope carries two vectors in `index.sqlite`: its **centroid** (average of its entries' embeddings) and its **phrase** (the scope label embedded). A scope matches if `max(sim(intent, centroid), sim(intent, phrase)) ≥ cutoff`. We chose centroid + phrase over embedding/matching every individual entry: it's simpler, uses two stable vectors per scope, and the phrase anchors matching even when a scope's centroid is broad — with coherent scopes (kept so by merging, below) and the fallback floor covering the residual risk.
+2. **Scope vectors + per-entry vectors.** Each scope carries two vectors in `index.sqlite`: its **centroid** (average of its entries' embeddings) and its **phrase** (the scope label embedded). A scope matches if `max(sim(intent, centroid), sim(intent, phrase)) ≥ cutoff`. **Scope *matching* uses only these two vectors** — we chose centroid + phrase over matching every individual entry: it's simpler, uses two stable vectors per scope, and the phrase anchors matching even when a scope's centroid is broad (coherent scopes, kept so by merging below, and the fallback floor cover the residual risk). The individual entry embeddings are computed anyway to form the centroid, so they are **also retained per-entry** in `index.sqlite` — not for scope matching, but because the MMR diverse cap (point 4) scores over per-entry similarity.
 3. **Multi-scope, asymmetric cutoffs.** One request touches several scopes, so we select **every** scope above its cutoff (not top-1). **Issues use a lower cutoff than learnings** — erring toward inclusion is *free* for issues (an issue only says "don't do X"; handling a marginally-relevant one costs nothing), but harmful for learnings (a mis-applied preference actively degrades output).
 4. **Diverse cap for learnings (MMR).** From all matched-scope learnings, if the count exceeds `learnings_k`, select a **diverse** subset via Maximal Marginal Relevance — iteratively pick the learning maximizing `λ·(weight × similarity) − (1−λ)·max_similarity_to_already_picked` (default `λ = 0.7`). This returns breadth, not `k` near-duplicates, so the model sees a representative majority. **Issues are never capped or subsetted** — all matched issues return (they're mandatory); the issue catalog is kept lean by compaction (§7) instead.
 5. **Fallback floor.** If no scope clears the cutoff (a genuinely thin request), return the skill's top-`weight` learnings plus its broadly-scoped issues, so a vague-but-real request never returns empty.
@@ -233,8 +235,8 @@ Our mechanism: the natural trigger is **the moment the model implements the user
 ## 7. Distill & reconcile
 
 Captured critique → a **generalized, scoped candidate rule**, not a raw diff. Then:
-- **Dedup:** near-duplicate learning → increment `recurrence`, refresh `last_seen`.
-- **Conflict:** detect `LEARNINGS`↔`ISSUES` contradictions (a new learning wants what an issue forbids) → surfaced as `capture`'s `conflict` status; resolved with the user via `revise` (`remove`/`demote` the issue).
+- **Dedup:** near-duplicate learning → increment `recurrence`, refresh `last_seen`. A near-duplicate **issue** has no `recurrence` to bump, so it is a **no-op** (optionally refresh provenance) rather than a second mandatory block — this keeps the uncapped issue set from bloating.
+- **Conflict:** detect contradictions and surface them as `capture`'s `conflict` status, resolved with the user via `revise`. Two cases: **`LEARNINGS`↔`ISSUES`** (a new learning wants what an issue forbids → `remove`/`demote` the issue) and **`LEARNINGS`↔`LEARNINGS`** (a new learning contradicts an existing one → route through `weaken`/`revise` instead of storing two opposing positive rules). Detection is best-effort over the same-scope embedding neighbourhood already scanned for dedup — no separate subsystem.
 - **Compact:** periodically dedupe, **merge overlapping scopes** (§5.4), and retire stale learnings below the weight threshold (default `weight < 0.15`). **Issues are not auto-retired**; keeping the issue catalog lean is a manual/periodic curation step (they're all mandatory, so bloat there is costly).
 
 ---
