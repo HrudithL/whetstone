@@ -5,7 +5,7 @@ current markdown state) this computes the KPIs that ordinary usage can support:
 
 - **runs** — number of ``recall`` events.
 - **avg learnings applied per run** — mean count of learnings returned per ``recall``.
-- **capture counts by status** — ``committed`` / ``reinforced`` / ``noop``.
+- **capture counts by status** — ``committed`` / ``reinforced`` / ``noop`` / ``conflict``.
 - **repeat-correction proxy** — the "money metric" (§11): the reinforcement rate (a repeated
   preference reinforced rather than newly captured) as a slowing-of-re-correction signal.
 - **% survived** — learnings still present in the store vs. all ever created.
@@ -55,22 +55,26 @@ def compute_metrics(loc: StoreLocation) -> dict:
         present_ids = {entry.id for entry in load_learnings(loc)}
     recalls = [e for e in events if e.get("type") == "recall"]
     captures = [e for e in events if e.get("type") == "capture"]
+    revises = [e for e in events if e.get("type") == "revise"]
 
     learnings_per_run = [int(e.get("counts", {}).get("learnings", 0)) for e in recalls]
 
-    by_status = {"committed": 0, "reinforced": 0, "noop": 0}
+    by_status = {"committed": 0, "reinforced": 0, "noop": 0, "conflict": 0}
     for e in captures:
         status = e.get("status")
         if status in by_status:
             by_status[status] += 1
 
-    # Repeat-correction proxy (§11): among learning-directed captures, how often a preference was
+    # Repeat-correction proxy (§11): among learning-directed corrections, how often a preference was
     # *reinforced* (already known) rather than newly *committed*. A rising rate = re-corrections
     # increasingly land on existing learnings, i.e. recurrence growth rather than new entries.
+    # Reinforcements now arrive via BOTH capture-dedup (`reinforced`) and `revise(action=reinforce)`
+    # — the latter is the primary path once `recall` surfaces the id — so both are counted.
     learning_committed = sum(
         1 for e in captures if e.get("status") == "committed" and e.get("polarity") == "learning"
     )
-    reinforcements = by_status["reinforced"]
+    revise_reinforcements = sum(1 for e in revises if e.get("action") == "reinforce")
+    reinforcements = by_status["reinforced"] + revise_reinforcements
     reinforce_denom = learning_committed + reinforcements
     reinforcement_rate = (
         round(reinforcements / reinforce_denom, 4) if reinforce_denom else None
@@ -82,11 +86,15 @@ def compute_metrics(loc: StoreLocation) -> dict:
     # only report a number when every currently-present learning is one telemetry recorded creating;
     # otherwise coverage is incomplete (pre-telemetry / imported markdown) and we return unknown
     # rather than a misleading figure. (Removals land in M2b; the KPI goes live once they exist.)
+    # A learning is "created" either by a committed learning capture OR by a `revise` demote (which
+    # mints a new learning from an issue). Both must be counted, else a demoted learning present in
+    # the store looks like uncovered/imported markdown and suppresses the KPI.
     created_events = [
         e.get("entry_id")
         for e in captures
         if e.get("status") == "committed" and e.get("polarity") == "learning"
     ]
+    created_events += [e.get("entry_id") for e in revises if e.get("action") == "demote"]
     created_events = [x for x in created_events if x is not None]
     committed_learning_ids = set(created_events)
     id_reused = len(created_events) != len(committed_learning_ids)

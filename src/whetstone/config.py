@@ -43,6 +43,14 @@ class Config:
     # A capture whose embedding is within this cosine similarity of an existing same-scope entry
     # counts as a near-duplicate (§7). PROVISIONAL / UNCALIBRATED.
     dedup_similarity: float = 0.9
+    # A new entry within this cosine similarity of an existing OPPOSITE-polarity entry in an
+    # overlapping scope is surfaced as a cross-polarity conflict (§7). PROVISIONAL / UNCALIBRATED.
+    conflict_similarity: float = 0.85
+    # When a learning's recurrence reaches this, `capture`/`revise` prompt to promote it to a
+    # mandatory issue (§6). Promotion always asks the user, regardless of supervision mode.
+    promotion_threshold: int = 4
+    # Recurrence a demoted issue-turned-learning is seeded with (§5.2 `revise` demote).
+    demote_seed_recurrence: int = 3
     store_root: Path = field(default_factory=default_store_root)
 
     def __post_init__(self) -> None:
@@ -86,6 +94,9 @@ _FIELD_TYPES: dict[str, type] = {
     "learnings_cutoff": float,
     "issues_cutoff": float,
     "dedup_similarity": float,
+    "conflict_similarity": float,
+    "promotion_threshold": int,
+    "demote_seed_recurrence": int,
     "store_root": Path,
 }
 
