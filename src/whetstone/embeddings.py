@@ -34,6 +34,13 @@ class EmbeddingBackend(Protocol):
         """The dimensionality of the vectors this backend produces."""
         ...
 
+    @property
+    def model_id(self) -> str:
+        """A stable identity of this embedder (backend + model). Feeds the index fingerprint so a
+        different model of the same dimensionality invalidates a stale index instead of silently
+        comparing incompatible vectors."""
+        ...
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Embed a batch of texts into ``len(texts)`` vectors of length :attr:`dim`."""
         ...
@@ -85,6 +92,10 @@ class HashingBackend:
     def dim(self) -> int:
         return self._dim
 
+    @property
+    def model_id(self) -> str:
+        return f"hashing:{self._dim}"
+
     def embed(self, texts: list[str]) -> list[list[float]]:
         return [self._embed_one(t) for t in texts]
 
@@ -108,6 +119,11 @@ class SentenceTransformerBackend:
         self._model_name = model_name
         self._model = None
         self._dim: int | None = None
+
+    @property
+    def model_id(self) -> str:
+        # Available without loading the model, so the fingerprint reflects a model swap immediately.
+        return f"sentence-transformers:{self._model_name}"
 
     def _ensure_model(self) -> None:
         if self._model is not None:

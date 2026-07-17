@@ -17,7 +17,9 @@ similarity is brute-force over these rows (§5.4: no ANN library at this scale).
 from __future__ import annotations
 
 import hashlib
+import os
 import sqlite3
+import tempfile
 from array import array
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,7 +27,7 @@ from pathlib import Path
 from ..embeddings import EmbeddingBackend
 from .access import load_issues, load_learnings
 from .entries import IssueEntry, LearningEntry
-from .layout import StoreLocation
+from .layout import StoreLocation, store_write_lock
 
 INDEX_NAME = "index.sqlite"
 
@@ -78,9 +80,13 @@ def _unpack(blob: bytes) -> list[float]:
 
 
 def _fingerprint(loc: StoreLocation, backend: EmbeddingBackend) -> str:
-    """A hash of the markdown plus backend identity; changes iff the index would differ."""
+    """A hash of the markdown plus backend identity; changes iff the index would differ.
+
+    ``model_id`` is included (not just class + dim) so switching to a different embedding model of
+    the same dimensionality invalidates the index instead of silently reusing incompatible vectors.
+    """
     hasher = hashlib.sha1()
-    hasher.update(f"{type(backend).__name__}:{backend.dim}\0".encode())
+    hasher.update(f"{type(backend).__name__}:{backend.model_id}:{backend.dim}\0".encode())
     for directory in (loc.learnings_dir, loc.issues_dir):
         for path in sorted(directory.glob("*.md")):
             hasher.update(path.name.encode("utf-8"))
@@ -137,30 +143,36 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
 
     path = index_path(loc)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".sqlite.tmp")
-    if tmp.exists():
-        tmp.unlink()
-    conn = sqlite3.connect(str(tmp))
+    # Build into a UNIQUE temp file, then atomically swap it in. A reader (a concurrent recall) must
+    # never observe a missing/half-written index.sqlite — os.replace is atomic and the live DB is
+    # never unlinked first.
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=INDEX_NAME, suffix=".tmp")
+    os.close(fd)  # sqlite opens its own handle to the path
     try:
-        _create_schema(conn)
-        conn.executemany(
-            "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
-            scope_rows,
-        )
-        conn.executemany(
-            "INSERT INTO entries (id, polarity, scope, vector, recurrence, title, body) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            entry_rows,
-        )
-        conn.execute(
-            "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
-            (_fingerprint(loc, backend),),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-    path.unlink(missing_ok=True)
-    tmp.replace(path)
+        conn = sqlite3.connect(tmp_name)
+        try:
+            _create_schema(conn)
+            conn.executemany(
+                "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
+                scope_rows,
+            )
+            conn.executemany(
+                "INSERT INTO entries (id, polarity, scope, vector, recurrence, title, body) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                entry_rows,
+            )
+            conn.execute(
+                "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
+                (_fingerprint(loc, backend),),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        os.replace(tmp_name, str(path))
+    except BaseException:
+        if os.path.exists(tmp_name):
+            os.remove(tmp_name)
+        raise
 
 
 def _collect(
@@ -213,7 +225,18 @@ def _create_schema(conn: sqlite3.Connection) -> None:
 
 
 def ensure_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
-    """Rebuild the index if it is missing or stale relative to the markdown + backend."""
+    """Rebuild the index if it is missing or stale, serialized against captures and other rebuilds.
+
+    Takes the per-store write lock (the same one ``capture`` holds) so a rebuild triggered by
+    ``recall`` never overlaps a capture's write or another rebuild.
+    """
+    with store_write_lock(loc):
+        rebuild_index_if_stale(loc, backend)
+
+
+def rebuild_index_if_stale(loc: StoreLocation, backend: EmbeddingBackend) -> None:
+    """Rebuild the index iff missing or stale. Lock-free: call while already holding the write lock
+    (as ``capture`` does) or via :func:`ensure_index` (which takes the lock for you)."""
     path = index_path(loc)
     if path.exists():
         try:

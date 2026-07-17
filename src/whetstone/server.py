@@ -26,7 +26,13 @@ from .store.access import (
 )
 from .store.entries import IssueEntry, LearningEntry
 from .store.index import IndexedEntry, entry_text
-from .store.layout import attach_skill, commit_store, ensure_store, store_location
+from .store.layout import (
+    attach_skill,
+    commit_store,
+    ensure_store,
+    store_location,
+    store_write_lock,
+)
 
 mcp = FastMCP("whetstone")
 
@@ -129,58 +135,65 @@ def capture(
     ensure_store(skill, config)
     loc = store_location(skill, config)
     backend = make_backend(config)
-    index.ensure_index(loc, backend)
 
-    candidate_vec = backend.embed([entry_text(title, body)])[0]
-    scope_vec = backend.embed([scope])[0]
-    duplicate = _find_duplicate(loc, polarity, scope, candidate_vec, scope_vec, config)
+    # The whole critical section runs under the per-store write lock so concurrent captures for the
+    # same skill can't race on next_id (duplicate ids / lost entries) or interleave index rebuilds.
+    # rebuild_index_if_stale is the lock-free variant (we already hold the lock here).
+    with store_write_lock(loc):
+        index.rebuild_index_if_stale(loc, backend)
 
-    if polarity == "learning":
-        if duplicate is not None:
-            updated = reinforce_learning(loc, duplicate.id, when=_today())
+        candidate_vec = backend.embed([entry_text(title, body)])[0]
+        scope_vec = backend.embed([scope])[0]
+        duplicate = _find_duplicate(loc, polarity, scope, candidate_vec, scope_vec, config)
+
+        if polarity == "learning":
+            if duplicate is not None:
+                updated = reinforce_learning(loc, duplicate.id, when=_today())
+                index.rebuild_index(loc, backend)
+                commit_store(
+                    loc, f"capture: reinforce {updated.id} (recurrence {updated.recurrence})"
+                )
+                return {
+                    "status": "reinforced",
+                    "entry_id": updated.id,
+                    "recurrence": updated.recurrence,
+                }
+            entry_id = next_id(loc, "learning")
+            today = _today()
+            save_learning(
+                loc,
+                LearningEntry(
+                    id=entry_id,
+                    title=title,
+                    body=body.strip(),
+                    scope=scope,
+                    provenance=provenance,
+                    recurrence=1,
+                    first_seen=today,
+                    last_seen=today,
+                ),
+            )
             index.rebuild_index(loc, backend)
-            commit_store(loc, f"capture: reinforce {updated.id} (recurrence {updated.recurrence})")
-            return {
-                "status": "reinforced",
-                "entry_id": updated.id,
-                "recurrence": updated.recurrence,
-            }
-        entry_id = next_id(loc, "learning")
-        today = _today()
-        save_learning(
+            commit_store(loc, f"capture: add {entry_id} ({scope})")
+            return {"status": "committed", "entry_id": entry_id, "recurrence": 1}
+
+        # polarity == "issue"
+        if duplicate is not None:
+            return {"status": "noop", "entry_id": duplicate.id}
+        entry_id = next_id(loc, "issue")
+        save_issue(
             loc,
-            LearningEntry(
+            IssueEntry(
                 id=entry_id,
                 title=title,
                 body=body.strip(),
                 scope=scope,
                 provenance=provenance,
-                recurrence=1,
-                first_seen=today,
-                last_seen=today,
             ),
         )
         index.rebuild_index(loc, backend)
         commit_store(loc, f"capture: add {entry_id} ({scope})")
-        return {"status": "committed", "entry_id": entry_id, "recurrence": 1}
-
-    # polarity == "issue"
-    if duplicate is not None:
-        return {"status": "noop", "entry_id": duplicate.id}
-    entry_id = next_id(loc, "issue")
-    save_issue(
-        loc,
-        IssueEntry(
-            id=entry_id,
-            title=title,
-            body=body.strip(),
-            scope=scope,
-            provenance=provenance,
-        ),
-    )
-    index.rebuild_index(loc, backend)
-    commit_store(loc, f"capture: add {entry_id} ({scope})")
-    return {"status": "committed", "entry_id": entry_id, "recurrence": None}
+        return {"status": "committed", "entry_id": entry_id, "recurrence": None}
 
 
 # --------------------------------------------------------------------------- helpers

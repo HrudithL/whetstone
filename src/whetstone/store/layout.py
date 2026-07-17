@@ -105,6 +105,21 @@ def _ensure_store_gitignore(loc: StoreLocation) -> None:
         path.write_text(_STORE_GITIGNORE, encoding="utf-8")
 
 
+@contextmanager
+def store_write_lock(loc: StoreLocation):
+    """Serialize all mutations of one store (and its index rebuilds) across calls and processes.
+
+    ``capture`` runs its whole critical section — duplicate check, id allocation, markdown write,
+    index rebuild, git commit — under this lock so concurrent captures for the same skill can't race
+    on ``next_id`` (which would mint duplicate ids or drop entries) or interleave index rebuilds.
+    ``recall``'s ``ensure_index`` takes the same lock, so a rebuild never overlaps another rebuild
+    or a capture. The lock file sits in the store root (outside the per-skill git repo), so it is
+    never committed. A no-op where ``fcntl`` is unavailable (non-POSIX).
+    """
+    with _file_lock(loc.path.parent / f".write-{loc.slug}.lock"):
+        yield
+
+
 def commit_store(loc: StoreLocation, message: str) -> None:
     """Stage all tracked markdown changes and commit them to the store's git repo.
 
