@@ -344,8 +344,9 @@ Still to resolve: the exact showcase/benchmark harness (curated examples, script
 1. **M0 — Attach + store.** `whetstone` MCP with `attach`; seed the git-tracked, scope-organized markdown store (§5.1). Target: `great-tables`.
 2. **M1 — Recall + capture loop.** `recall` (elaborated `intent`, centroid+phrase scope match, MMR cap, fallback floor) + the capture-contract; `capture` distills/dedups/commits. Apply-at-recall (§8), no review.
 3. **M2 — Revise + scoring + supervision + telemetry.** `revise` (reinforce/weaken/remove/promote/demote + contradiction prompts); the `recurrence`/`recency`/`weight` model with decay toggles; conflict detection; the supervision modes; `events.jsonl` + `metrics`; compaction + scope merging.
-4. **M3 — Showcase.** Simple docs site: before / learned-layer / after; telemetry KPIs; blinded judge; one example per class (visual → code → context).
-5. **M4 — Generalize.** Attach to a code-improvement skill, then a context-organizing skill; confirm the substrate holds without skill-specific code.
+4. **M2.5 — Dual-backend CI & test hardening.** Introduce CI (there was none) that runs the suite against both embedding backends as two jobs: the fast, deterministic `hashing` suite on every push (`pytest -m "not embeddings"`, primary signal), and a separate cached `sentence-transformers` calibration suite (`pytest -m embeddings`) that verifies the real semantic behavior the thresholds are tuned for — dedup-by-paraphrase, cross-polarity conflict detection, retrieval relevance — which the deterministic hashing stand-in cannot. `hashing` stays the default backend; ST remains the opt-in `[embeddings]` extra. Bridges M2's engine to M3's showcase, which must run on the ST backend.
+5. **M3 — Showcase.** Simple docs site: before / learned-layer / after; telemetry KPIs; blinded judge; one example per class (visual → code → context).
+6. **M4 — Generalize.** Attach to a code-improvement skill, then a context-organizing skill; confirm the substrate holds without skill-specific code.
 
 ---
 
