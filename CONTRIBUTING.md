@@ -2,7 +2,7 @@
 
 This guide is a **drop-in template** for any GitHub repository. It defines how an autonomous coding agent (and its subagents) must plan, branch, commit, review, and merge work. It is written in imperative voice: every "MUST" / "MUST NOT" is a hard rule.
 
-The agent's north star: **ship small, reviewable, reversible slices; delegate every subjective decision to the human; never touch `main` without explicit approval.**
+The agent's north star: **ship small, reviewable, reversible slices; keep it simple and decide the obvious yourself, escalating only genuine forks; never touch `main` without explicit approval.**
 
 ---
 
@@ -25,6 +25,8 @@ The agent's north star: **ship small, reviewable, reversible slices; delegate ev
 
 ## 1. Core Principles
 
+- **Keep it simple and linear.** Build the smallest thing that satisfies the spec. Do not add scope, abstraction, features, or ceremony the task did not ask for. Do not make the project more than it is. When two paths both work, take the simpler one. When in doubt, do less.
+- **Use senior-developer discretion.** Act like a talented senior engineer: make straightforward, reasonable fixes and decisions yourself instead of asking permission for the obvious. Don't make silly mistakes, and know where the boundaries are (§10). The bar for interrupting the human is high — see [§10.1](#101-when-to-decide-vs-ask).
 - **Plan, then read your plan, then execute.** Never begin editing code before a written spec exists and has been re-read.
 - **One small feature per branch.** A branch holds a few commits at most, each tightly scoped to one condensed piece of behavior.
 - **Distribute and parallelize** work across a tree of branches using subagents. The tree always terminates at a single **root branch** that is the only branch that merges to `main`.
@@ -151,14 +153,16 @@ The agent MUST wait for automated review before merging any PR up the tree.
 
 ### Iterating on review feedback
 
-For each Codex comment:
+Read the whole review, decide what is reasonable to fix, and **make those fixes yourself**. Do not turn the review into a checklist of questions for the human — that is the failure mode this section exists to prevent.
 
-1. **Classify** the comment as objective (a defect, a bug, a factual code smell, a missed test) or subjective (style preference, alternate design, opinion). The agent's classification itself must be conservative — when unsure, treat it as subjective.
-2. **Objective comments:** fix them. Push follow-up commits to the same branch. Re-request review.
-3. **Subjective comments:** surface to the human user verbatim, with the agent's recommendation and tradeoffs. Do not act until the human decides.
-4. Repeat until Codex issues a clean/approving pass **and** every subjective item has a human answer.
+For each Codex comment, apply the [§10.1](#101-when-to-decide-vs-ask) test:
 
-The PR is only eligible to merge up when **both** conditions are true: Codex thumbs-up AND all subjective items resolved by the human.
+1. **If the fix is clear and reasonable — just make it.** A defect, an inconsistency, a missed test, a straightforward correctness/security fix, or a change with one obviously-right implementation is the agent's to make at its own discretion. Push a follow-up commit; re-request review.
+2. **Escalate only a genuine fork:** a fix that has **multiple materially-different reasonable implementations**, or that is a true product/policy/naming/architecture decision per [§10](#10-subjective-vs-objective-decisions). Then ask one focused question — "implement it this way or that way?" — with a recommendation. Do not ask about fixes that are straightforward to make.
+3. **Decline what would overcomplicate.** A suggestion that adds scope, abstraction, or infrastructure beyond what the spec needs may be declined or deferred — briefly note why on the PR. Keeping it simple (§1) outranks satisfying every suggestion.
+4. Repeat until Codex issues a clean/approving pass **and** any genuinely-escalated fork has a human answer.
+
+The PR is only eligible to merge up when **both** are true: Codex thumbs-up AND any escalated forks resolved by the human.
 
 ---
 
@@ -201,7 +205,18 @@ Rules:
 
 ## 10. Subjective vs. Objective Decisions
 
-The agent's job is to **think about what is important** and, for every change under consideration, ask: *"Is any part of this dependent on human opinion, product judgment, or repo-level policy?"* If yes, it escalates. It does not decide.
+The agent's job is to **think about what is important** and, for every change under consideration, ask: *"Is any part of this dependent on human opinion, product judgment, or repo-level policy?"* If yes — and it is a genuine fork — it escalates. Otherwise it decides and moves on.
+
+### 10.1 When to decide vs. ask
+
+Default to **deciding**. Interrupt the human only when it is genuinely warranted. Before asking, run this test:
+
+- **Is the fix/decision straightforward with one obviously-right answer?** → **Decide and do it.** (correctness fixes, inconsistencies, mechanical refactors, tests, security/robustness fixes, following an explicit instruction, the plainly-simpler of two options.)
+- **Are there multiple materially-different reasonable implementations?** → **Ask** one focused "this way or that way?" question with a recommendation. A difference that is trivial or cosmetic is *not* material — pick the clean one and move on.
+- **Is it one of the always-subjective categories below (product/UX, public API shape, naming, deps, architecture, security posture)?** → **Ask.**
+- **Would it add scope/abstraction/infra the spec doesn't need?** → **Don't do it** (or do the minimal version); note the choice.
+
+Batch genuinely-needed questions; never fan a single review out into many small questions. When you do proceed on your own, say briefly what you decided and why, so it stays auditable.
 
 ### Always subjective — escalate to the human
 
@@ -263,8 +278,8 @@ Per slice:
 Per PR:
 - [ ] Waited for the Codex auto-review emoji marker.
 - [ ] If no Codex review appeared, asked the human how to proceed.
-- [ ] Addressed every objective comment.
-- [ ] Escalated every subjective comment; recorded the human's decision.
+- [ ] Made the reasonable fixes at own discretion; declined/deferred anything that would overcomplicate (noted why).
+- [ ] Escalated only genuine forks (multiple reasonable implementations, or a §10 decision); recorded the human's answer.
 - [ ] Merged up with a **merge commit** (not squash, not rebase).
 - [ ] Proposed branch deletion to the human.
 
