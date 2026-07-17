@@ -78,13 +78,26 @@ def compute_metrics(loc: StoreLocation) -> dict:
     # otherwise coverage is incomplete (pre-telemetry / imported markdown) and we return unknown
     # rather than a misleading figure. (Removals land in M2b; the KPI goes live once they exist.)
     present_ids = {entry.id for entry in load_learnings(loc)}
-    committed_learning_ids = {
+    created_events = [
         e.get("entry_id")
         for e in captures
         if e.get("status") == "committed" and e.get("polarity") == "learning"
-    }
-    committed_learning_ids.discard(None)
-    if committed_learning_ids and present_ids <= committed_learning_ids:
+    ]
+    created_events = [x for x in created_events if x is not None]
+    committed_learning_ids = set(created_events)
+    id_reused = len(created_events) != len(committed_learning_ids)
+    if id_reused:
+        # A learning id appears in multiple creation events → it was removed and a later capture
+        # reused the id (next_id = max+1). The set then collapses two distinct ever-created
+        # learnings into one, so still-present-vs-ever-created can't be computed honestly.
+        survived_pct = {
+            "value": None,
+            "note": (
+                "A learning id was reused across creation events (an entry was removed and its id "
+                "later reassigned), so % survived cannot be computed honestly from the event log."
+            ),
+        }
+    elif committed_learning_ids and present_ids <= committed_learning_ids:
         survived_pct = {
             "value": round(len(present_ids) / len(committed_learning_ids), 4),
             "note": None,

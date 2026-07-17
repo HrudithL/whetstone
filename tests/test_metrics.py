@@ -112,3 +112,24 @@ def test_survived_pct_unknown_when_telemetry_coverage_incomplete(tmp_path, monke
     report = metrics("gt")
     assert report["learnings_survived_pct"]["value"] is None
     assert "ncomplete" in report["learnings_survived_pct"]["note"]
+
+
+def test_survived_pct_unknown_when_a_learning_id_is_reused(store):
+    # If a learning id appears in two creation events (removed, then id reused), the set-based
+    # coverage check would collapse them; survival must be reported as unknown instead.
+    from conftest import make_learning
+    from whetstone.store.access import save_learning
+
+    save_learning(store, make_learning("L1", "Right-align currency.", "currency"))
+    _seed_events(
+        store,
+        [
+            {"type": "capture", "run_id": "r1", "entry_id": "L1",
+             "polarity": "learning", "status": "committed"},
+            {"type": "capture", "run_id": "r2", "entry_id": "L1",
+             "polarity": "learning", "status": "committed"},
+        ],
+    )
+    m = compute_metrics(store)
+    assert m["learnings_survived_pct"]["value"] is None
+    assert "reused" in m["learnings_survived_pct"]["note"]

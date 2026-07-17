@@ -144,3 +144,29 @@ def test_append_event_is_best_effort_on_write_failure(tmp_path, monkeypatch):
     telemetry.append_event(loc, {"type": "capture", "entry_id": "L1"})  # must not raise
     # And nothing was written, since the open failed.
     assert telemetry.read_events(loc) == []
+
+
+def test_append_event_completes_line_on_partial_writes(tmp_path, monkeypatch):
+    # os.write may accept only part of the buffer; append_event must loop so the whole line lands
+    # (an unterminated fragment would concatenate with and corrupt the next event).
+    import os
+
+    from whetstone import telemetry
+    from whetstone.store.layout import ensure_store, store_location
+
+    monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
+    ensure_store("gt")
+    loc = store_location("gt")
+
+    real_write = os.write
+
+    def one_byte_at_a_time(fd, data):
+        return real_write(fd, bytes(data[:1]))  # accept a single byte per call
+
+    monkeypatch.setattr(telemetry.os, "write", one_byte_at_a_time)
+    telemetry.append_event(loc, {"type": "capture", "entry_id": "L7", "status": "committed"})
+    monkeypatch.undo()
+
+    events = telemetry.read_events(loc)
+    assert len(events) == 1
+    assert events[0]["entry_id"] == "L7"

@@ -8,10 +8,11 @@ simply accepts produces no follow-up ``capture``.
 ``events.jsonl`` is derived/local telemetry, not source of truth: the per-store ``.gitignore``
 (see :mod:`whetstone.store.layout`) keeps it out of git history entirely.
 
-Appends are made with a single ``O_APPEND`` write of one newline-terminated line. On POSIX an
-``O_APPEND`` write is positioned atomically, and a write this small is delivered in one piece, so
-concurrent appends from multiple processes interleave whole lines rather than corrupting each other
-— no lock is required on the write path.
+Appends are made with an ``O_APPEND`` write of one newline-terminated line, looping until every
+byte is written (``os.write`` may accept only part of the buffer on interruption or a space-limited
+filesystem, and ignoring that would leave an unterminated fragment that concatenates with the next
+append). On POSIX each ``O_APPEND`` write is positioned atomically, so concurrent appends from
+multiple processes interleave whole writes rather than corrupting each other — no lock is required.
 """
 
 from __future__ import annotations
@@ -46,7 +47,9 @@ def append_event(loc: StoreLocation, event: dict) -> None:
         loc.path.mkdir(parents=True, exist_ok=True)
         fd = os.open(events_path(loc), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
-            os.write(fd, line.encode("utf-8"))
+            view = memoryview(line.encode("utf-8"))
+            while view:  # os.write may accept only part of the buffer; write the rest.
+                view = view[os.write(fd, view) :]
         finally:
             os.close(fd)
     except OSError:
