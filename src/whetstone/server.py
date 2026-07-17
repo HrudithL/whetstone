@@ -11,8 +11,10 @@ conflict detection in ``capture`` (§7). ``main()`` runs the server over stdio.
 
 from __future__ import annotations
 
+import json
 import re
 import secrets
+import sys
 from dataclasses import asdict
 from datetime import UTC, datetime
 
@@ -817,9 +819,28 @@ def _find_duplicate(
     return best
 
 
-def main() -> None:
-    """Console entry point: run the stdio MCP server."""
-    mcp.run()
+_USAGE = "usage: whetstone [serve | compact <skill>]"
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Console entry point. No args (or ``serve``) runs the stdio MCP server as usual; ``compact
+    <skill>`` runs the out-of-band compaction pass (§7) and prints its summary. Compaction is
+    deliberately NOT one of the five MCP tools — it is maintenance, invoked out of band."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args or args[0] == "serve":
+        mcp.run()
+        return
+    if args[0] == "compact":
+        if len(args) != 2:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        # Imported lazily so the hot ``serve`` path doesn't pull the compaction module.
+        from .compaction import compact
+
+        print(json.dumps(compact(args[1]), indent=2))
+        return
+    print(_USAGE, file=sys.stderr)
+    raise SystemExit(2)
 
 
 if __name__ == "__main__":

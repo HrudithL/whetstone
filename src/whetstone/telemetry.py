@@ -135,6 +135,28 @@ def emit_revise(
     )
 
 
+def emit_compaction(
+    loc: StoreLocation,
+    *,
+    retired: int,
+    merged_scopes: int,
+    deduped: int,
+) -> None:
+    """Record a ``compact`` maintenance pass (§7): how many learnings were retired, how many scopes
+    folded into another (anti-fragmentation), and how many near-duplicate entries collapsed. Emitted
+    only when the pass actually changed the store (a no-op compaction logs nothing), so metrics can
+    see the maintenance that mattered."""
+    append_event(
+        loc,
+        {
+            "type": "compaction",
+            "retired": retired,
+            "merged_scopes": merged_scopes,
+            "deduped": deduped,
+        },
+    )
+
+
 def read_events(loc: StoreLocation) -> list[dict]:
     """Read every event line, skipping blank lines. Missing log -> empty list.
 
