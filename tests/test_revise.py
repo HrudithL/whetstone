@@ -15,8 +15,15 @@ import pytest
 
 from conftest import make_issue, make_learning, seed
 from whetstone.server import capture, revise
-from whetstone.store.access import find_issue, find_learning, load_issues, load_learnings
+from whetstone.store.access import (
+    _next_ids_path,
+    find_issue,
+    find_learning,
+    load_issues,
+    load_learnings,
+)
 from whetstone.store.layout import commit_store, store_location
+from whetstone.store.markdown import MarkdownParseError
 from whetstone.telemetry import read_events
 
 
@@ -44,6 +51,16 @@ def _commit_count(loc) -> int:
         text=True,
     )
     return int(out.stdout.strip())
+
+
+def _git_status(loc) -> str:
+    return subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(loc.path),
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
 
 
 def _clean_seed(loc, learnings=(), issues=()) -> None:
@@ -143,6 +160,32 @@ def test_reinforce_applies_supplied_body_and_scope(store, config):
     assert [e.id for e in load_learnings(store)] == ["L1"]
 
 
+def test_reinforce_with_invalid_body_leaves_store_clean(store, config):
+    _clean_seed(store, learnings=[_muted("L1", 2)])
+    before = _commit_count(store)
+
+    # A body containing an entry-heading delimiter would corrupt the store; it must fail BEFORE the
+    # recurrence bump so nothing is left half-applied.
+    with pytest.raises(MarkdownParseError, match="entry-heading delimiter"):
+        revise("gt", "L1", "reinforce", body="ok\n\n## L99 · Example\n\nsneaky.")
+
+    assert find_learning(store, "L1").recurrence == 2  # unchanged
+    assert _commit_count(store) == before
+    assert _git_status(store) == ""  # working tree clean
+
+
+def test_weaken_with_invalid_body_leaves_store_clean(store, config):
+    _clean_seed(store, learnings=[_muted("L1", 3)])
+    before = _commit_count(store)
+
+    with pytest.raises(MarkdownParseError, match="entry-heading delimiter"):
+        revise("gt", "L1", "weaken", body="ok\n\n## L98 · Example\n\nsneaky.")
+
+    assert find_learning(store, "L1").recurrence == 3  # unchanged
+    assert _commit_count(store) == before
+    assert _git_status(store) == ""
+
+
 # --------------------------------------------------------------------------- weaken
 
 
@@ -156,6 +199,23 @@ def test_weaken_decrements_recurrence_without_refreshing_last_seen(store, config
     entry = find_learning(store, "L1")
     assert entry.recurrence == 2
     assert entry.last_seen == seeded.last_seen  # weaken must NOT refresh recency
+
+
+def test_weaken_applies_supplied_body_and_scope(store, config):
+    # Conflict resolution rewords the surviving (weakened) entry — the stale contradicted wording
+    # must not linger in markdown/index.
+    _clean_seed(store, learnings=[_muted("L1", 3)])
+
+    result = revise(
+        "gt", "L1", "weaken", body="Muted palettes only when the client hasn't set a brand color.",
+        scope="theme",
+    )
+
+    assert result == {"status": "revised", "entry_id": "L1", "recurrence": 2}
+    entry = find_learning(store, "L1")
+    assert entry.body == "Muted palettes only when the client hasn't set a brand color."
+    assert entry.scope == "theme"
+    assert [e.id for e in load_learnings(store)] == ["L1"]  # moved, not duplicated
 
 
 def test_weaken_below_zero_prompts_then_keep_resets_to_one(store, config):
@@ -333,6 +393,29 @@ def test_ids_are_never_reused_after_remove_promote_demote(env_only):
     demoted = revise("gt", "I1", "demote", confirm=True)
     assert demoted["entry_id"] == "L5"
     assert capture("gt", "issue", "Never use comic sans.", "type", "p")["entry_id"] == "I2"
+
+
+def test_legacy_store_without_next_ids_does_not_reuse_ids(store, config):
+    # Simulate a pre-M2b store: entries written straight to markdown, no next_ids.json yet.
+    seed(store, learnings=[_muted("L1"), make_learning("L2", "Serif captions.", "type")])
+    commit_store(store, "legacy seed")
+    assert not _next_ids_path(store).exists()
+
+    # Removing the highest-numbered id must record it before it leaves markdown, so the next capture
+    # does not fall back to (markdown max + 1) and reuse L2.
+    revise("gt", "L2", "remove")
+    assert capture("gt", "learning", "Bold the header row.", "header", "p")["entry_id"] == "L3"
+
+
+def test_malformed_next_ids_file_self_heals(store, config):
+    capture("gt", "learning", "A muted blue palette.", "color", "p")  # writes L1 + next_ids.json
+    # A hand-edited/garbled file of the wrong shape must not raise — it falls back to markdown max.
+    for junk in ("null", "[1, 2, 3]", '{"learning": "oops"}', "not json at all"):
+        _next_ids_path(store).write_text(junk, encoding="utf-8")
+        # next capture must still succeed; markdown max is L1, so the next id is L2.
+        result = capture("gt", "learning", f"Distinct pref {junk}.", f"scope-{junk[:3]}", "p")
+        assert result["entry_id"] == "L2"
+        revise("gt", "L2", "remove")  # reset back to a single learning for the next iteration
 
 
 def test_next_ids_is_git_tracked(env_only):

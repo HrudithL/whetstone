@@ -78,13 +78,20 @@ def _next_ids_path(loc: StoreLocation):
 
 
 def _load_next_ids(loc: StoreLocation) -> dict[str, int]:
-    """The persisted next-number counters, or zeros if the file is missing/corrupt (self-heals)."""
+    """The persisted next-number counters, or zeros if the file is missing/corrupt (self-heals).
+
+    "Corrupt" covers a torn file (bad JSON) AND a valid-JSON-but-wrong-shape file (``null``, a list,
+    a non-integer value) — a hand-edited ``next_ids.json`` must degrade to the markdown-max
+    fallback, never raise and block ``next_id``.
+    """
     path = _next_ids_path(loc)
     if path.exists():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             return {p: int(data.get(p, 0)) for p in _POLARITY_PREFIX}
-        except (ValueError, OSError):  # pragma: no cover - defensive against a torn/edited file
+        # JSONDecodeError is a ValueError; .get on a non-dict raises AttributeError; a non-int value
+        # raises TypeError/ValueError. Any of these means the file is unusable -> fall back to zero.
+        except (AttributeError, TypeError, ValueError, OSError):
             pass
     return {p: 0 for p in _POLARITY_PREFIX}
 
@@ -215,7 +222,14 @@ def update_learning_prose(
 
 
 def remove_entry(loc: StoreLocation, entry_id: str) -> bool:
-    """Delete a learning or issue (by id prefix) from its scope file; True iff it existed."""
+    """Delete a learning or issue (by id prefix) from its scope file; True iff it existed.
+
+    Advances the persisted id counter past ``entry_id`` BEFORE dropping it from markdown. On a store
+    created before ``next_ids.json`` existed, removing/moving the highest-numbered entry would
+    otherwise leave ``next_id`` deriving from the (now lower) markdown max and reuse that id;
+    recording it here gives upgraded stores the same no-reuse guarantee. This is the shared deletion
+    path, so it covers ``remove``, ``promote``, and ``demote`` (all delete their source through it).
+    """
     if entry_id.startswith("L"):
         directory, parse, write = loc.learnings_dir, parse_learnings, write_learnings
     elif entry_id.startswith("I"):
@@ -226,6 +240,7 @@ def remove_entry(loc: StoreLocation, entry_id: str) -> bool:
         entries = parse(path.read_text(encoding="utf-8"))
         kept = [e for e in entries if e.id != entry_id]
         if len(kept) != len(entries):
+            record_id(loc, entry_id)  # remember the id before it leaves the markdown (no reuse)
             write(path, kept)
             return True
     return False

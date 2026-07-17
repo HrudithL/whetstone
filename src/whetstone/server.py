@@ -48,6 +48,7 @@ from .store.layout import (
     store_location,
     store_write_lock,
 )
+from .store.markdown import validate_body
 from .telemetry import emit_capture, emit_recall, emit_revise
 
 mcp = FastMCP("whetstone")
@@ -353,16 +354,14 @@ def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, conf
         return _needs_confirmation(
             entry_id, f"Supervised mode: reinforce {entry_id}? Re-call `revise` with confirm:true."
         )
+    # Build + VALIDATE any reworded prose before the recurrence bump, so an invalid body fails
+    # cleanly with no partial mutation (the bump/scope-move would otherwise already be on disk).
+    prose = _prepare_prose(entry_id, learning, body, scope)
     updated = reinforce_learning(loc, entry_id, when=_today())
     # A corrected wording supplied alongside the reinforcement updates the stored prose (and, on the
     # index rebuild below, its embedding) so markdown never keeps stale text (§5.2).
-    if (body and body.strip()) or scope:
-        new_body = body.strip() if (body and body.strip()) else updated.body
-        new_scope = scope if scope else updated.scope
-        new_title = _title_from_body(new_body) if (body and body.strip()) else updated.title
-        updated = update_learning_prose(
-            loc, entry_id, title=new_title, body=new_body, scope=new_scope
-        )
+    if prose is not None:
+        updated = update_learning_prose(loc, entry_id, **prose)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: reinforce {updated.id} (recurrence {updated.recurrence})")
     emit_revise(loc, run_id, updated.id, "reinforce", "reinforced")
@@ -419,7 +418,12 @@ def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
             f"(recurrence {learning.recurrence} -> {new_recurrence})? "
             f"Re-call `revise` with confirm:true.",
         )
+    # Conflict resolution can reword the surviving (weakened) entry. Build + VALIDATE up front so an
+    # invalid body fails cleanly before the recurrence change / scope move (§7).
+    prose = _prepare_prose(entry_id, learning, body, scope)
     set_learning_recurrence(loc, entry_id, new_recurrence)
+    if prose is not None:
+        update_learning_prose(loc, entry_id, **prose)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: weaken {entry_id} (recurrence {new_recurrence})")
     emit_revise(loc, run_id, entry_id, "weaken", "revised")
@@ -590,6 +594,25 @@ def _title_from_body(body: str) -> str:
         raise ValueError("capture requires a non-empty body")
     first_sentence = re.split(r"(?<=[.!?])\s", collapsed, maxsplit=1)[0]
     return (first_sentence[:_MAX_TITLE].strip() or collapsed[:_MAX_TITLE].strip())
+
+
+def _prepare_prose(
+    entry_id: str, current: LearningEntry, body: str | None, scope: str | None
+) -> dict | None:
+    """Build the reworded ``{title, body, scope}`` for a learning, or None if none was supplied.
+
+    Validates the new body up front (raising :class:`MarkdownParseError` BEFORE any caller mutates
+    the store), so a body that would corrupt the store fails cleanly with no partial write. The
+    returned dict is spread straight into :func:`update_learning_prose`.
+    """
+    has_body = bool(body and body.strip())
+    if not has_body and not scope:
+        return None
+    new_body = body.strip() if has_body else current.body
+    new_scope = scope if scope else current.scope
+    new_title = _title_from_body(new_body) if has_body else current.title
+    validate_body(entry_id, new_body)
+    return {"title": new_title, "body": new_body, "scope": new_scope}
 
 
 def _confirmed(confirm: bool | str) -> bool:

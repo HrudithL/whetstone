@@ -5,7 +5,7 @@ current markdown state) this computes the KPIs that ordinary usage can support:
 
 - **runs** — number of ``recall`` events.
 - **avg learnings applied per run** — mean count of learnings returned per ``recall``.
-- **capture counts by status** — ``committed`` / ``reinforced`` / ``noop``.
+- **capture counts by status** — ``committed`` / ``reinforced`` / ``noop`` / ``conflict``.
 - **repeat-correction proxy** — the "money metric" (§11): the reinforcement rate (a repeated
   preference reinforced rather than newly captured) as a slowing-of-re-correction signal.
 - **% survived** — learnings still present in the store vs. all ever created.
@@ -59,7 +59,7 @@ def compute_metrics(loc: StoreLocation) -> dict:
 
     learnings_per_run = [int(e.get("counts", {}).get("learnings", 0)) for e in recalls]
 
-    by_status = {"committed": 0, "reinforced": 0, "noop": 0}
+    by_status = {"committed": 0, "reinforced": 0, "noop": 0, "conflict": 0}
     for e in captures:
         status = e.get("status")
         if status in by_status:

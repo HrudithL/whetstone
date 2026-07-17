@@ -196,6 +196,15 @@ def _validate_body(entry_id: str, body: str) -> None:
             )
 
 
+def validate_body(entry_id: str, body: str) -> None:
+    """Public pre-write check: raise :class:`MarkdownParseError` if ``body`` would corrupt storage.
+
+    Lets a caller reject an invalid revised body BEFORE mutating anything (e.g. bumping recurrence
+    or moving a scope file), so a bad body fails cleanly with no partial write.
+    """
+    _validate_body(entry_id, body)
+
+
 def _serialize_block(entry_id: str, title: str, metadata: list[tuple[str, str]], body: str) -> str:
     _validate_body(entry_id, body)
     lines = [f"## {entry_id}{_HEADING_SEP}{_single_line(title)}"]
