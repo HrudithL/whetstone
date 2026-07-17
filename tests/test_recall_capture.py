@@ -1,0 +1,161 @@
+"""End-to-end tests for the recall + capture tools via their tool functions."""
+
+from __future__ import annotations
+
+import subprocess
+
+import pytest
+
+from whetstone.server import capture, recall
+from whetstone.store.layout import store_location
+
+
+@pytest.fixture
+def env(tmp_path, monkeypatch):
+    """Point the server's own load_config() at a temp store root."""
+    monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
+    return tmp_path
+
+
+def _commit_count(root, slug) -> int:
+    out = subprocess.run(
+        ["git", "rev-list", "--count", "HEAD"],
+        cwd=str(root / slug),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return int(out.stdout.strip())
+
+
+# --------------------------------------------------------------------------- recall
+
+
+def test_recall_payload_shape_matches_spec(env):
+    capture(
+        "gt",
+        "learning",
+        "Right-align currency columns and drop vertical gridlines.",
+        "currency columns",
+        "prov",
+    )
+    capture("gt", "issue", "Never band tables under ten rows.", "small tables", "prov")
+
+    result = recall(
+        "gt", "right-align the currency columns and never band small tables under ten rows"
+    )
+
+    assert set(result) == {
+        "skill",
+        "run_id",
+        "learnings",
+        "issues",
+        "how_to_use",
+        "capture_contract",
+    }
+    assert result["skill"] == "gt"
+    assert result["run_id"].startswith("r-")
+    assert "MANDATORY" in result["how_to_use"]
+    assert "run_id" in result["capture_contract"]
+
+    assert result["learnings"], "the currency learning should be recalled"
+    learning = result["learnings"][0]
+    assert set(learning) == {"id", "rule", "scope", "recurrence", "weight"}
+    issue = result["issues"][0]
+    assert set(issue) == {"id", "rule", "scope"}
+
+
+def test_recall_on_empty_store_returns_empty_lists(env):
+    result = recall("fresh-skill", "some elaborated intent about tables")
+    assert result["learnings"] == []
+    assert result["issues"] == []
+    assert result["run_id"].startswith("r-")
+
+
+def test_recall_creates_store_lazily(env):
+    recall("never-attached", "an elaborated intent")
+    slug = store_location("never-attached").slug
+    assert (env / slug / ".git").is_dir()
+
+
+# --------------------------------------------------------------------------- capture
+
+
+def test_capture_commits_a_new_learning(env):
+    result = capture(
+        "gt",
+        "learning",
+        "Right-align currency columns and drop vertical gridlines.",
+        "currency columns",
+        "2026-07-16 — 'make revenue right-aligned'",
+    )
+    assert result == {"status": "committed", "entry_id": "L1", "recurrence": 1}
+
+    slug = store_location("gt").slug
+    md = list((env / slug / "learnings").glob("*.md"))
+    assert md, "a learnings markdown file was written"
+    # The store advanced past its initial commit (markdown committed to git).
+    assert _commit_count(env, slug) == 2
+    # The derived index is not tracked by git.
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=str(env / slug), check=True, capture_output=True, text=True
+    ).stdout
+    assert "index.sqlite" not in tracked
+
+
+def test_capture_reinforces_a_near_duplicate_learning(env, monkeypatch):
+    # The default dedup cutoff (0.9) is calibrated for sentence-transformers; the lite hashing
+    # backend scores paraphrases lower, so exercise dedup at a hashing-appropriate threshold.
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
+    body = "Right-align currency columns and drop vertical gridlines for a clean look."
+    first = capture("gt", "learning", body, "currency columns", "prov-1")
+    assert first["status"] == "committed"
+
+    again = capture(
+        "gt",
+        "learning",
+        "Please right-align the currency columns and drop vertical gridlines for a clean look.",
+        "currency columns",
+        "prov-2",
+    )
+    assert again["status"] == "reinforced"
+    assert again["entry_id"] == "L1"
+    assert again["recurrence"] == 2
+
+    # Still one learning, now recalled with the bumped weight.
+    result = recall("gt", "currency column alignment and gridlines")
+    ids = [x["id"] for x in result["learnings"]]
+    assert ids == ["L1"]
+
+
+def test_capture_noops_a_duplicate_issue(env, monkeypatch):
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
+    body = "Never apply heavy row banding to tables under ten rows."
+    first = capture("gt", "issue", body, "small tables", "prov-1")
+    assert first == {"status": "committed", "entry_id": "I1", "recurrence": None}
+
+    dup = capture(
+        "gt",
+        "issue",
+        "Never use heavy row banding on tables that have under ten rows.",
+        "small tables",
+        "prov-2",
+    )
+    assert dup == {"status": "noop", "entry_id": "I1"}
+
+
+def test_learning_and_issue_ids_are_independent_sequences(env):
+    assert capture("gt", "learning", "Prefer muted palettes.", "color", "p")["entry_id"] == "L1"
+    assert capture("gt", "issue", "Never use neon.", "color", "p")["entry_id"] == "I1"
+    assert capture("gt", "learning", "Prefer serif headers.", "type", "p")["entry_id"] == "L2"
+    assert capture("gt", "issue", "Never use comic sans.", "type", "p")["entry_id"] == "I2"
+
+
+def test_capture_rejects_unknown_polarity(env):
+    with pytest.raises(ValueError, match="polarity"):
+        capture("gt", "bogus", "body", "scope", "prov")
+
+
+def test_capture_rejects_empty_body(env):
+    with pytest.raises(ValueError, match="non-empty body"):
+        capture("gt", "learning", "   ", "scope", "prov")
