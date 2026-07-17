@@ -164,8 +164,20 @@ heavier ST job, the full run takes longer — waiting for it is deliberate, not 
 
 ### Detecting the Codex review
 
-- The Codex auto-review posts a review comment on the PR containing a recognizable **emoji marker** it always leaves. The agent verifies the review is complete by locating that marker on the PR.
-- If, after a reasonable wait, **no Codex review appears**, that means Codex has opted not to review this PR. In that case the agent MUST NOT invent a substitute — it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
+Codex signals its status with an **emoji reaction on the PR body** (the pull request's top-level description), left by the **`chatgpt-codex-connector[bot]`** account — not with a separate "review started" comment. The reaction is the source of truth for whether the review is done:
+
+- **👀 (eyes)** — Codex is still reviewing/thinking. **In progress; do not proceed.** Keep waiting.
+- **👍 (`+1`, thumbs up)** — Codex has **finished** its review. A thumbs-up with no review comments or inline findings is a **clean/approving pass**. If Codex also posts a formal review or inline comments, address those per "Iterating on review feedback" below; the thumbs-up marks the review *complete*, not that there is nothing to fix.
+
+Check the reaction directly on the raw PR:
+
+```sh
+gh api repos/<owner>/<repo>/issues/<pr-number>/reactions
+# look for content "+1" (done) or "eyes" (in progress) by chatgpt-codex-connector[bot]
+```
+
+- Treat the review as complete **only** once the 👍 reaction is present (the 👀, if it was there, has resolved). Do not act on a PR that still shows only 👀.
+- If, after a reasonable wait, **no Codex reaction appears at all** (neither 👀 nor 👍), that means Codex has opted not to review this PR. In that case the agent MUST NOT invent a substitute — it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
 
 ### Iterating on review feedback
 
