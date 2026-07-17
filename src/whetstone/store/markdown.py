@@ -32,11 +32,11 @@ from .entries import IssueEntry, LearningEntry
 _HEADING_SEP = " · "
 _LEARNING_KEYS = ("recurrence", "first_seen", "last_seen", "scope", "provenance")
 _ISSUE_KEYS = ("scope", "provenance")
-# A new block starts ONLY at a genuine entry heading: ``## <id> · <title>`` where the id is
-# ``<letters><digits>`` (e.g. ``L12``, ``I3``). Ordinary prose in a body that happens to start with
-# ``## `` (e.g. ``## Summary``) is therefore NOT treated as a delimiter, keeping bodies round-trip
-# safe for normal markdown.
-_HEADING_LINE = re.compile(r"^## [A-Za-z]+[0-9]+ · .")
+# A new block starts ONLY at a genuine Whetstone entry heading: ``## <id> · <title>`` where the id
+# is ``L``/``I`` + digits (e.g. ``L12``, ``I3``). Ordinary prose in a body that starts with ``## ``
+# — including version-like headings such as ``## Python3 · compatibility`` or ``## Summary`` — is
+# therefore NOT treated as a delimiter, keeping bodies round-trip safe for normal markdown.
+_HEADING_LINE = re.compile(r"^## [LI][0-9]+ · .")
 
 
 class MarkdownParseError(ValueError):

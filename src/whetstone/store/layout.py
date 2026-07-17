@@ -95,6 +95,26 @@ def _git(args: list[str], cwd: Path) -> None:
     )
 
 
+@contextmanager
+def _file_lock(lock_path: Path):
+    """Cross-call/cross-process mutual exclusion via a POSIX ``flock`` on ``lock_path``.
+
+    Used to serialize both store creation (the ``is_store`` check + ``git init``/commit) and the
+    registry read-modify-write, so concurrent ``attach``/lazy-create calls can't race. A no-op where
+    ``fcntl`` is unavailable (non-POSIX).
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    if fcntl is None:  # pragma: no cover - non-POSIX
+        yield
+        return
+    with open(lock_path, "w") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
 def is_store(path: Path) -> bool:
     """True if ``path`` is a *fully* initialized store: a git repo with a baseline commit.
 
@@ -128,23 +148,29 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
     call lazily from future ``recall``/``capture`` paths.
     """
     loc = store_location(skill, config)
+    root = resolve_store_root(config)
+    root.mkdir(parents=True, exist_ok=True)
 
-    if is_store(loc.path):
+    # Serialize check + create so two concurrent calls for the same skill can't both run
+    # git init/commit in one directory (which races to exit 128/1). Double-checked: the winner
+    # creates; the loser re-observes a finished store inside the lock and returns it as existing.
+    with _file_lock(root / f".create-{loc.slug}.lock"):
+        if is_store(loc.path):
+            _register(loc, config)
+            return EnsureResult(location=loc, created=False)
+
+        loc.learnings_dir.mkdir(parents=True, exist_ok=True)
+        loc.issues_dir.mkdir(parents=True, exist_ok=True)
+        # .gitkeep so the (initially empty) scope directories are tracked from the first commit.
+        (loc.learnings_dir / ".gitkeep").write_text("", encoding="utf-8")
+        (loc.issues_dir / ".gitkeep").write_text("", encoding="utf-8")
+
+        _git(["init", "-q"], cwd=loc.path)
+        _git(["add", "-A"], cwd=loc.path)
+        _git(["commit", "-q", "-m", f"Initialize Whetstone store for '{skill}'"], cwd=loc.path)
+
         _register(loc, config)
-        return EnsureResult(location=loc, created=False)
-
-    loc.learnings_dir.mkdir(parents=True, exist_ok=True)
-    loc.issues_dir.mkdir(parents=True, exist_ok=True)
-    # .gitkeep so the (initially empty) scope directories are tracked from the first commit.
-    (loc.learnings_dir / ".gitkeep").write_text("", encoding="utf-8")
-    (loc.issues_dir / ".gitkeep").write_text("", encoding="utf-8")
-
-    _git(["init", "-q"], cwd=loc.path)
-    _git(["add", "-A"], cwd=loc.path)
-    _git(["commit", "-q", "-m", f"Initialize Whetstone store for '{skill}'"], cwd=loc.path)
-
-    _register(loc, config)
-    return EnsureResult(location=loc, created=True)
+        return EnsureResult(location=loc, created=True)
 
 
 # --------------------------------------------------------------------------- registry
@@ -161,26 +187,9 @@ def read_registry(config: Config | None = None) -> dict[str, dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@contextmanager
-def _registry_lock(config: Config | None):
-    """Serialize the registry read-modify-write so concurrent attaches can't drop each other's
-    records. POSIX ``flock``; a no-op where ``fcntl`` is unavailable."""
-    root = resolve_store_root(config)
-    root.mkdir(parents=True, exist_ok=True)
-    if fcntl is None:  # pragma: no cover - non-POSIX
-        yield
-        return
-    with open(root / ".registry.lock", "w") as fh:
-        fcntl.flock(fh, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(fh, fcntl.LOCK_UN)
-
-
 def _register(loc: StoreLocation, config: Config | None, skill_path: str | None = None) -> None:
     path = registry_path(config)
-    with _registry_lock(config):
+    with _file_lock(path.parent / ".registry.lock"):
         path.parent.mkdir(parents=True, exist_ok=True)
         registry = read_registry(config)
         record = registry.get(loc.skill, {})

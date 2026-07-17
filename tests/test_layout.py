@@ -99,3 +99,29 @@ def test_partial_store_is_recovered(cfg):
     assert is_store(loc.path)  # now has a baseline commit
     assert (loc.path / "learnings").is_dir()
     assert _git_log_count(loc.path) == 1
+
+
+def test_concurrent_ensure_store_is_idempotent(cfg):
+    # Parallel ensure_store() calls for the same skill must not race on git init/commit.
+    import threading
+
+    results: list = []
+    errors: list = []
+
+    def worker():
+        try:
+            results.append(ensure_store("concurrent", cfg))
+        except Exception as exc:  # noqa: BLE001 - the test records any race failure
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker) for _ in range(6)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert errors == []
+    assert len(results) == 6
+    assert sum(1 for r in results if r.created) == 1  # exactly one creator
+    loc = store_location("concurrent", cfg)
+    assert _git_log_count(loc.path) == 1  # exactly one baseline commit

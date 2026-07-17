@@ -179,3 +179,12 @@ def test_two_entries_still_split_on_real_headings():
     text = serialize_learnings([_learning(id="L1"), _learning(id="L2", title="Second")])
     back = parse_learnings(text)
     assert [e.id for e in back] == ["L1", "L2"]
+
+
+def test_body_with_version_like_heading_round_trips():
+    # Only "## <L|I><digits> · ..." delimits; a version-like "## Python3 · compatibility" in a body
+    # must NOT be split into a bogus block.
+    body = "Notes.\n\n## Python3 · compatibility\n\nSupports 3.11+."
+    back = parse_learnings(serialize_learnings([_learning(body=body)]))
+    assert len(back) == 1
+    assert back[0].body == body
