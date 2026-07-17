@@ -50,9 +50,19 @@ def append_event(loc: StoreLocation, event: dict) -> None:
         # record between them. Separate from the store write lock, so a capture emitting while
         # holding that lock does not self-deadlock.
         with store_events_lock(loc):
-            fd = os.open(events_path(loc), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+            path = events_path(loc)
+            data = line.encode("utf-8")
+            # If a prior process died mid-append and left no trailing newline, begin a new line
+            # first so this event isn't concatenated onto — and dropped together with — that torn
+            # fragment; only the fragment is lost, not the first good event after a crash.
+            if path.exists() and path.stat().st_size > 0:
+                with open(path, "rb") as tail:
+                    tail.seek(-1, os.SEEK_END)
+                    if tail.read(1) != b"\n":
+                        data = b"\n" + data
+            fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
             try:
-                view = memoryview(line.encode("utf-8"))
+                view = memoryview(data)
                 while view:  # os.write may accept only part of the buffer; write the rest.
                     view = view[os.write(fd, view) :]
             finally:

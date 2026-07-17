@@ -181,3 +181,13 @@ def test_read_events_tolerates_a_torn_non_ascii_tail(store):
     events = read_events(store)
     assert len(events) == 1  # the intact first line survives; the torn tail is dropped
     assert events[0]["entry_id"] == "L1"
+
+
+def test_append_recovers_from_a_torn_tail_without_a_trailing_newline(store):
+    # A prior crash left a fragment with no trailing newline; the next append must start a new line
+    # so the good event is preserved (only the fragment is skipped as malformed).
+    with open(events_path(store), "wb") as fh:
+        fh.write(b'{"type":"capture","entry_id":"L0"')  # torn: no closing brace, no newline
+    append_event(store, {"type": "capture", "entry_id": "L1", "status": "committed"})
+    events = read_events(store)
+    assert [e["entry_id"] for e in events] == ["L1"]  # torn fragment dropped, good event kept
