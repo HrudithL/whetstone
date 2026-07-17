@@ -30,6 +30,9 @@ except ImportError:  # pragma: no cover - non-POSIX
     fcntl = None
 
 _REGISTRY_NAME = "registry.json"
+# Only the markdown is source of truth. The sqlite index is derived/rebuildable and events.jsonl is
+# local telemetry (§5.1), so a per-store .gitignore keeps both out of the committed history.
+_STORE_GITIGNORE = "index.sqlite\nindex.sqlite-*\nevents.jsonl\n"
 # Applied per-command so a store commit never depends on (or mutates) the user's global git config:
 # a fixed identity, no GPG signing, and no user hooks (a global core.hooksPath / template hook must
 # not be able to fail Whetstone's internal bookkeeping commits). This disables hooks via config
@@ -95,6 +98,23 @@ def _git(args: list[str], cwd: Path) -> None:
     )
 
 
+def _ensure_store_gitignore(loc: StoreLocation) -> None:
+    """Write the per-store ``.gitignore`` if missing/outdated so derived files stay uncommitted."""
+    path = loc.path / ".gitignore"
+    if not path.exists() or path.read_text(encoding="utf-8") != _STORE_GITIGNORE:
+        path.write_text(_STORE_GITIGNORE, encoding="utf-8")
+
+
+def commit_store(loc: StoreLocation, message: str) -> None:
+    """Stage all tracked markdown changes and commit them to the store's git repo.
+
+    Derived artifacts (``index.sqlite``, ``events.jsonl``) are excluded by the store ``.gitignore``,
+    so ``git add -A`` only ever stages the source-of-truth markdown.
+    """
+    _git(["add", "-A"], cwd=loc.path)
+    _git(["commit", "-q", "-m", message], cwd=loc.path)
+
+
 @contextmanager
 def _file_lock(lock_path: Path):
     """Cross-call/cross-process mutual exclusion via a POSIX ``flock`` on ``lock_path``.
@@ -156,10 +176,12 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
     # creates; the loser re-observes a finished store inside the lock and returns it as existing.
     with _file_lock(root / f".create-{loc.slug}.lock"):
         if is_store(loc.path):
-            # Repair scaffolding: an existing store that lost its scope dirs still gets them back,
-            # so `attach`/lazy-create always leaves learnings/ and issues/ present.
+            # Repair scaffolding: an existing store that lost its scope dirs (or predates the
+            # derived index) still gets them back, so `attach`/lazy-create always leaves
+            # learnings/, issues/, and the .gitignore present.
             loc.learnings_dir.mkdir(parents=True, exist_ok=True)
             loc.issues_dir.mkdir(parents=True, exist_ok=True)
+            _ensure_store_gitignore(loc)
             _register(loc, config)
             return EnsureResult(location=loc, created=False)
 
@@ -168,6 +190,7 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
         # .gitkeep so the (initially empty) scope directories are tracked from the first commit.
         (loc.learnings_dir / ".gitkeep").write_text("", encoding="utf-8")
         (loc.issues_dir / ".gitkeep").write_text("", encoding="utf-8")
+        _ensure_store_gitignore(loc)
 
         _git(["init", "-q"], cwd=loc.path)
         _git(["add", "-A"], cwd=loc.path)

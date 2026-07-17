@@ -16,6 +16,7 @@ from pathlib import Path
 from .paths import config_path, default_store_root
 
 _SUPERVISION_MODES = ("supervised", "balanced", "autonomous")
+_EMBEDDING_BACKENDS = ("hashing", "sentence-transformers")
 
 
 @dataclass
@@ -28,12 +29,31 @@ class Config:
     learnings_k: int = 12
     mmr_lambda: float = 0.7
     embedding_model: str = "all-MiniLM-L6-v2"
+    # Which embedding implementation to use (see whetstone.embeddings). "hashing" is a small,
+    # dependency-free, deterministic default that keeps the base install light and lets tests run
+    # without torch/network; "sentence-transformers" selects the model named by ``embedding_model``.
+    embedding_backend: str = "hashing"
+    # Vector width for the hashing backend (ignored by sentence-transformers, whose model fixes it).
+    embedding_dim: int = 384
+    # Retrieval cutoffs (§5.4). PROVISIONAL / UNCALIBRATED defaults: the real values come from
+    # calibration against a labeled (elaborated-intent -> relevant-scopes) set (future work). Issues
+    # use the lower cutoff on purpose — erring toward including a mandatory "don't do X" is cheap.
+    learnings_cutoff: float = 0.35
+    issues_cutoff: float = 0.25
+    # A capture whose embedding is within this cosine similarity of an existing same-scope entry
+    # counts as a near-duplicate (§7). PROVISIONAL / UNCALIBRATED.
+    dedup_similarity: float = 0.9
     store_root: Path = field(default_factory=default_store_root)
 
     def __post_init__(self) -> None:
         if self.supervision not in _SUPERVISION_MODES:
             raise ValueError(
                 f"supervision must be one of {_SUPERVISION_MODES}, got {self.supervision!r}"
+            )
+        if self.embedding_backend not in _EMBEDDING_BACKENDS:
+            raise ValueError(
+                f"embedding_backend must be one of {_EMBEDDING_BACKENDS}, "
+                f"got {self.embedding_backend!r}"
             )
         self.store_root = Path(self.store_root).expanduser()
 
@@ -61,6 +81,11 @@ _FIELD_TYPES: dict[str, type] = {
     "learnings_k": int,
     "mmr_lambda": float,
     "embedding_model": str,
+    "embedding_backend": str,
+    "embedding_dim": int,
+    "learnings_cutoff": float,
+    "issues_cutoff": float,
+    "dedup_similarity": float,
     "store_root": Path,
 }
 
