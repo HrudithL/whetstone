@@ -31,7 +31,7 @@ The agent's north star: **ship small, reviewable, reversible slices; keep it sim
 - **One small feature per branch.** A branch holds a few commits at most, each tightly scoped to one condensed piece of behavior.
 - **Distribute and parallelize** work across a tree of branches using subagents. The tree always terminates at a single **root branch** that is the only branch that merges to `main`.
 - **The agent does not make *genuine-fork* calls alone.** Product/UX, public API shape, naming, dependencies, architecture, security posture — the categories in [§10](#10-subjective-vs-objective-decisions) — are escalated. Straightforward, obviously-right fixes are made at the agent's discretion, not escalated (see [§10.1](#101-when-to-decide-vs-ask)).
-- **Automated review must pass before merging up.** Wait for the Codex auto-review, address every non-subjective comment, and get a thumbs-up before proceeding.
+- **Automated review must pass before merging up.** Wait for the Codex review, address every non-subjective comment, and get a clean review signal (§6 — a first-pass 👍 or a clean requested re-review) before proceeding.
 - **`main` is sacred.** No direct pushes, no force pushes, no auto-merge, no shortcuts.
 
 ---
@@ -191,15 +191,18 @@ The signal is not pushed to you — you must **poll** for it. After the PR opens
 ```sh
 # first pass — reaction on the PR body (look for "+1" / "eyes" by chatgpt-codex-connector[bot]):
 gh api --paginate repos/<owner>/<repo>/issues/<pr-number>/reactions
-# re-review — a new Codex REVIEW (body) for the latest commit, plus its inline comments:
-gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews    # match user==bot AND commit_id==HEAD
-gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/comments   # inline findings (path/line/body)
+# re-review — find the bot REVIEW whose commit_id == your latest HEAD, then read ONLY that review's
+# inline comments (the PR-wide comments list also contains stale findings from earlier passes):
+gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews   # pick user==bot AND commit_id==HEAD -> review_id
+gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews/<review_id>/comments   # this review's findings
 ```
 
-Poll on a **modest cadence (~every 30s) within a bounded window (~15–20 min)**, ideally as a background loop that exits the moment the signal appears. Do **not** proceed until BOTH the review signal and CI are in:
+Read only the inline comments belonging to the matched review (via `pulls/<pr>/reviews/<review_id>/comments`, or by filtering the PR-wide `pulls/<pr>/comments` to `commit_id == HEAD`). The PR-wide list keeps every earlier pass's comments, so treating all of them as "the fresh review" makes you re-address already-fixed findings or read a clean re-review as still failing.
 
-- **first pass:** the 👍 reaction is present on the PR body (any 👀 has resolved) **and** CI is fully green; or
-- **re-review:** a fresh `chatgpt-codex-connector[bot]` review whose `commit_id` matches your latest pushed commit has appeared **and** CI is fully green. (Match on `commit_id`, not merely "a review exists" — an older review of a prior commit is stale.)
+Poll on a **modest cadence (~every 30s) within a bounded window (~15–20 min)**, ideally as a background loop that exits the moment the signal appears. Two distinct gates use different bars:
+
+- **To begin the FIX pass** — proceed once the **full CI run has completed (green OR red)** *and* the review signal is in (first-pass 👍 on the PR body / any 👀 resolved; or a fresh bot review whose `commit_id` matches your latest commit). You need CI *finished*, not passing, so you can collect and fix its failures. Match the review on `commit_id`, not merely "a review exists" — an older review of a prior commit is stale.
+- **To MERGE up** — CI must be **fully green** (all jobs) in addition to a clean review signal (see [§7](#7-phase-6--merging-up-the-tree)).
 
 Re-request **at most once per round of fixes**. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), Codex has opted out — the agent MUST NOT invent a substitute; it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
 
@@ -214,7 +217,7 @@ For each Codex comment, apply the [§10.1](#101-when-to-decide-vs-ask) test:
 3. **Decline what would overcomplicate.** A suggestion that adds scope, abstraction, or infrastructure beyond what the spec needs may be declined or deferred — briefly note why on the PR. Keeping it simple (§1) outranks satisfying every suggestion.
 4. Repeat until Codex issues a clean/approving pass **and** any genuinely-escalated fork has a human answer.
 
-The PR is only eligible to merge up when **both** are true: Codex thumbs-up AND any escalated forks resolved by the human.
+The PR is only eligible to merge up when **both** are true: a **clean Codex review signal** for your latest commit (a first-pass 👍 on the PR body, or a clean requested re-review whose `commit_id` matches HEAD — NOT necessarily a 👍, since re-reviews signal via a comment) AND any escalated forks resolved by the human.
 
 ---
 
@@ -328,9 +331,9 @@ Per slice:
 - [ ] Opened a PR to the parent branch with a complete description.
 
 Per PR:
-- [ ] Waited for the **entire CI run** (all jobs) AND the **entire Codex review** to finish before making any fix — no reacting to partial signals.
-- [ ] Waited for the Codex auto-review emoji marker.
-- [ ] If no Codex review appeared, asked the human how to proceed.
+- [ ] Waited for the **entire CI run** (completed, green or red) AND the **entire Codex review** to finish before making any fix — no reacting to partial signals.
+- [ ] Detected the pass-aware Codex signal: first-pass 👍 on the PR body, or (after `@codex review`) a fresh bot review whose `commit_id` matches HEAD.
+- [ ] If no Codex signal appeared, asked the human how to proceed.
 - [ ] Made the reasonable fixes at own discretion; declined/deferred anything that would overcomplicate (noted why).
 - [ ] Escalated only genuine forks (multiple reasonable implementations, or a §10 decision); recorded the human's answer.
 - [ ] Merged up with a **merge commit** (not squash, not rebase).

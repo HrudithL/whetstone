@@ -17,6 +17,8 @@ assertions are stable, not knife-edge. They run only when the ``[embeddings]`` e
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from whetstone.server import capture, recall
@@ -29,20 +31,30 @@ pytestmark = pytest.mark.embeddings
 @pytest.fixture(autouse=True)
 def _require_sentence_transformers():
     # Skip at setup (NOT a module-level importorskip) so collection still finishes and the four
-    # `embeddings`-marked tests are collected. In a base/dev env without the extra, `pytest -m
-    # embeddings` then reports clean skips instead of pytest's no-tests-collected exit status.
-    pytest.importorskip("sentence_transformers")
+    # `embeddings`-marked tests are collected — in a base/dev env `pytest -m embeddings` then
+    # reports clean skips instead of pytest's no-tests-collected status. But CI's embeddings job
+    # exists to verify the REAL backend, so a missing/broken extra there must FAIL, not skip green.
+    try:
+        import sentence_transformers  # noqa: F401
+    except ImportError:
+        if os.environ.get("CI"):
+            pytest.fail("the [embeddings] extra must import in CI's sentence-transformers job")
+        pytest.skip("sentence-transformers not installed ([embeddings] extra)")
 
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     """Point the server's load_config() at a temp store root and pin the calibrated ST backend.
 
-    The cosine-margin wordings below are calibrated for ``all-MiniLM-L6-v2``, so pin both the
-    backend and the model, and isolate config (empty ``XDG_CONFIG_HOME``) so an ambient
-    ``WHETSTONE_EMBEDDING_MODEL`` / ``config.toml`` can't silently swap the model or the thresholds
-    and make these margins meaningless.
+    The cosine-margin wordings below are calibrated for ``all-MiniLM-L6-v2``. First clear ALL
+    ambient ``WHETSTONE_*`` vars so a dev/CI environment can't leak tunables in — e.g.
+    ``WHETSTONE_SUPERVISION`` would make the first ``capture`` return ``needs_confirmation`` instead
+    of ``committed``, and ``WHETSTONE_DEDUP_SIMILARITY`` / ``WHETSTONE_LEARNINGS_CUTOFF`` would
+    invalidate the margins. Then set only what these tests need and isolate config via
+    an empty ``XDG_CONFIG_HOME``.
     """
+    for key in [k for k in os.environ if k.startswith("WHETSTONE_")]:
+        monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("WHETSTONE_STORE_ROOT", str(tmp_path))
     monkeypatch.setenv("WHETSTONE_EMBEDDING_BACKEND", "sentence-transformers")
     monkeypatch.setenv("WHETSTONE_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
