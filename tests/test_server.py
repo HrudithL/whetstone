@@ -10,8 +10,8 @@ from whetstone.server import attach, mcp
 
 def test_tools_are_registered_on_the_server():
     names = [t.name for t in asyncio.run(mcp.list_tools())]
-    # M0's attach, the M1 recall/capture loop, and M2a's out-of-band metrics. (revise: M2b.)
-    assert set(names) == {"attach", "recall", "capture", "metrics"}
+    # M0's attach, the M1 recall/capture loop, M2a's out-of-band metrics, and M2b's revise.
+    assert set(names) == {"attach", "recall", "capture", "metrics", "revise"}
 
 
 def test_attach_tool_creates_a_git_backed_store(tmp_path, monkeypatch):

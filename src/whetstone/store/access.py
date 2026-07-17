@@ -9,6 +9,7 @@ file), so a file only ever holds entries of one scope.
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from datetime import date
 
@@ -21,6 +22,21 @@ from .markdown import (
     write_learnings,
 )
 from .slug import scope_filename
+
+_MAX_TITLE = 60
+
+
+def _title_from_body(body: str, fallback: str) -> str:
+    """A short single-line heading for a moved entry, distilled from ``body``'s first sentence.
+
+    Mirrors the derivation ``capture`` uses; ``fallback`` (the source entry's title) is kept when
+    the body is unchanged/empty so a plain move never loses the heading.
+    """
+    collapsed = " ".join(body.split())
+    if not collapsed:
+        return fallback
+    first_sentence = re.split(r"(?<=[.!?])\s", collapsed, maxsplit=1)[0]
+    return first_sentence[:_MAX_TITLE].strip() or collapsed[:_MAX_TITLE].strip()
 
 
 def load_learnings(loc: StoreLocation) -> list[LearningEntry]:
@@ -89,3 +105,119 @@ def reinforce_learning(
                 write_learnings(path, entries)
                 return entries[i]
     raise KeyError(f"no learning with id {entry_id!r}")
+
+
+def find_learning(loc: StoreLocation, entry_id: str) -> LearningEntry | None:
+    """The learning with ``entry_id``, or None."""
+    for e in load_learnings(loc):
+        if e.id == entry_id:
+            return e
+    return None
+
+
+def find_issue(loc: StoreLocation, entry_id: str) -> IssueEntry | None:
+    """The issue with ``entry_id``, or None."""
+    for e in load_issues(loc):
+        if e.id == entry_id:
+            return e
+    return None
+
+
+def set_learning_recurrence(
+    loc: StoreLocation, entry_id: str, recurrence: int
+) -> LearningEntry:
+    """Set ``entry_id``'s recurrence to an explicit value in place; return the result.
+
+    Unlike :func:`reinforce_learning` this does NOT touch ``last_seen`` — weakening a preference
+    (the user going against it) must not also refresh its recency, which would perversely raise its
+    weight.
+    """
+    for path in sorted(loc.learnings_dir.glob("*.md")):
+        entries = parse_learnings(path.read_text(encoding="utf-8"))
+        for i, e in enumerate(entries):
+            if e.id == entry_id:
+                entries[i] = replace(e, recurrence=recurrence)
+                write_learnings(path, entries)
+                return entries[i]
+    raise KeyError(f"no learning with id {entry_id!r}")
+
+
+def remove_entry(loc: StoreLocation, entry_id: str) -> bool:
+    """Delete a learning or issue (by id prefix) from its scope file; True iff it existed."""
+    if entry_id.startswith("L"):
+        directory, parse, write = loc.learnings_dir, parse_learnings, write_learnings
+    elif entry_id.startswith("I"):
+        directory, parse, write = loc.issues_dir, parse_issues, write_issues
+    else:
+        raise ValueError(f"entry id must start with 'L' or 'I', got {entry_id!r}")
+    for path in sorted(directory.glob("*.md")):
+        entries = parse(path.read_text(encoding="utf-8"))
+        kept = [e for e in entries if e.id != entry_id]
+        if len(kept) != len(entries):
+            write(path, kept)
+            return True
+    return False
+
+
+def promote_learning_to_issue(
+    loc: StoreLocation,
+    entry_id: str,
+    new_id: str,
+    *,
+    body: str | None = None,
+    scope: str | None = None,
+) -> IssueEntry:
+    """Move learning ``entry_id`` to ``issues/`` under ``new_id``, dropping its scoring fields (§6).
+
+    ``body``/``scope`` supply the objective rewording promotion requires; when omitted the source
+    prose/scope carries over. The heading is re-derived from the (possibly reworded) body.
+    """
+    learning = find_learning(loc, entry_id)
+    if learning is None:
+        raise KeyError(f"no learning with id {entry_id!r}")
+    new_body = body.strip() if body else learning.body
+    issue = IssueEntry(
+        id=new_id,
+        title=_title_from_body(new_body, learning.title),
+        body=new_body,
+        scope=scope or learning.scope,
+        provenance=learning.provenance,
+    )
+    save_issue(loc, issue)
+    remove_entry(loc, entry_id)
+    return issue
+
+
+def demote_issue_to_learning(
+    loc: StoreLocation,
+    entry_id: str,
+    new_id: str,
+    *,
+    seed_recurrence: int,
+    when: date,
+    body: str | None = None,
+    scope: str | None = None,
+) -> LearningEntry:
+    """Move issue ``entry_id`` to ``learnings/`` under ``new_id``, seeding scoring fields (§5.2).
+
+    Recurrence is seeded to ``seed_recurrence`` and ``first_seen``/``last_seen`` to ``when``.
+    Optional ``body``/``scope`` supply reworded prose (used when softening a rule in conflict
+    resolution).
+    """
+    issue = find_issue(loc, entry_id)
+    if issue is None:
+        raise KeyError(f"no issue with id {entry_id!r}")
+    new_body = body.strip() if body else issue.body
+    learning = LearningEntry(
+        id=new_id,
+        title=_title_from_body(new_body, issue.title),
+        body=new_body,
+        scope=scope or issue.scope,
+        provenance=issue.provenance,
+        recurrence=seed_recurrence,
+        first_seen=when,
+        last_seen=when,
+    )
+    save_learning(loc, learning)
+    remove_entry(loc, entry_id)
+    return learning

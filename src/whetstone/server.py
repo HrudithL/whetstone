@@ -3,8 +3,10 @@
 Milestone M1 adds the in-loop pair to M0's ``attach``: ``recall`` (embedding scope retrieval over
 the markdown store) and ``capture`` (distill feedback into a scoped, deduped, committed entry).
 Milestone M2a adds the measurement layer: recall/capture append to ``events.jsonl`` and the
-out-of-band ``metrics`` tool reports the §11 KPIs. The still-to-come ``revise`` tool lands in M2b.
-``main()`` runs the server over stdio.
+out-of-band ``metrics`` tool reports the §11 KPIs. Milestone M2b adds the confirmation-gated editing
+layer: the ``revise`` tool (reinforce/weaken/remove/promote/demote), the supervision dial (§9)
+applied in both ``capture`` and ``revise``, the promotion threshold (§6), and cross-polarity
+conflict detection in ``capture`` (§7). ``main()`` runs the server over stdio.
 """
 
 from __future__ import annotations
@@ -16,20 +18,27 @@ from datetime import UTC, datetime
 
 from mcp.server.fastmcp import FastMCP
 
-from .config import load_config
+from .config import Config, load_config
 from .embeddings import cosine, get_backend
 from .metrics import compute_metrics
 from .retrieval import retrieve
 from .store import index
 from .store.access import (
+    demote_issue_to_learning,
+    find_issue,
+    find_learning,
     next_id,
+    promote_learning_to_issue,
     reinforce_learning,
+    remove_entry,
     save_issue,
     save_learning,
+    set_learning_recurrence,
 )
 from .store.entries import IssueEntry, LearningEntry
 from .store.index import IndexedEntry, entry_text
 from .store.layout import (
+    StoreLocation,
     attach_skill,
     commit_store,
     ensure_store,
@@ -37,7 +46,7 @@ from .store.layout import (
     store_location,
     store_write_lock,
 )
-from .telemetry import emit_capture, emit_recall
+from .telemetry import emit_capture, emit_recall, emit_revise
 
 mcp = FastMCP("whetstone")
 
@@ -118,7 +127,7 @@ def capture(
     scope: str,
     provenance: str,
     run_id: str | None = None,
-    confirm: bool = False,
+    confirm: bool | str = False,
 ) -> dict:
     """Call the moment you act on user feedback about output from an attached skill, when it's
     something *new*.
@@ -134,7 +143,11 @@ def capture(
 
     Distills, then in code dedups: a near-duplicate learning is reinforced (``recurrence`` +1,
     refresh ``last_seen``) → ``reinforced``; a near-duplicate issue is a ``noop`` (issues have no
-    recurrence); otherwise a new entry is written, indexed, and committed → ``committed``.
+    recurrence); otherwise a new entry is written, indexed, and committed → ``committed``. A new
+    entry that contradicts an existing opposite-polarity rule returns ``conflict`` (resolve it with
+    ``revise``) instead of committing. If the server returns ``needs_confirmation``, ask the user
+    the returned ``prompt`` and re-call with ``confirm`` set to their choice — ``true`` to commit a
+    supervised add/reinforcement, or ``"promote"``/``"keep"`` at the promotion threshold (§6).
     """
     if polarity not in ("learning", "issue"):
         raise ValueError(f"polarity must be 'learning' or 'issue', got {polarity!r}")
@@ -158,17 +171,18 @@ def capture(
 
         if polarity == "learning":
             if duplicate is not None:
-                updated = reinforce_learning(loc, duplicate.id, when=_today())
-                index.rebuild_index(loc, backend)
-                commit_store(
-                    loc, f"capture: reinforce {updated.id} (recurrence {updated.recurrence})"
+                return _capture_reinforce(
+                    loc, backend, duplicate, body, scope, run_id, confirm, config
                 )
-                emit_capture(loc, run_id, updated.id, polarity, "reinforced")
-                return {
-                    "status": "reinforced",
-                    "entry_id": updated.id,
-                    "recurrence": updated.recurrence,
-                }
+            conflict = _find_conflict(loc, "learning", scope, candidate_vec, scope_vec, config)
+            if conflict is not None:
+                return _conflict_result(loc, run_id, "learning", conflict)
+            if _supervised_hold(config, confirm):
+                return _needs_confirmation(
+                    None,
+                    f"Supervised mode: commit this new learning about {scope!r}? "
+                    f"Re-call `capture` with confirm:true.",
+                )
             entry_id = next_id(loc, "learning")
             today = _today()
             save_learning(
@@ -193,6 +207,15 @@ def capture(
         if duplicate is not None:
             emit_capture(loc, run_id, duplicate.id, polarity, "noop")
             return {"status": "noop", "entry_id": duplicate.id}
+        conflict = _find_conflict(loc, "issue", scope, candidate_vec, scope_vec, config)
+        if conflict is not None:
+            return _conflict_result(loc, run_id, "issue", conflict)
+        if _supervised_hold(config, confirm):
+            return _needs_confirmation(
+                None,
+                f"Supervised mode: commit this new issue about {scope!r}? "
+                f"Re-call `capture` with confirm:true.",
+            )
         entry_id = next_id(loc, "issue")
         save_issue(
             loc,
@@ -208,6 +231,297 @@ def capture(
         commit_store(loc, f"capture: add {entry_id} ({scope})")
         emit_capture(loc, run_id, entry_id, polarity, "committed")
         return {"status": "committed", "entry_id": entry_id, "recurrence": None}
+
+
+def _capture_reinforce(
+    loc: StoreLocation,
+    backend,
+    duplicate: IndexedEntry,
+    body: str,
+    scope: str,
+    run_id: str | None,
+    confirm: bool | str,
+    config: Config,
+) -> dict:
+    """The dedup-reinforce path of ``capture``: bump recurrence, honoring the supervision dial and
+    the promotion threshold (§6). ``confirm:"promote"``/``"keep"`` are the answers to a prior
+    threshold prompt — the reinforcement was already applied on that call, so they only resolve the
+    promotion, never double-bump."""
+    if confirm == "promote":
+        if find_learning(loc, duplicate.id) is None:
+            raise ValueError(f"no learning with id {duplicate.id!r} to promote")
+        return _promote_or_ask_body(loc, backend, duplicate.id, body, scope, run_id)
+    if confirm == "keep":
+        current = find_learning(loc, duplicate.id)
+        if current is None:
+            raise ValueError(f"no learning with id {duplicate.id!r}")
+        return {"status": "reinforced", "entry_id": current.id, "recurrence": current.recurrence}
+    if _supervised_hold(config, confirm):
+        return _needs_confirmation(
+            duplicate.id,
+            f"Supervised mode: reinforce {duplicate.id} "
+            f"(recurrence {duplicate.recurrence} -> {duplicate.recurrence + 1})? "
+            f"Re-call `capture` with confirm:true.",
+        )
+    updated = reinforce_learning(loc, duplicate.id, when=_today())
+    index.rebuild_index(loc, backend)
+    commit_store(loc, f"capture: reinforce {updated.id} (recurrence {updated.recurrence})")
+    emit_capture(loc, run_id, updated.id, "learning", "reinforced")
+    if updated.recurrence >= config.promotion_threshold:
+        return {
+            "status": "needs_confirmation",
+            "entry_id": updated.id,
+            "recurrence": updated.recurrence,
+            "prompt": _promote_prompt(updated.recurrence),
+        }
+    return {"status": "reinforced", "entry_id": updated.id, "recurrence": updated.recurrence}
+
+
+@mcp.tool()
+def revise(
+    skill: str,
+    entry_id: str,
+    action: str,
+    body: str | None = None,
+    scope: str | None = None,
+    run_id: str | None = None,
+    confirm: bool | str = False,
+) -> dict:
+    """Call when user feedback concerns a learning or issue that ``recall`` already showed you (use
+    its ``id``).
+
+    ``action`` ∈ ``reinforce`` (they repeated a preference), ``weaken`` (they contradicted one),
+    ``promote`` (a preference should become an always/never rule), ``demote`` (a hard rule should
+    soften to a preference), ``remove`` (they rejected it outright). Optional ``body``/``scope``
+    supply reworded prose — REQUIRED for ``promote`` (reword the subjective preference into an
+    objective 'Always …'/'Never …' rule), usable to reword the survivor in conflict resolution.
+
+    If the server returns ``needs_confirmation``, ask the user the returned ``prompt``, then re-call
+    with ``confirm`` set to their choice:
+    - ``reinforce`` reaching the promotion threshold (§6) → ``confirm:"promote"`` or ``"keep"``.
+    - ``weaken`` taking a learning below recurrence 0 → ``confirm:"keep"`` or ``"remove"``.
+    - ``promote`` always asks first → re-call with ``confirm:true`` (and ``body``).
+    - ``weaken``/``remove`` on an *issue* is a 3-way hard-rule prompt → ``confirm:"remove"``,
+      ``"demote"``, or ``"cancel"``.
+    - In supervised mode every routine mutation asks first → re-call with ``confirm:true``.
+    """
+    if action not in ("reinforce", "weaken", "remove", "promote", "demote"):
+        raise ValueError(
+            "action must be one of reinforce|weaken|remove|promote|demote, "
+            f"got {action!r}"
+        )
+    config = load_config()
+    ensure_store(skill, config)
+    loc = store_location(skill, config)
+    backend = get_backend(config)
+
+    # One critical section per revise (mirrors capture): duplicate/id allocation, markdown write,
+    # index rebuild, and git commit are serialized against concurrent mutations of the same store.
+    with store_write_lock(loc):
+        index.rebuild_index_if_stale(loc, backend)
+        if action == "reinforce":
+            return _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        if action == "weaken":
+            return _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        if action == "remove":
+            return _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        if action == "promote":
+            return _revise_promote(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        return _revise_demote(loc, backend, entry_id, body, scope, run_id, confirm, config)
+
+
+def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+    """``reinforce``: recurrence +1, refresh ``last_seen``; prompt at the promotion threshold (§6).
+
+    ``confirm:"promote"``/``"keep"`` answer a prior threshold prompt (the +1 already committed), so
+    they resolve the promotion without bumping again."""
+    if confirm == "promote":
+        if find_learning(loc, entry_id) is None:
+            _reject_missing_learning(loc, entry_id, "promote")
+        return _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id)
+    if confirm == "keep":
+        current = find_learning(loc, entry_id)
+        if current is None:
+            _reject_missing_learning(loc, entry_id, "reinforce")
+        return {"status": "reinforced", "entry_id": current.id, "recurrence": current.recurrence}
+
+    learning = find_learning(loc, entry_id)
+    if learning is None:
+        _reject_missing_learning(loc, entry_id, "reinforce")
+    if _supervised_hold(config, confirm):
+        return _needs_confirmation(
+            entry_id, f"Supervised mode: reinforce {entry_id}? Re-call `revise` with confirm:true."
+        )
+    updated = reinforce_learning(loc, entry_id, when=_today())
+    index.rebuild_index(loc, backend)
+    commit_store(loc, f"revise: reinforce {updated.id} (recurrence {updated.recurrence})")
+    emit_revise(loc, run_id, updated.id, "reinforce", "reinforced")
+    if updated.recurrence >= config.promotion_threshold:
+        return {
+            "status": "needs_confirmation",
+            "entry_id": updated.id,
+            "recurrence": updated.recurrence,
+            "prompt": _promote_prompt(updated.recurrence),
+        }
+    return {"status": "reinforced", "entry_id": updated.id, "recurrence": updated.recurrence}
+
+
+def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+    """``weaken``: recurrence −1. Below 0 prompts keep/remove; on an *issue* it's the 3-way
+    hard-rule prompt."""
+    learning = find_learning(loc, entry_id)
+    if learning is None:
+        if find_issue(loc, entry_id) is not None:
+            return _issue_contradiction(
+                loc, backend, entry_id, body, scope, run_id, confirm, config
+            )
+        raise ValueError(f"no entry with id {entry_id!r}")
+
+    # Answers to a prior below-0 prompt (only reachable once recurrence has bottomed out).
+    if confirm == "keep":
+        set_learning_recurrence(loc, entry_id, 1)
+        index.rebuild_index(loc, backend)
+        commit_store(loc, f"revise: keep {entry_id} (recurrence 1)")
+        emit_revise(loc, run_id, entry_id, "weaken", "revised")
+        return {"status": "revised", "entry_id": entry_id, "recurrence": 1}
+    if confirm == "remove":
+        remove_entry(loc, entry_id)
+        index.rebuild_index(loc, backend)
+        commit_store(loc, f"revise: remove {entry_id}")
+        emit_revise(loc, run_id, entry_id, "weaken", "removed")
+        return {"status": "removed", "entry_id": entry_id}
+
+    new_recurrence = learning.recurrence - 1
+    if new_recurrence < 0:
+        return {
+            "status": "needs_confirmation",
+            "entry_id": entry_id,
+            "recurrence": learning.recurrence,
+            "prompt": (
+                "You've gone against this learning — keep it (reset to recurrence 1) or remove it? "
+                "Re-call `revise` with confirm:'keep' or confirm:'remove'."
+            ),
+        }
+    if _supervised_hold(config, confirm):
+        return _needs_confirmation(
+            entry_id,
+            f"Supervised mode: weaken {entry_id} "
+            f"(recurrence {learning.recurrence} -> {new_recurrence})? "
+            f"Re-call `revise` with confirm:true.",
+        )
+    set_learning_recurrence(loc, entry_id, new_recurrence)
+    index.rebuild_index(loc, backend)
+    commit_store(loc, f"revise: weaken {entry_id} (recurrence {new_recurrence})")
+    emit_revise(loc, run_id, entry_id, "weaken", "revised")
+    return {"status": "revised", "entry_id": entry_id, "recurrence": new_recurrence}
+
+
+def _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+    """``remove``: delete a learning (dial-governed) or route an issue through the hard-rule
+    3-way prompt."""
+    if find_learning(loc, entry_id) is not None:
+        if _supervised_hold(config, confirm):
+            return _needs_confirmation(
+                entry_id,
+                f"Supervised mode: remove learning {entry_id}? Re-call `revise` with confirm:true.",
+            )
+        remove_entry(loc, entry_id)
+        index.rebuild_index(loc, backend)
+        commit_store(loc, f"revise: remove {entry_id}")
+        emit_revise(loc, run_id, entry_id, "remove", "removed")
+        return {"status": "removed", "entry_id": entry_id}
+    if find_issue(loc, entry_id) is not None:
+        return _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, config)
+    raise ValueError(f"no entry with id {entry_id!r}")
+
+
+def _revise_promote(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+    """``promote`` (learning → issue): ALWAYS prompts first (§6), regardless of supervision mode."""
+    learning = find_learning(loc, entry_id)
+    if learning is None:
+        _reject_missing_learning(loc, entry_id, "promote")
+    if not _confirmed(confirm):
+        return {
+            "status": "needs_confirmation",
+            "entry_id": entry_id,
+            "recurrence": learning.recurrence,
+            "prompt": _promote_prompt(learning.recurrence),
+        }
+    return _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id)
+
+
+def _revise_demote(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+    """``demote`` (issue → learning): seed recurrence and dates; dial-governed."""
+    issue = find_issue(loc, entry_id)
+    if issue is None:
+        if find_learning(loc, entry_id) is not None:
+            raise ValueError(f"demote applies to issues; {entry_id!r} is a learning")
+        raise ValueError(f"no issue with id {entry_id!r}")
+    if _supervised_hold(config, confirm):
+        return _needs_confirmation(
+            entry_id,
+            f"Supervised mode: soften issue {entry_id} to a learning? "
+            f"Re-call `revise` with confirm:true.",
+        )
+    return _do_demote(loc, backend, entry_id, body, scope, run_id, config)
+
+
+def _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+    """The 3-way hard-rule prompt for ``weaken``/``remove`` on an issue — ALWAYS asks (§6),
+    regardless of supervision mode: remove it, demote it to a preference, or cancel."""
+    if confirm == "remove":
+        remove_entry(loc, entry_id)
+        index.rebuild_index(loc, backend)
+        commit_store(loc, f"revise: remove issue {entry_id}")
+        emit_revise(loc, run_id, entry_id, "remove", "removed")
+        return {"status": "removed", "entry_id": entry_id}
+    if confirm == "demote":
+        return _do_demote(loc, backend, entry_id, body, scope, run_id, config)
+    if confirm == "cancel":
+        return {"status": "unchanged", "entry_id": entry_id}
+    return {
+        "status": "needs_confirmation",
+        "entry_id": entry_id,
+        "prompt": (
+            "This was made a hard rule (issue) and you're going against it — fully remove it, "
+            "soften it to a preference, or make no change? Re-call `revise` with confirm:'remove', "
+            "confirm:'demote', or confirm:'cancel'."
+        ),
+    }
+
+
+def _do_demote(loc, backend, entry_id, body, scope, run_id, config) -> dict:
+    """Move an issue to ``learnings/`` seeded at ``demote_seed_recurrence`` with today's dates."""
+    new_id = next_id(loc, "learning")
+    learning = demote_issue_to_learning(
+        loc,
+        entry_id,
+        new_id,
+        seed_recurrence=config.demote_seed_recurrence,
+        when=_today(),
+        body=body,
+        scope=scope,
+    )
+    index.rebuild_index(loc, backend)
+    commit_store(loc, f"revise: demote issue {entry_id} -> {learning.id}")
+    emit_revise(loc, run_id, learning.id, "demote", "demoted")
+    return {"status": "demoted", "entry_id": learning.id, "recurrence": learning.recurrence}
+
+
+def _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id) -> dict:
+    """Execute a promotion, or ask for the objective rewording when ``body`` is missing (§6)."""
+    if not (body and body.strip()):
+        return _needs_confirmation(
+            entry_id,
+            "Promotion needs an objective rewording — re-call `promote` with `body` phrased as an "
+            "'Always …' / 'Never …' rule.",
+        )
+    new_id = next_id(loc, "issue")
+    issue = promote_learning_to_issue(loc, entry_id, new_id, body=body, scope=scope)
+    index.rebuild_index(loc, backend)
+    commit_store(loc, f"revise: promote {entry_id} -> {issue.id}")
+    emit_revise(loc, run_id, issue.id, "promote", "promoted")
+    return {"status": "promoted", "entry_id": issue.id}
 
 
 @mcp.tool()
@@ -257,6 +571,104 @@ def _title_from_body(body: str) -> str:
         raise ValueError("capture requires a non-empty body")
     first_sentence = re.split(r"(?<=[.!?])\s", collapsed, maxsplit=1)[0]
     return (first_sentence[:_MAX_TITLE].strip() or collapsed[:_MAX_TITLE].strip())
+
+
+def _confirmed(confirm: bool | str) -> bool:
+    """Whether ``confirm`` carries the user's assent — ``True`` or any non-empty choice string."""
+    if isinstance(confirm, bool):
+        return confirm
+    return bool(str(confirm).strip())
+
+
+def _supervised_hold(config: Config, confirm: bool | str) -> bool:
+    """Whether the supervision dial (§9) must gate this routine change before it commits.
+
+    Only ``supervised`` mode holds; ``balanced``/``autonomous`` commit routine changes silently.
+    Promotion and issue-contradiction removals prompt independently of this gate (§6), so they never
+    route through here.
+    """
+    return config.supervision == "supervised" and not _confirmed(confirm)
+
+
+def _needs_confirmation(entry_id: str | None, prompt: str) -> dict:
+    return {"status": "needs_confirmation", "entry_id": entry_id, "prompt": prompt}
+
+
+def _promote_prompt(recurrence: int) -> str:
+    return (
+        f"This has come up ~{recurrence} times — promote it to a guaranteed always/never rule? "
+        "Re-call with confirm:'promote' to make it a mandatory issue, or confirm:'keep' to leave "
+        "it a learning."
+    )
+
+
+def _reject_missing_learning(loc: StoreLocation, entry_id: str, action: str) -> None:
+    """Raise a clear error when an action needing a learning got an issue id or an unknown id."""
+    if find_issue(loc, entry_id) is not None:
+        raise ValueError(f"{action} applies to learnings; {entry_id!r} is an issue")
+    raise ValueError(f"no learning with id {entry_id!r}")
+
+
+def _conflict_result(
+    loc: StoreLocation,
+    run_id: str | None,
+    polarity: str,
+    conflict: tuple[IndexedEntry, str],
+) -> dict:
+    with_entry, explanation = conflict
+    # Log the surfaced conflict against the entry it clashed with; nothing was committed.
+    emit_capture(loc, run_id, with_entry.id, polarity, "conflict")
+    return {
+        "status": "conflict",
+        "entry_id": None,
+        "conflict": {"with_id": with_entry.id, "explanation": explanation},
+    }
+
+
+def _find_conflict(
+    loc,
+    polarity: str,
+    scope: str,
+    candidate_vec: list[float],
+    scope_vec: list[float],
+    config,
+) -> tuple[IndexedEntry, str] | None:
+    """The nearest OPPOSITE-polarity entry in an overlapping scope above ``conflict_similarity``.
+
+    Cross-polarity only (§7): a new **learning** wanting what an existing **issue** forbids, and the
+    symmetric new-issue-vs-existing-learning case. ``LEARNINGS``↔``LEARNINGS`` contradictions are
+    NOT detected here — an embedding cannot reliably separate "duplicate" from "contradiction" for
+    same-polarity text, so beyond dedup they are left as a documented limitation (§7) rather than a
+    brittle detector. "Overlapping scope" mirrors dedup: same scope, or the other entry's scope
+    phrase within ``conflict_similarity`` of the candidate's scope.
+    """
+    other = "issue" if polarity == "learning" else "learning"
+    scope_phrase = {s.scope: s.phrase for s in index.load_scopes(loc, other)}
+    best: IndexedEntry | None = None
+    best_sim = config.conflict_similarity
+    for entry in index.load_entries(loc, other):
+        if entry.scope != scope:
+            phrase = scope_phrase.get(entry.scope)
+            if phrase is None or cosine(scope_vec, phrase) < config.conflict_similarity:
+                continue
+        sim = cosine(candidate_vec, entry.vector)
+        if sim >= best_sim:
+            best_sim = sim
+            best = entry
+    if best is None:
+        return None
+    if polarity == "learning":
+        explanation = (
+            f"New learning overlaps issue {best.id} in scope {scope!r}: the issue forbids what "
+            f"this learning prefers. Resolve with `revise` — remove/demote {best.id}, or drop the "
+            "learning."
+        )
+    else:
+        explanation = (
+            f"New issue overlaps learning {best.id} in scope {scope!r}: the mandatory rule forbids "
+            f"what that learning prefers. Resolve with `revise` — weaken/remove/promote {best.id}."
+        )
+    return best, explanation
 
 
 def _find_duplicate(

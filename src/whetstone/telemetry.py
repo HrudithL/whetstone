@@ -112,6 +112,29 @@ def emit_capture(
     )
 
 
+def emit_revise(
+    loc: StoreLocation,
+    run_id: str | None,
+    entry_id: str,
+    action: str,
+    status: str,
+) -> None:
+    """Record a ``revise``: the entry it touched, the ``action`` applied, and the outcome ``status``
+    (``revised`` | ``removed`` | ``promoted`` | ``demoted`` | ``reinforced``). Only emitted when a
+    mutation actually commits — a bare ``needs_confirmation`` prompt changes nothing and logs
+    nothing."""
+    append_event(
+        loc,
+        {
+            "type": "revise",
+            "run_id": run_id,
+            "entry_id": entry_id,
+            "action": action,
+            "status": status,
+        },
+    )
+
+
 def read_events(loc: StoreLocation) -> list[dict]:
     """Read every event line, skipping blank lines. Missing log -> empty list.
 
