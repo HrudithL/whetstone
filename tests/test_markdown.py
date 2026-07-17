@@ -190,6 +190,20 @@ def test_body_with_version_like_heading_round_trips():
     assert back[0].body == body
 
 
+def test_serialize_rejects_body_with_entry_heading_delimiter():
+    # A body line matching "## <L|I><digits> · ..." would be re-parsed as a bogus block, so it is
+    # rejected at serialize time (before any write) rather than silently corrupting the store.
+    evil = _learning(body="Fine prose.\n\n## L99 · injected\n\nmore.")
+    with pytest.raises(MarkdownParseError, match="entry-heading delimiter"):
+        serialize_learnings([evil])
+    evil_issue = _issue(body="Never do X.\n\n## I42 · injected block")
+    with pytest.raises(MarkdownParseError, match="entry-heading delimiter"):
+        serialize_issues([evil_issue])
+    # A non-delimiter markdown heading in a body is still fine.
+    ok = _learning(body="Notes.\n\n## Summary\n\nAll good.")
+    assert "## Summary" in serialize_learnings([ok])
+
+
 def test_id_polarity_is_enforced():
     # An I* id in a learnings file (or L* in an issues file) must fail early, not flip polarity.
     issue_shaped = (

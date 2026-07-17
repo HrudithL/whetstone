@@ -30,6 +30,9 @@ except ImportError:  # pragma: no cover - non-POSIX
     fcntl = None
 
 _REGISTRY_NAME = "registry.json"
+# Only the markdown is source of truth. The sqlite index is derived/rebuildable and events.jsonl is
+# local telemetry (§5.1), so a per-store .gitignore keeps both out of the committed history.
+_STORE_GITIGNORE = "index.sqlite\nindex.sqlite-*\nevents.jsonl\n"
 # Applied per-command so a store commit never depends on (or mutates) the user's global git config:
 # a fixed identity, no GPG signing, and no user hooks (a global core.hooksPath / template hook must
 # not be able to fail Whetstone's internal bookkeeping commits). This disables hooks via config
@@ -95,6 +98,60 @@ def _git(args: list[str], cwd: Path) -> None:
     )
 
 
+def _ensure_store_gitignore(loc: StoreLocation) -> bool:
+    """Write the per-store ``.gitignore`` if missing/outdated; return True iff the file changed."""
+    path = loc.path / ".gitignore"
+    if not path.exists() or path.read_text(encoding="utf-8") != _STORE_GITIGNORE:
+        path.write_text(_STORE_GITIGNORE, encoding="utf-8")
+        return True
+    return False
+
+
+@contextmanager
+def store_write_lock(loc: StoreLocation):
+    """Serialize all mutations of one store (and its index rebuilds) across calls and processes.
+
+    ``capture`` runs its whole critical section — duplicate check, id allocation, markdown write,
+    index rebuild, git commit — under this lock so concurrent captures for the same skill can't race
+    on ``next_id`` (which would mint duplicate ids or drop entries) or interleave index rebuilds.
+    ``recall``'s ``ensure_index`` takes the same lock, so a rebuild never overlaps another rebuild
+    or a capture. The lock file sits in the store root (outside the per-skill git repo), so it is
+    never committed. A no-op where ``fcntl`` is unavailable (non-POSIX).
+    """
+    with _file_lock(loc.path.parent / f".write-{loc.slug}.lock"):
+        yield
+
+
+def commit_store(loc: StoreLocation, message: str) -> None:
+    """Stage all tracked markdown changes and commit them to the store's git repo.
+
+    Derived artifacts (``index.sqlite``, ``events.jsonl``) are excluded by the store ``.gitignore``,
+    so ``git add -A`` only ever stages the source-of-truth markdown.
+    """
+    _git(["add", "-A"], cwd=loc.path)
+    _git(["commit", "-q", "-m", message], cwd=loc.path)
+
+
+def commit_paths(loc: StoreLocation, paths: list[str], message: str) -> None:
+    """Commit ONLY the given paths, leaving any other working-tree changes untouched.
+
+    Used for internal bookkeeping commits (e.g. a repaired ``.gitignore``) so a ``recall`` or
+    ``attach`` can never sweep unrelated untracked/modified markdown into it. Staging then
+    committing is scoped to ``paths``; if that stages no actual change, nothing is committed (no
+    empty commits).
+    """
+    _git(["add", "--", *paths], cwd=loc.path)
+    staged = subprocess.run(
+        ["git", "diff", "--cached", "--quiet", "--", *paths],
+        cwd=str(loc.path),
+        capture_output=True,
+        text=True,
+    )
+    if staged.returncode == 0:  # 0 == no staged diff for these paths
+        return
+    _git(["commit", "-q", "-m", message, "--", *paths], cwd=loc.path)
+
+
 @contextmanager
 def _file_lock(lock_path: Path):
     """Cross-call/cross-process mutual exclusion via a POSIX ``flock`` on ``lock_path``.
@@ -156,10 +213,16 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
     # creates; the loser re-observes a finished store inside the lock and returns it as existing.
     with _file_lock(root / f".create-{loc.slug}.lock"):
         if is_store(loc.path):
-            # Repair scaffolding: an existing store that lost its scope dirs still gets them back,
-            # so `attach`/lazy-create always leaves learnings/ and issues/ present.
+            # Repair scaffolding: an existing store that lost its scope dirs (or predates the
+            # derived index) still gets them back, so `attach`/lazy-create always leaves
+            # learnings/, issues/, and the .gitignore present.
             loc.learnings_dir.mkdir(parents=True, exist_ok=True)
             loc.issues_dir.mkdir(parents=True, exist_ok=True)
+            # An upgraded M0 store predates the .gitignore. If we just added/updated it, commit that
+            # bookkeeping now (guarded on a real change, so no empty commits) so the repo isn't left
+            # dirty for the next operation.
+            if _ensure_store_gitignore(loc):
+                commit_paths(loc, [".gitignore"], "Add derived-artifact .gitignore")
             _register(loc, config)
             return EnsureResult(location=loc, created=False)
 
@@ -168,6 +231,7 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
         # .gitkeep so the (initially empty) scope directories are tracked from the first commit.
         (loc.learnings_dir / ".gitkeep").write_text("", encoding="utf-8")
         (loc.issues_dir / ".gitkeep").write_text("", encoding="utf-8")
+        _ensure_store_gitignore(loc)
 
         _git(["init", "-q"], cwd=loc.path)
         _git(["add", "-A"], cwd=loc.path)

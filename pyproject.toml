@@ -19,6 +19,11 @@ dev = [
     "pytest",
     "ruff",
 ]
+# Heavy, optional. The default "hashing" embedding backend needs none of this; only the
+# "sentence-transformers" backend does. Install with: pip install "whetstone-mcp[embeddings]".
+embeddings = [
+    "sentence-transformers",
+]
 
 [project.scripts]
 whetstone = "whetstone.server:main"
