@@ -58,6 +58,14 @@ export ANTHROPIC_API_KEY=sk-ant-...        # or put it in harness/.env (gitignor
 python -m harness.run                       # slice 3 — regenerates out/
 ```
 
+**Prerequisites for a real run** (beyond the pip extras):
+
+- The **Claude Code CLI** on `PATH` (`claude-agent-sdk` drives it) — `npm i -g @anthropic-ai/claude-code`.
+- A **headless Chrome/Chromium** binary *only if* you export `table.png` snapshots: great-tables'
+  PNG export renders through headless Chrome. The site itself renders great-tables **natively as
+  HTML** in Quarto (the whole point — real tables, not screenshots), so the `table.png` artifacts in
+  `out/` are an optional convenience; set `CHROME_PATH` if a run cannot find a browser.
+
 ## Layout
 
 ```

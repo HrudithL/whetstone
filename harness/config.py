@@ -56,12 +56,18 @@ def showcase_env() -> dict[str, str]:
 
 
 def apply_showcase_env(environ: dict[str, str] | None = None) -> dict[str, str]:
-    """Apply the showcase overrides onto ``environ`` (defaults to ``os.environ``); return them.
+    """Pin the showcase environment on ``environ`` (defaults to ``os.environ``); return the pins.
 
-    Overwrites unconditionally: the whole point is that a showcase run is reproducible regardless of
-    whatever ``WHETSTONE_*`` vars happen to be set in the maintainer's shell.
+    A showcase run must be reproducible regardless of the maintainer's shell, so this first **clears
+    every** ``WHETSTONE_*`` var, then sets our pins. Clearing matters: ``whetstone.config`` consumes
+    *all* ``WHETSTONE_*`` fields, so a stray override such as ``WHETSTONE_DEDUP_SIMILARITY`` or
+    ``WHETSTONE_LEARNINGS_CUTOFF`` left in the environment would otherwise run the showcase on
+    non-calibrated thresholds. After clearing, the tunables we do not pin fall back to the
+    ST-calibrated dataclass defaults.
     """
     target = os.environ if environ is None else environ
+    for key in [k for k in target if k.startswith("WHETSTONE_")]:
+        del target[key]
     overrides = showcase_env()
     target.update(overrides)
     return overrides

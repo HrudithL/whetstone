@@ -73,9 +73,10 @@ POLARITIES = ("learning", "issue")
 CHECK_KINDS = ("code_contains", "code_absent", "regex")
 
 # ``name`` and preference ``id`` become a filesystem path component (``out/<name>/``) and the store
-# skill id, so they must be plain slugs — no separators, no ``.``/``..``, no leading digit-only edge
-# cases that would let one scenario write outside its directory or collide with another.
-_SLUG_RE = re.compile(r"^[a-z0-9]+(?:[_-][a-z0-9]+)*$")
+# skill id, so they must be plain slugs — no separators, no ``.``/``..``, no embedded whitespace or
+# newlines that would let one scenario write outside its directory or collide with another. Matched
+# with ``fullmatch`` (below), so a trailing newline like ``"foo\n"`` is rejected, not accepted.
+_SLUG_RE = re.compile(r"[a-z0-9]+(?:[_-][a-z0-9]+)*")
 
 
 class ScenarioError(ValueError):
@@ -137,7 +138,7 @@ def _require_slug(mapping: object, key: str, where: str) -> str:
     """Like :func:`_require` for a str, but also enforce the ``_SLUG_RE`` path-safe slug shape."""
     value = _require(mapping, key, where, str)
     assert isinstance(value, str)
-    if not _SLUG_RE.match(value):
+    if not _SLUG_RE.fullmatch(value):
         raise ScenarioError(
             f"{where}: field {key!r} must be a slug (lowercase letters/digits, '-'/'_' "
             f"separators), got {value!r}"
