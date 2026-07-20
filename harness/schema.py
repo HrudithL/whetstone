@@ -70,7 +70,10 @@ import yaml
 
 DIFFICULTIES = ("easy", "medium", "hard")
 POLARITIES = ("learning", "issue")
-CHECK_KINDS = ("code_contains", "code_absent", "regex")
+# code_contains/regex assert presence; code_absent/regex_absent assert absence. The regex variants
+# let a forbidden thing be matched by more than a single literal (e.g. a color by name OR hex).
+CHECK_KINDS = ("code_contains", "code_absent", "regex", "regex_absent")
+_REGEX_KINDS = ("regex", "regex_absent")
 
 # ``name`` and preference ``id`` become a filesystem path component (``out/<name>/``) and the store
 # skill id, so they must be plain slugs — no separators, no ``.``/``..``, no embedded whitespace or
@@ -180,7 +183,7 @@ def _parse_check(raw: object, where: str) -> Check:
     if kind not in CHECK_KINDS:
         raise ScenarioError(f"{where}: check.kind must be one of {CHECK_KINDS}, got {kind!r}")
     pattern = _require(raw, "pattern", where, str)
-    if kind == "regex":
+    if kind in _REGEX_KINDS:
         # Compile now so a broken pattern fails at load time, not after the runner has spent API
         # calls generating artifacts.
         try:

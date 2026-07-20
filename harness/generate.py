@@ -18,6 +18,7 @@ into the instruction block injected on WARM runs — the same text saved verbati
 
 from __future__ import annotations
 
+import ast
 import io
 import re
 import shutil
@@ -37,38 +38,61 @@ class GenerationResult:
     transcript: list = field(default_factory=list)  # raw model messages; empty for the stub
 
 
-def strip_comments(code: str) -> str:
-    """Return ``code`` with Python comments removed (string literals preserved).
+def _strip_docstrings(tree: ast.AST) -> None:
+    """Drop docstrings (leading bare string-literal statements) from every scope in ``tree``."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            body = node.body
+            first = body[0] if body else None
+            if (
+                isinstance(first, ast.Expr)
+                and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)
+            ):
+                body[0] = ast.Pass() if len(body) == 1 else None  # placeholder; filtered next
+                node.body = [s for s in body if s is not None]
 
-    A live agent is asked to write explanatory table code, so a comment like ``# avoid green`` or
-    ``# use fmt_currency`` would otherwise fool the checks (a false ``code_absent`` failure or a
-    false ``code_contains`` pass). Tokenizing keeps ``#`` inside strings (e.g. hex ``"#1b7837"``)
-    intact; if the agent's code doesn't tokenize, fall back to a naive per-line strip.
+
+def code_for_check(code: str) -> str:
+    """Return ``code`` reduced to *executable* source for checking — comments AND docstrings gone.
+
+    A live agent writes explanatory prose as comments and docstrings, so ``# avoid green`` or
+    ``\"\"\"use fmt_currency\"\"\"`` must not fool the checks. Parsing to an AST and unparsing drops
+    both while preserving string literals that are actually *arguments* (e.g. ``palette="green"``,
+    which a ``code_absent: green`` check must still catch). If the agent's code doesn't parse, fall
+    back to tokenize-based comment stripping (keeps ``#`` inside strings intact).
     """
     try:
-        toks = [
-            (t.type, t.string)
-            for t in tokenize.generate_tokens(io.StringIO(code).readline)
-            if t.type != tokenize.COMMENT
-        ]
-        return tokenize.untokenize(toks)
-    except (tokenize.TokenError, IndentationError, SyntaxError, ValueError):
-        return "\n".join(line.split("#", 1)[0] for line in code.splitlines())
+        tree = ast.parse(code)
+        _strip_docstrings(tree)
+        return ast.unparse(tree)
+    except (SyntaxError, ValueError):
+        try:
+            toks = [
+                (t.type, t.string)
+                for t in tokenize.generate_tokens(io.StringIO(code).readline)
+                if t.type != tokenize.COMMENT
+            ]
+            return tokenize.untokenize(toks)
+        except (tokenize.TokenError, IndentationError, ValueError):
+            return "\n".join(line.split("#", 1)[0] for line in code.splitlines())
 
 
 def honors(code: str, check: Check) -> bool:
     """Does ``code`` satisfy ``check``? The runner's one source of truth for "was it applied?".
 
-    Checks run against the **comment-stripped** source so an explanatory comment can neither satisfy
-    nor break a check — only real code counts.
+    Runs against :func:`code_for_check` output (comments + docstrings removed) so only executable
+    code counts. ``*_absent`` kinds assert the pattern is gone; the others assert it is present.
     """
-    stripped = strip_comments(code)
+    src = code_for_check(code)
     if check.kind == "code_contains":
-        return check.pattern in stripped
+        return check.pattern in src
     if check.kind == "code_absent":
-        return check.pattern not in stripped
+        return check.pattern not in src
     if check.kind == "regex":
-        return re.search(check.pattern, stripped) is not None
+        return re.search(check.pattern, src) is not None
+    if check.kind == "regex_absent":
+        return re.search(check.pattern, src) is None
     raise ValueError(f"unknown check kind: {check.kind!r}")  # pragma: no cover - schema-guarded
 
 
@@ -129,19 +153,31 @@ def _regex_sample(pattern: str) -> str:
     return s
 
 
+def _first_literal(pattern: str) -> str:
+    """A literal matching the first alternative of ``pattern`` (drops leading inline flags)."""
+    p = re.sub(r"^\(\?[a-zA-Z]+\)", "", pattern)  # strip a leading (?i)/(?is)/... flag group
+    return _regex_sample(p.split("|", 1)[0])
+
+
+_ABSENT_KINDS = ("code_absent", "regex_absent")
+
+
 def _stub_line(pref: Preference, honor: bool) -> str | None:
     """The line a stubbed ``table.py`` emits for ``pref`` when honoring / violating it.
 
-    Mirrors ``honors`` so the checker agrees with the stub: for ``code_absent`` a violation *emits*
-    the forbidden token and honoring emits nothing; for the positive kinds honoring emits a matching
-    token and a violation emits nothing.
+    Mirrors ``honors`` so the checker agrees with the stub: for an *absent* check a violation
+    *emits* the forbidden token and honoring emits nothing; for a *presence* check honoring emits a
+    matching token and a violation emits nothing.
     """
-    kind, pattern = pref.check.kind, pref.check.pattern
-    if kind == "code_absent":
-        return f"    .data_color(palette={pattern!r})  # {pref.id}" if not honor else None
+    check = pref.check
+    if check.kind in _ABSENT_KINDS:
+        if honor:
+            return None
+        token = check.pattern if check.kind == "code_absent" else _first_literal(check.pattern)
+        return f"    .data_color(palette={token!r})  # {pref.id}"
     if not honor:
         return None
-    token = pattern if kind == "code_contains" else _regex_sample(pattern)
+    token = check.pattern if check.kind == "code_contains" else _regex_sample(check.pattern)
     return f"    .{token if '(' in token else f'fmt({token})'}  # {pref.id}"
 
 
@@ -249,6 +285,14 @@ class AgentGenerator:
         table_py = workdir / "table.py"
         if not table_py.is_file():
             raise RuntimeError(f"{scenario.name}: agent did not write table.py in {workdir}")
+        # The before/after artifacts require a rendered PNG. Fail loudly if the agent wrote the
+        # script but it never rendered (e.g. it skipped running it, or Chrome is missing) rather
+        # than silently committing an incomplete artifact set.
+        if not (workdir / "table.png").is_file():
+            raise RuntimeError(
+                f"{scenario.name}: agent produced table.py but no rendered table.png in {workdir} "
+                "(did the script run? is a headless Chrome available for gtsave?)"
+            )
         return GenerationResult(code=table_py.read_text(encoding="utf-8"), transcript=transcript)
 
 

@@ -54,9 +54,15 @@ maintainer's shell:
 ```bash
 # from the repo root
 pip install -e ".[showcase,embeddings]"
-export ANTHROPIC_API_KEY=sk-ant-...        # or put it in harness/.env (gitignored)
-python -m harness.run                       # slice 3 — regenerates out/
+export ANTHROPIC_API_KEY=sk-ant-...          # or put it in harness/.env (gitignored)
+
+python -m harness.run --agent                 # real (paid): regenerates the committed out/ artifacts
+python -m harness.run --stub                  # free deterministic pipeline check (does NOT commit real artifacts)
+python -m harness.run --agent --scenario sp500_monthly_performance   # one scenario
 ```
+
+A mode (`--agent` or `--stub`) is **required** — a bare `python -m harness.run` refuses to run, since
+each run clears `out/<scenario>/` first and an accidental stub run would overwrite the real artifacts.
 
 **Prerequisites for a real run** (beyond the pip extras):
 

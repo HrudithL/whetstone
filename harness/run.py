@@ -234,7 +234,7 @@ def run_scenario(
     return {
         "scenario": scenario.name,
         "runs": len(runs),
-        "runs_to_stick": {p.id: _runs_to_stick(runs, p.id) for p in prefs},
+        "runs_to_stick": {p.id: _runs_to_stick(runs, p.id, stick_streak) for p in prefs},
     }
 
 
@@ -246,11 +246,17 @@ def _all_stuck(runs: list[dict], prefs, streak: int) -> bool:
     return all(all(r["honored"].get(p.id) for r in tail) for p in prefs)
 
 
-def _runs_to_stick(runs: list[dict], pref_id: str) -> int | None:
-    """First run number from which ``pref_id`` is honored through the end; ``None`` if never."""
+def _runs_to_stick(runs: list[dict], pref_id: str, stick_streak: int) -> int | None:
+    """First run from which ``pref_id`` is honored to the end for at least ``stick_streak`` runs.
+
+    ``None`` if it never stuck — including the truncated case where ``--max-runs`` was hit before
+    the preference achieved the required consecutive-honored streak, so a lone final-run success is
+    not miscounted as "stuck".
+    """
     honored = [(r["run"], bool(r["honored"].get(pref_id))) for r in runs]
     for i, (run_no, ok) in enumerate(honored):
-        if ok and all(h for _, h in honored[i:]):
+        tail = honored[i:]
+        if ok and len(tail) >= stick_streak and all(h for _, h in tail):
             return run_no
     return None
 
@@ -311,8 +317,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Whetstone showcase runner (command-only).")
     parser.add_argument("--scenario", action="append", metavar="NAME",
                         help="Run only this scenario (repeatable). Default: all.")
-    parser.add_argument("--agent", action="store_true",
-                        help="Use the live Claude Agent SDK (paid). Default: the free stub.")
+    # Require an explicit mode: `python -m harness.run` alone must NOT silently pick a generator,
+    # because a run clears out/<scenario>/ first — an accidental stub run would clobber the
+    # committed real artifacts with synthetic table.py-only outputs.
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--agent", action="store_true",
+                      help="Use the live Claude Agent SDK (paid) to produce the real artifacts.")
+    mode.add_argument("--stub", action="store_true",
+                      help="Use the deterministic free stub (pipeline verification only).")
     parser.add_argument("--model", metavar="ID", default=None,
                         help="Model id for --agent (e.g. claude-haiku-4-5).")
     parser.add_argument("--max-runs", type=int, default=DEFAULT_MAX_RUNS)
