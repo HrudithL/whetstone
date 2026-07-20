@@ -152,10 +152,12 @@ def _persist(result: GenerationResult, workdir: Path, phase_dir: Path) -> None:
     """Copy the generated artifacts out of the (soon-deleted) workdir into ``phase_dir``."""
     phase_dir.mkdir(parents=True, exist_ok=True)
     (phase_dir / "table.py").write_text(result.code, encoding="utf-8")
-    # The live agent renders table.png in the workdir; capture it before the workdir is torn down.
-    png = workdir / "table.png"
-    if png.is_file():
-        shutil.copy2(png, phase_dir / "table.png")
+    # Capture the rendered outputs from the workdir before it is torn down: table.png (raster) and
+    # table.html (self-contained, embedded natively by the triptych). Both are best-effort.
+    for artifact in ("table.png", "table.html"):
+        src = workdir / artifact
+        if src.is_file():
+            shutil.copy2(src, phase_dir / artifact)
     if result.transcript:
         (phase_dir / "transcript.json").write_text(
             json.dumps(result.transcript, indent=2), encoding="utf-8"

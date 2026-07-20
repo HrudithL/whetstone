@@ -249,9 +249,17 @@ class StubGenerator:
             emitted = _stub_line(pref, honored)
             if emitted is not None:
                 lines.append(emitted)
-        lines += [")", 'gt.GT.save(table, "table.png")', ""]
+        lines += [")", 'table.gtsave("table.png")', ""]
         code = "\n".join(lines)
         (workdir / "table.py").write_text(code, encoding="utf-8")
+        # A minimal, self-contained HTML table so the triptych can render a stub run natively too.
+        applied = [p.id for p in scenario.preferences if p.scope in learned_layer]
+        rows = "".join(f"<li>{pid}</li>" for pid in applied) or "<li>(none)</li>"
+        html = (
+            f"<table class='gt_table'><thead><tr><th>{scenario.name} (stub)</th></tr></thead>"
+            f"<tbody><tr><td>preferences applied:<ul>{rows}</ul></td></tr></tbody></table>"
+        )
+        (workdir / "table.html").write_text(html, encoding="utf-8")
         return GenerationResult(code=code)
 
 
@@ -292,7 +300,9 @@ class AgentGenerator:
             f"The data is in `{data_name}` in the current directory. Write a Python script "
             "`table.py` that builds the requested table with `great_tables`, then render it to "
             "`table.png` with Great Tables' gtsave (the skill's mandatory renderer, "
-            '`table.gtsave("table.png")`). Run the script to confirm it works.',
+            '`table.gtsave("table.png")`). Also write the table\'s self-contained HTML to '
+            '`table.html` via `<your GT object>.as_raw_html()` so it can be embedded natively. '
+            "Run the script to confirm it works.",
         ]
         return "\n".join(parts)
 
