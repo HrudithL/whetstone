@@ -1,0 +1,16 @@
+name: islands_sizes
+difficulty: easy
+prompt: >
+  Make a table of the islands and their sizes.
+data: data/islands.csv
+preferences:
+  - id: sort-size-desc
+    polarity: learning
+    scope: row ordering
+    body: >
+      Order the rows by size from largest to smallest.
+    feedback: >
+      Sort the islands biggest first.
+    check:
+      kind: code_contains
+      pattern: ascending=False

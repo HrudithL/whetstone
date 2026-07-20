@@ -1,0 +1,28 @@
+name: sp500_monthly_performance
+difficulty: hard
+prompt: >
+  Make a table of the S&P 500 data showing monthly performance summary for 2010 through 2015, with
+  each month's opening price, closing price, percent change, average daily volume, and the highest
+  single-day gain and loss within that month.
+data: data/sp500.csv
+preferences:
+  - id: negatives-accounting
+    polarity: learning
+    scope: number formatting
+    body: >
+      Show negative numbers in accounting style — wrapped in parentheses, not with a minus sign.
+    feedback: >
+      Use accounting format for negatives (parentheses, not a minus).
+    check:
+      kind: regex
+      pattern: accounting\s*=\s*True
+  - id: prices-usd
+    polarity: learning
+    scope: currency formatting
+    body: >
+      Format the opening and closing price columns as US dollars.
+    feedback: >
+      Show the open/close prices as USD currency.
+    check:
+      kind: code_contains
+      pattern: fmt_currency
