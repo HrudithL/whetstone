@@ -272,8 +272,10 @@ class AgentGenerator:
 
         # Restrict the capability set with `tools` (allowed_tools only auto-approves; it does not
         # limit). Confining generation to filesystem/shell tools — no WebSearch/WebFetch — keeps a
-        # committed artifact run reproducible and free of external state.
-        fs_tools = ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
+        # committed artifact run reproducible and free of external state. `Skill` MUST stay in the
+        # base `tools` list: `skills=[...]` only appends Skill(name) to the auto-approve set, so
+        # dropping Skill from `tools` would make the mounted great-tables skill uninvokable.
+        fs_tools = ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"]
         options = ClaudeAgentOptions(
             skills=[skill_name],
             setting_sources=["project"],
