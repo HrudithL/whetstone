@@ -170,6 +170,14 @@ def run_scenario(
     scenario succeeds**, so a mid-run failure (e.g. the agent renders no PNG, or the API aborts)
     leaves the previously committed artifacts intact rather than half-deleted.
     """
+    # Validate the data file BEFORE anything destructive: _reset_store() deletes the per-scenario
+    # store, so a missing CSV must fail here rather than after wiping a prior run's telemetry.
+    src = (config.HARNESS_ROOT / scenario.data).resolve()
+    if not src.is_file():
+        raise FileNotFoundError(
+            f"{scenario.name}: data file not found: {scenario.data} (resolved {src})"
+        )
+
     _reset_store(scenario.name)
     stage = Path(tempfile.mkdtemp(prefix=f"whetstone-stage-{scenario.name}-"))
     try:
@@ -179,12 +187,33 @@ def run_scenario(
     except BaseException:
         shutil.rmtree(stage, ignore_errors=True)
         raise
-    # Success: atomically-ish swap the staged artifacts into place (old dir removed only now).
-    out_dir = out_root / scenario.name
-    out_dir.parent.mkdir(parents=True, exist_ok=True)
-    shutil.rmtree(out_dir, ignore_errors=True)
-    shutil.move(str(stage), str(out_dir))
+    _swap_into_place(stage, out_root / scenario.name)
     return summary
+
+
+def _swap_into_place(stage: Path, out_dir: Path) -> None:
+    """Install ``stage`` at ``out_dir``, keeping the old artifacts until the new ones are in place.
+
+    The old directory is renamed aside first (a same-filesystem, near-atomic rename), the staged
+    artifacts are moved in, and only then is the backup removed. If installing the new artifacts
+    fails (e.g. a cross-filesystem ``shutil.move`` errors partway), the backup is restored, so the
+    committed artifacts survive a failure during the swap itself — not just during generation.
+    """
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    backup = out_dir.with_name(f"{out_dir.name}.old-{os.getpid()}")
+    shutil.rmtree(backup, ignore_errors=True)
+    had_old = out_dir.exists()
+    if had_old:
+        os.rename(out_dir, backup)
+    try:
+        shutil.move(str(stage), str(out_dir))
+    except BaseException:
+        shutil.rmtree(out_dir, ignore_errors=True)  # remove any partial install
+        if had_old:
+            os.rename(backup, out_dir)  # restore the previous artifacts
+        raise
+    if had_old:
+        shutil.rmtree(backup, ignore_errors=True)
 
 
 def _run_scenario_into(

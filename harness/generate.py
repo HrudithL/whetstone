@@ -147,8 +147,12 @@ _NETWORK_BASH_TOKENS = (
 
 
 def bash_command_is_networked(command: str) -> bool:
-    """True if a Bash ``command`` looks like it fetches remote state or installs packages."""
-    low = command.lower()
+    """True if a Bash ``command`` looks like it fetches remote state or installs packages.
+
+    Whitespace is collapsed first so ``pip  install`` / ``git   clone`` (Bash treats runs of
+    whitespace as one separator) can't slip past the space-bearing tokens.
+    """
+    low = re.sub(r"\s+", " ", command.lower())
     return any(tok in low for tok in _NETWORK_BASH_TOKENS)
 
 
