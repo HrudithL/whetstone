@@ -20,13 +20,16 @@ from __future__ import annotations
 
 import ast
 import io
+import os
 import re
 import shutil
+import sys
 import tokenize
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
+from . import config
 from .schema import Check, Preference, Scenario
 
 
@@ -309,7 +312,8 @@ class AgentGenerator:
     async def _generate(
         self, scenario: Scenario, learned_layer: str, workdir: Path
     ) -> GenerationResult:
-        from claude_agent_sdk import ClaudeAgentOptions, query  # lazy: only for the paid path
+        # lazy import: only the paid path needs the SDK
+        from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 
         # The SDK discovers *project* skills by name from the cwd's `.claude/skills/`. cwd is a temp
         # workdir, so mount the vendored skill into it and reference it by its directory name — a
@@ -329,6 +333,15 @@ class AgentGenerator:
         # `curl`/`pip install` around the WebSearch/WebFetch denial. (An unscoped `Bash` in
         # allowed_tools would auto-approve the whole tool.)
         auto_approve = [t for t in fs_tools if t != "Bash"]
+        # The agent runs the generated `table.py` via its Bash tool. `great_tables` (and, for
+        # `gtsave`, the lightweight `nokap` renderer) live only in *this* venv — the parent is
+        # launched as `.venv/bin/python`, which does NOT put `.venv/bin` on PATH, so a bare
+        # `python3 table.py` would otherwise resolve to a system interpreter that lacks `nokap` and
+        # fail to write `table.png`. Hand the subprocess an env with this venv's bin dir first on
+        # PATH so `python`/`python3` deterministically import the showcase dependencies.
+        child_env = config.subprocess_env()
+        venv_bin = os.path.dirname(sys.executable)
+        child_env["PATH"] = venv_bin + os.pathsep + child_env.get("PATH", "")
         options = ClaudeAgentOptions(
             skills=[skill_name],
             setting_sources=["project"],
@@ -339,11 +352,27 @@ class AgentGenerator:
             cwd=str(workdir),
             permission_mode="default",
             model=self.model,
+            env=child_env,
+            # Each CLI->SDK message is one JSON line; the default 1 MiB cap overflows when a single
+            # tool result carries a large payload (e.g. reading sp500.csv, ~918 KB, or emitting the
+            # table's raw HTML). Raise it so a whole-file Read or HTML dump stays in one message.
+            max_buffer_size=32 * 1024 * 1024,
         )
         transcript: list = []
         prompt = self._build_prompt(scenario, learned_layer)
-        async for msg in query(prompt=prompt, options=options):
-            transcript.append(_message_to_dict(msg))
+
+        # Setting `can_use_tool` requires the SDK's *bidirectional* streaming session: the
+        # permission callback is served over a control channel that must stay open for the whole
+        # run. A plain `query(prompt=str)` refuses ("callback requires streaming mode"), and
+        # `query()` with a finite async-iterable prompt is worse — it closes stdin after the first
+        # turn, tearing that control channel down, so every later tool call needing a verdict fails
+        # with "AbortError: Stream closed" and the agent can never run `table.py` (no png/html).
+        # `ClaudeSDKClient` holds the session open for the duration; `receive_response()` yields
+        # until (and including) the terminating ResultMessage.
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(prompt)
+            async for msg in client.receive_response():
+                transcript.append(_message_to_dict(msg))
         table_py = workdir / "table.py"
         if not table_py.is_file():
             raise RuntimeError(f"{scenario.name}: agent did not write table.py in {workdir}")

@@ -1,0 +1,6 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L1] (percentage formatting, weight 0.67) Show the percentage-change columns as percentages with an explicit + sign on positive values.
+Issues (mandatory constraints):
+  - [I1] (color encoding) Do not use green to signal growth (not colorblind-safe); use a single neutral accent color for emphasis instead.

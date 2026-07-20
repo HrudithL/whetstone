@@ -1,0 +1,4 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L1] (column grouping, weight 0.67) Group the drivetrain and transmission columns under a single "Powertrain" spanner.
