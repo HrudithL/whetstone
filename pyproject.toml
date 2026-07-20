@@ -47,6 +47,9 @@ packages = ["src/whetstone"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# Vendored third-party content (the great-tables Claude skill copied from the sibling gtskill repo)
+# is not ours to lint/format.
+extend-exclude = ["harness/skill"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]

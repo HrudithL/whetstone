@@ -5,9 +5,12 @@ deterministically and CI needs no API key. The Quarto site in [`../../docs/`](..
 *reads* this directory — it never regenerates it. Regenerate with the runner (slice 3):
 
 ```bash
-pip install -e ".[showcase,embeddings]"   # from the repo root
-python -m harness.run                      # command-only; drives a live model, never runs in CI
+pip install -e ".[showcase,embeddings]"    # from the repo root
+python -m harness.run --agent               # command-only; drives a live model, never runs in CI
 ```
+
+A mode is required — `--agent` (paid; writes these committed artifacts) or `--stub` (free
+verification; writes to a throwaway dir and never touches `out/`).
 
 ## Layout (populated by slices 3–4)
 

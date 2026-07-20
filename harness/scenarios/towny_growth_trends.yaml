@@ -25,5 +25,6 @@ preferences:
     feedback: >
       Stop using green to mark growth — it isn't colorblind-safe.
     check:
-      kind: code_absent
-      pattern: green
+      # Catch green by name OR by common green hex codes (a name-only check is evadable by hex).
+      kind: regex_absent
+      pattern: "(?i)green|#1b7837|#2f4a38|#4d9221|#1a9850"
