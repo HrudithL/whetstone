@@ -7,9 +7,9 @@ Each scenario runs the Great Tables skill three ways, left to right:
 
 1. **Before** — the table generated with an **empty** Whetstone store. The subjective preference we
    later teach is (typically) not honored.
-2. **The learned layer** — the **verbatim `recall()` payload** the skill received on the warm run:
-   the tracked learnings and issues, with their ids, scopes, and weights. This is exactly what the
-   model was told — not a paraphrase.
+2. **The learned layer** — the **exact text injected into the warm run's prompt** (rendered by
+   Whetstone from the recalled learnings and issues, with their ids, scopes, and weights). This is
+   verbatim what the model was told — not a paraphrase.
 3. **After** — the table generated once that learned layer was applied. The preference is honored.
 
 *The three panels render Great Tables output natively (real tables, not screenshots) from the

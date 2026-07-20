@@ -269,12 +269,14 @@ def _run_scenario_into(
 
     # ---- WARM (runs 2..N): recall + inject + regenerate + reinforce -----------------------------
     run_no = 1
+    final_learned = ""
     while run_no < max_runs:
         run_no += 1
         payload = _recall(scenario.name, intent)
         final_recall = payload
         warm_run_id = payload.get("run_id")
         learned = format_learned_layer(payload)
+        final_learned = learned
         with _make_workdir(scenario) as wd:
             warm = generator.generate(scenario, learned, wd)
             _persist(warm, wd, out_dir / "warm")
@@ -299,6 +301,9 @@ def _run_scenario_into(
             break
 
     _write_outputs(out_dir, scenario, prefs, runs, cold_code, warm_code, final_recall)
+    # The exact learned-layer text injected into the final warm run's prompt — this, not the raw
+    # recall.json, is "what the model was told", so the triptych's middle panel renders it verbatim.
+    (out_dir / "learned_layer.txt").write_text(final_learned, encoding="utf-8")
     summary = _scenario_summary(
         scenario, generator, runs, stick_streak, max_runs, usage_kpis=_metrics(scenario.name)
     )

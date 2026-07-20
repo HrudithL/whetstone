@@ -54,7 +54,7 @@ def _panel_body(scenario: str, phase: str) -> str:
     so a relative path would not resolve in the deployed site).
     """
     native = read_text(scenario, phase, "table.html")
-    if native:
+    if native and native.strip():
         return native
     png = out_root() / scenario / phase / "table.png"
     if png.is_file():
@@ -67,11 +67,19 @@ def _panel_body(scenario: str, phase: str) -> str:
 
 
 def learned_layer_html(scenario: str) -> str:
-    """Render the middle panel: the ``recall.json`` payload **verbatim** (pretty-printed, escaped).
+    """Render the middle panel: the **exact learned-layer text injected into the warm prompt**.
 
-    The triptych promises this panel is exactly what the model received, so it prints the saved JSON
-    as-is — no rounding, no dropped fields, no reformatting of values — rather than a lossy summary.
+    ``learned_layer.txt`` is the literal string the runner fed the model (from
+    ``format_learned_layer``), so it is precisely "what the model was told". If it is absent (older
+    runs), fall back to the raw ``recall.json`` and say so, rather than misclaiming the prompt text.
     """
+    injected = read_text(scenario, "learned_layer.txt")
+    if injected and injected.strip():
+        return (
+            "<p><small>The learned layer injected into the warm run's prompt, verbatim:</small></p>"
+            f"<pre style='max-height:32rem;overflow:auto'><code>{_html.escape(injected)}"
+            "</code></pre>"
+        )
     p = out_root() / scenario / "recall.json"
     if not p.is_file():
         return "<em>not generated</em>"
@@ -80,8 +88,8 @@ def learned_layer_html(scenario: str) -> str:
         return "<em>empty recall — nothing was retrieved</em>"
     pretty = json.dumps(raw, indent=2, ensure_ascii=False)
     return (
-        "<p><small>The verbatim <code>recall()</code> payload the skill received:</small></p>"
-        f"<pre style='max-height:32rem;overflow:auto'><code>{_html.escape(pretty)}</code></pre>"
+        "<p><small>The stored <code>recall()</code> data (source of the injected layer):</small>"
+        f"</p><pre style='max-height:32rem;overflow:auto'><code>{_html.escape(pretty)}</code></pre>"
     )
 
 
@@ -91,7 +99,7 @@ def triptych_html(scenario: str) -> str:
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;'
         'align-items:start;margin:0.5rem 0 2rem">'
         f'<div><h4>Before <small>(empty store)</small></h4>{_panel_body(scenario, "cold")}</div>'
-        f'<div><h4>The learned layer <small>(verbatim recall)</small></h4>'
+        f'<div><h4>The learned layer <small>(injected, verbatim)</small></h4>'
         f"{learned_layer_html(scenario)}</div>"
         f'<div><h4>After <small>(learned layer applied)</small></h4>'
         f'{_panel_body(scenario, "warm")}</div>'

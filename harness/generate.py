@@ -354,10 +354,13 @@ class AgentGenerator:
             ("table.png", "did the script run? is a headless Chrome available for gtsave?"),
             ("table.html", "did the script write <GT>.as_raw_html() to table.html?"),
         ):
-            if not (workdir / artifact).is_file():
+            f = workdir / artifact
+            # Require a NON-EMPTY file: a touched/truncated table.html passes is_file() but the
+            # triptych would treat it as absent and silently fall back to the PNG screenshot.
+            if not f.is_file() or f.stat().st_size == 0:
                 raise RuntimeError(
-                    f"{scenario.name}: agent produced table.py but no {artifact} in {workdir} "
-                    f"({hint})"
+                    f"{scenario.name}: agent produced table.py but no non-empty {artifact} in "
+                    f"{workdir} ({hint})"
                 )
         return GenerationResult(code=table_py.read_text(encoding="utf-8"), transcript=transcript)
 
