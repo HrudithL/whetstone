@@ -52,8 +52,9 @@ line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
 # Vendored third-party content (the great-tables Claude skill copied from the sibling gtskill repo)
-# is not ours to lint/format.
-extend-exclude = ["harness/skill"]
+# is not ours to lint/format. `harness/out` is model-generated showcase output, committed verbatim so
+# the site can embed it and cold->warm diffs stay reviewable — an artifact, not source to lint.
+extend-exclude = ["harness/skill", "harness/out"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]
