@@ -24,6 +24,18 @@ dev = [
 embeddings = [
     "sentence-transformers",
 ]
+# Showcase harness only (M3). Never needed to run the MCP server; used by the internal, command-only
+# harness under `harness/` to generate the site's before/after artifacts and metrics. The harness
+# also requires the `embeddings` extra (it runs on the sentence-transformers backend) and the Claude
+# Code CLI on PATH (claude-agent-sdk drives it). Install with:
+#   pip install -e ".[showcase,embeddings]"
+showcase = [
+    "great-tables",
+    "pandas",
+    "claude-agent-sdk",
+    "matplotlib",
+    "pyyaml",
+]
 
 [project.scripts]
 whetstone = "whetstone.server:main"

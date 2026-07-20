@@ -21,5 +21,11 @@ htmlcov/
 .cache/
 *.onnx
 
+# M3 showcase harness: the live, per-skill Whetstone store the harness seeds while generating
+# artifacts is throwaway (each store is its own nested git repo). The committed proof lives in
+# harness/out/, not here. Secrets for the generation runner also stay local.
+harness/.store/
+harness/.env
+
 # OS / editor
 .DS_Store
