@@ -33,8 +33,15 @@ STORE_ROOT = HARNESS_ROOT / ".store"
 EMBEDDING_BACKEND = "sentence-transformers"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
-# Seeding must run unattended, so no capture/revise confirmation gates.
+# Seeding must run unattended. `autonomous` clears the ordinary capture/revise confirmation gates,
+# but promotion (learning -> issue at the recurrence threshold) and contradiction-removal ALWAYS
+# confirm regardless of supervision mode, by design. The showcase never promotes or removes on
+# contradiction, and the value-over-time scenarios reinforce a learning many times — so we also pin
+# the promotion threshold above any realistic harness run count to keep reinforcement from ever
+# reaching the promotion-suggestion branch. (Whetstone commits the reinforcement either way; this
+# just avoids a `needs_confirmation` the runner would otherwise have to step over.)
 SUPERVISION = "autonomous"
+PROMOTION_THRESHOLD = 100000
 
 
 def showcase_env() -> dict[str, str]:
@@ -44,6 +51,7 @@ def showcase_env() -> dict[str, str]:
         "WHETSTONE_EMBEDDING_MODEL": EMBEDDING_MODEL,
         "WHETSTONE_STORE_ROOT": str(STORE_ROOT),
         "WHETSTONE_SUPERVISION": SUPERVISION,
+        "WHETSTONE_PROMOTION_THRESHOLD": str(PROMOTION_THRESHOLD),
     }
 
 

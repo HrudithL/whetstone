@@ -62,6 +62,7 @@ as ``whetstone.metrics`` does today. Nothing here is ever hand-set.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -70,6 +71,11 @@ import yaml
 DIFFICULTIES = ("easy", "medium", "hard")
 POLARITIES = ("learning", "issue")
 CHECK_KINDS = ("code_contains", "code_absent", "regex")
+
+# ``name`` and preference ``id`` become a filesystem path component (``out/<name>/``) and the store
+# skill id, so they must be plain slugs — no separators, no ``.``/``..``, no leading digit-only edge
+# cases that would let one scenario write outside its directory or collide with another.
+_SLUG_RE = re.compile(r"^[a-z0-9]+(?:[_-][a-z0-9]+)*$")
 
 
 class ScenarioError(ValueError):
@@ -127,16 +133,35 @@ def _require(mapping: object, key: str, where: str, typ: type) -> object:
     return value
 
 
+def _require_slug(mapping: object, key: str, where: str) -> str:
+    """Like :func:`_require` for a str, but also enforce the ``_SLUG_RE`` path-safe slug shape."""
+    value = _require(mapping, key, where, str)
+    assert isinstance(value, str)
+    if not _SLUG_RE.match(value):
+        raise ScenarioError(
+            f"{where}: field {key!r} must be a slug (lowercase letters/digits, '-'/'_' "
+            f"separators), got {value!r}"
+        )
+    return value
+
+
 def _parse_check(raw: object, where: str) -> Check:
     kind = _require(raw, "kind", where, str)
     if kind not in CHECK_KINDS:
         raise ScenarioError(f"{where}: check.kind must be one of {CHECK_KINDS}, got {kind!r}")
     pattern = _require(raw, "pattern", where, str)
+    if kind == "regex":
+        # Compile now so a broken pattern fails at load time, not after the runner has spent API
+        # calls generating artifacts.
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            raise ScenarioError(f"{where}: check.pattern is not a valid regex: {exc}") from exc
     return Check(kind=kind, pattern=pattern)
 
 
 def _parse_preference(raw: object, where: str) -> Preference:
-    pref_id = _require(raw, "id", where, str)
+    pref_id = _require_slug(raw, "id", where)
     where = f"{where} (preference {pref_id!r})"
     polarity = _require(raw, "polarity", where, str)
     if polarity not in POLARITIES:
@@ -153,7 +178,7 @@ def _parse_preference(raw: object, where: str) -> Preference:
 
 def parse_scenario(raw: object, source: str) -> Scenario:
     """Validate a parsed mapping into a :class:`Scenario`. Raises :class:`ScenarioError`."""
-    name = _require(raw, "name", source, str)
+    name = _require_slug(raw, "name", source)
     where = f"{source} (scenario {name!r})"
     difficulty = _require(raw, "difficulty", where, str)
     if difficulty not in DIFFICULTIES:
@@ -196,5 +221,20 @@ def load_scenario(path: Path) -> Scenario:
 
 
 def load_scenarios(directory: Path) -> list[Scenario]:
-    """Load every ``*.yaml`` scenario in ``directory``, sorted by name. Empty dir returns ``[]``."""
-    return [load_scenario(p) for p in sorted(directory.glob("*.yaml"))]
+    """Load every ``*.yaml`` scenario in ``directory``, sorted by name. Empty dir returns ``[]``.
+
+    Scenario ``name`` is the ``out/`` subdirectory and store skill id, so it must be unique across
+    files — two scenarios sharing a name would overwrite each other's artifacts. Raises
+    :class:`ScenarioError` on a collision.
+    """
+    scenarios: list[Scenario] = []
+    by_name: dict[str, Path] = {}
+    for path in sorted(directory.glob("*.yaml")):
+        scenario = load_scenario(path)
+        if scenario.name in by_name:
+            raise ScenarioError(
+                f"{path}: scenario name {scenario.name!r} already used by {by_name[scenario.name]}"
+            )
+        by_name[scenario.name] = path
+        scenarios.append(scenario)
+    return scenarios
