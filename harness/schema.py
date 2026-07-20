@@ -64,7 +64,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 
@@ -146,6 +146,24 @@ def _require_slug(mapping: object, key: str, where: str) -> str:
     return value
 
 
+def _require_relpath(mapping: object, key: str, where: str) -> str:
+    """Like :func:`_require` for a str, but reject absolute paths and ``..`` traversal.
+
+    ``data`` is documented as a CSV path *relative to the harness root*; an absolute path or a
+    ``../..`` escape would let a scenario read uncommitted local files, so reject those at load
+    time rather than letting the runner discover it after a paid model run.
+    """
+    value = _require(mapping, key, where, str)
+    assert isinstance(value, str)
+    parts = PurePosixPath(value).parts
+    if value.startswith(("/", "~", "\\")) or PurePosixPath(value).is_absolute() or ".." in parts:
+        raise ScenarioError(
+            f"{where}: field {key!r} must be a relative path under the harness root "
+            f"(no leading '/'/'~', no '..'), got {value!r}"
+        )
+    return value
+
+
 def _parse_check(raw: object, where: str) -> Check:
     kind = _require(raw, "kind", where, str)
     if kind not in CHECK_KINDS:
@@ -204,7 +222,7 @@ def parse_scenario(raw: object, source: str) -> Scenario:
         name=name,
         difficulty=difficulty,
         prompt=_require(raw, "prompt", where, str),
-        data=_require(raw, "data", where, str),
+        data=_require_relpath(raw, "data", where),
         preferences=preferences,
     )
 
@@ -238,4 +256,7 @@ def load_scenarios(directory: Path) -> list[Scenario]:
             )
         by_name[scenario.name] = path
         scenarios.append(scenario)
+    # Order by declared scenario name (not filesystem path), so renaming/prefixing a file does not
+    # reshuffle artifact/metric ordering downstream.
+    scenarios.sort(key=lambda s: s.name)
     return scenarios

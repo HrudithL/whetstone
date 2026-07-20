@@ -56,6 +56,11 @@ def showcase_env() -> dict[str, str]:
 
     ``WHETSTONE_*`` pins override the top precedence layer; ``XDG_CONFIG_HOME`` neutralizes the TOML
     layer beneath it (see :data:`CONFIG_HOME`). Together they fully determine ``whetstone.config``.
+
+    This is only the *overlay*. It does NOT remove pre-existing ``WHETSTONE_*`` vars, so overlaying
+    it onto a dirty environment still leaks any key it does not pin. To build an actual environment,
+    use :func:`apply_showcase_env` (mutates the current process) or :func:`subprocess_env` (returns
+    a clean copy) — both strip stray ``WHETSTONE_*`` first.
     """
     return {
         "WHETSTONE_EMBEDDING_BACKEND": EMBEDDING_BACKEND,
@@ -84,3 +89,17 @@ def apply_showcase_env(environ: dict[str, str] | None = None) -> dict[str, str]:
     overrides = showcase_env()
     target.update(overrides)
     return overrides
+
+
+def subprocess_env(base: dict[str, str] | None = None) -> dict[str, str]:
+    """Return a **copy** of ``base`` (default ``os.environ``) sanitized for a showcase subprocess.
+
+    Same guarantee as :func:`apply_showcase_env` — stray ``WHETSTONE_*`` stripped, pins applied —
+    but without mutating the current process. Hand the result to the child that drives Whetstone
+    (e.g. the Agent-SDK generation subprocess in slice 3), so it can never inherit a maintainer's
+    tunables even if the parent shell had them set.
+    """
+    src = os.environ if base is None else base
+    env = {k: v for k, v in src.items() if not k.startswith("WHETSTONE_")}
+    env.update(showcase_env())
+    return env
