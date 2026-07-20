@@ -67,30 +67,22 @@ def _panel_body(scenario: str, phase: str) -> str:
 
 
 def learned_layer_html(scenario: str) -> str:
-    """Render the verbatim ``recall.json`` payload (learnings + issues) for the middle panel."""
+    """Render the middle panel: the ``recall.json`` payload **verbatim** (pretty-printed, escaped).
+
+    The triptych promises this panel is exactly what the model received, so it prints the saved JSON
+    as-is — no rounding, no dropped fields, no reformatting of values — rather than a lossy summary.
+    """
     p = out_root() / scenario / "recall.json"
     if not p.is_file():
         return "<em>not generated</em>"
-    r = json.loads(p.read_text(encoding="utf-8"))
-
-    def _items(entries: list, weighted: bool) -> str:
-        rows = []
-        for x in entries:
-            w = x.get("weight")
-            wt = f" · weight {w:.2f}" if weighted and isinstance(w, int | float) else ""
-            rule = _html.escape(str(x.get("rule", "")))
-            rows.append(
-                f"<li><code>{x.get('id')}</code> <em>({_html.escape(str(x.get('scope')))}{wt})</em>"
-                f"<br>{rule}</li>"
-            )
-        return "<ul>" + "".join(rows) + "</ul>"
-
-    parts = []
-    if r.get("learnings"):
-        parts.append("<strong>Learnings</strong>" + _items(r["learnings"], True))
-    if r.get("issues"):
-        parts.append("<strong>Issues (mandatory)</strong>" + _items(r["issues"], False))
-    return "".join(parts) or "<em>empty recall — nothing was retrieved</em>"
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    if not raw.get("learnings") and not raw.get("issues"):
+        return "<em>empty recall — nothing was retrieved</em>"
+    pretty = json.dumps(raw, indent=2, ensure_ascii=False)
+    return (
+        "<p><small>The verbatim <code>recall()</code> payload the skill received:</small></p>"
+        f"<pre style='max-height:32rem;overflow:auto'><code>{_html.escape(pretty)}</code></pre>"
+    )
 
 
 def triptych_html(scenario: str) -> str:
