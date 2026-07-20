@@ -44,6 +44,65 @@ stance `whetstone metrics` takes for its labeled KPIs. The store runs on the
 **sentence-transformers** backend (the calibrated one); when retrieval genuinely misses a seeded
 entry, the site shows that miss rather than hiding it.
 
+## What was taught, and how "honored" is judged
+
+Every preference below is an **arbitrary house-style choice** — the point is only that a correction,
+once given, is tracked and re-applied, not that the choice is objectively right. The `check` column
+is the exact deterministic test that decides whether a generated table honored the preference.
+
+```{python}
+# | echo: false
+# | output: asis
+import html
+import sys
+
+sys.path.insert(0, ".")
+from _showcase import scenarios_meta  # noqa: E402
+from IPython.display import HTML, display  # noqa: E402
+
+# An HTML table (not Markdown), so a check pattern containing regex metacharacters like `|` is shown
+# EXACTLY — a Markdown pipe table would split the cell and corrupt the audited check.
+def td(text: str) -> str:
+    return f"<td>{html.escape(' '.join(str(text).split()))}</td>"
+
+
+head = ("<tr><th>scenario</th><th>diff.</th><th>preference</th><th>polarity</th>"
+        "<th>scope</th><th>rule</th><th>check</th></tr>")
+body = []
+for s in scenarios_meta():
+    for p in s["preferences"]:
+        chk = f"{html.escape(p['check']['kind'])} · <code>{html.escape(p['check']['pattern'])}</code>"
+        body.append(
+            f"<tr>{td(s['name'])}{td(s['difficulty'])}<td><code>{html.escape(p['id'])}</code></td>"
+            f"{td(p['polarity'])}{td(p['scope'])}{td(p['body'])}<td>{chk}</td></tr>"
+        )
+display(HTML(f"<table class='table'><thead>{head}</thead><tbody>{''.join(body)}</tbody></table>"))
+```
+
+## Where every number comes from
+
+The site reads only committed files under `harness/out/`; nothing is computed at page-render time
+beyond formatting. Per scenario:
+
+| file | feeds |
+| --- | --- |
+| `cold/table.{py,png,html}` | the **Before** panel |
+| `warm/table.{py,png,html}` | the **After** panel |
+| `learned_layer.txt` | the middle **learned-layer** panel (verbatim injected prompt text) |
+| `recall.json` | the structured recall payload behind the learned layer |
+| `runs.jsonl` | per-run honored map + weight/recurrence — the raw record |
+| `summary.json` | per-preference **runs-to-stick** + **value-over-time** + store usage KPIs |
+| `../metrics.json` | the cross-scenario **aggregate** and the dashboard charts |
+
+Each headline number traces to `summary.json` / `metrics.json`, which trace to `runs.jsonl`, which is
+written straight from the tool calls.
+
+## Coming next
+
+v1 is the **visual** skill class (Great Tables). The same substrate — attach, recall, capture,
+revise — applies unchanged to a **code-improvement** skill (objective ground truth: tests, lint,
+types) and a **context-organizing** skill; those are the next classes.
+
 ## Reproduce it
 
 ```bash

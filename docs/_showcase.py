@@ -107,6 +107,22 @@ def triptych_html(scenario: str) -> str:
     )
 
 
+def scenarios_meta() -> list[dict]:
+    """Parse the committed scenario YAMLs (``harness/scenarios/*.yaml``) for the methodology table.
+
+    Reads the source of truth directly (only depends on the committed YAML), so the page shows
+    exactly what was taught and how each "honored" check is decided — no dependency on a run.
+    """
+    import yaml  # committed [showcase] dep
+
+    root = out_root().parent / "scenarios"
+    metas = []
+    for path in sorted(root.glob("*.yaml")):
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        metas.append(raw)
+    return metas
+
+
 def not_generated_note(what: str = "These panels"):
     """A Markdown callout shown when the harness hasn't populated ``out/`` yet."""
     from IPython.display import Markdown
