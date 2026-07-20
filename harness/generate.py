@@ -249,9 +249,17 @@ class StubGenerator:
             emitted = _stub_line(pref, honored)
             if emitted is not None:
                 lines.append(emitted)
-        lines += [")", 'gt.GT.save(table, "table.png")', ""]
+        lines += [")", 'table.gtsave("table.png")', ""]
         code = "\n".join(lines)
         (workdir / "table.py").write_text(code, encoding="utf-8")
+        # A minimal, self-contained HTML table so the triptych can render a stub run natively too.
+        applied = [p.id for p in scenario.preferences if p.scope in learned_layer]
+        rows = "".join(f"<li>{pid}</li>" for pid in applied) or "<li>(none)</li>"
+        html = (
+            f"<table class='gt_table'><thead><tr><th>{scenario.name} (stub)</th></tr></thead>"
+            f"<tbody><tr><td>preferences applied:<ul>{rows}</ul></td></tr></tbody></table>"
+        )
+        (workdir / "table.html").write_text(html, encoding="utf-8")
         return GenerationResult(code=code)
 
 
@@ -292,7 +300,9 @@ class AgentGenerator:
             f"The data is in `{data_name}` in the current directory. Write a Python script "
             "`table.py` that builds the requested table with `great_tables`, then render it to "
             "`table.png` with Great Tables' gtsave (the skill's mandatory renderer, "
-            '`table.gtsave("table.png")`). Run the script to confirm it works.',
+            '`table.gtsave("table.png")`). Also write the table\'s self-contained HTML to '
+            '`table.html` via `<your GT object>.as_raw_html()` so it can be embedded natively. '
+            "Run the script to confirm it works.",
         ]
         return "\n".join(parts)
 
@@ -337,14 +347,25 @@ class AgentGenerator:
         table_py = workdir / "table.py"
         if not table_py.is_file():
             raise RuntimeError(f"{scenario.name}: agent did not write table.py in {workdir}")
-        # The before/after artifacts require a rendered PNG. Fail loudly if the agent wrote the
-        # script but it never rendered (e.g. it skipped running it, or Chrome is missing) rather
-        # than silently committing an incomplete artifact set.
-        if not (workdir / "table.png").is_file():
-            raise RuntimeError(
-                f"{scenario.name}: agent produced table.py but no rendered table.png in {workdir} "
-                "(did the script run? is a headless Chrome available for gtsave?)"
-            )
+        # The before/after artifacts require BOTH a rendered PNG and the native HTML (the triptych's
+        # native-table proof). Fail loudly if either is missing rather than silently committing an
+        # incomplete set / degrading to a screenshot.
+        for artifact, hint in (
+            ("table.png", "did the script run? is a headless Chrome available for gtsave?"),
+            ("table.html", "did the script write <GT>.as_raw_html() to table.html?"),
+        ):
+            f = workdir / artifact
+            # Require a non-empty artifact. For table.html require non-WHITESPACE content too: a
+            # whitespace-only file passes a size check but the triptych ignores it (native.strip()
+            # is falsy) and silently falls back to the PNG screenshot.
+            ok = f.is_file() and f.stat().st_size > 0
+            if ok and artifact.endswith(".html"):
+                ok = bool(f.read_text(encoding="utf-8", errors="ignore").strip())
+            if not ok:
+                raise RuntimeError(
+                    f"{scenario.name}: agent produced table.py but no non-empty {artifact} in "
+                    f"{workdir} ({hint})"
+                )
         return GenerationResult(code=table_py.read_text(encoding="utf-8"), transcript=transcript)
 
 

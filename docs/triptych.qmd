@@ -7,29 +7,29 @@ Each scenario runs the Great Tables skill three ways, left to right:
 
 1. **Before** — the table generated with an **empty** Whetstone store. The subjective preference we
    later teach is (typically) not honored.
-2. **The learned layer** — the **verbatim `recall()` payload** the skill received on the warm run:
-   the tracked learnings and issues, with their ids, scopes, and weights. This is exactly what the
-   model was told — not a paraphrase.
+2. **The learned layer** — the **exact text injected into the warm run's prompt** (rendered by
+   Whetstone from the recalled learnings and issues, with their ids, scopes, and weights). This is
+   verbatim what the model was told — not a paraphrase.
 3. **After** — the table generated once that learned layer was applied. The preference is honored.
+
+*The three panels render Great Tables output natively (real tables, not screenshots) from the
+committed artifacts under `harness/out/`; a PNG fallback is used only if a scenario has no native
+HTML.*
 
 ```{python}
 # | echo: false
+# | output: asis
 import sys
 
 sys.path.insert(0, ".")
-from _showcase import not_generated_note, scenario_names  # noqa: E402
-from IPython.display import Markdown  # noqa: E402
+from _showcase import learned_layer_html, not_generated_note, scenario_names, triptych_html  # noqa: E402
+from IPython.display import HTML, Markdown, display  # noqa: E402
 
 names = scenario_names()
 if not names:
-    out = not_generated_note("The before / learned-layer / after panels")
+    display(not_generated_note("The before / learned-layer / after panels"))
 else:
-    out = Markdown(
-        "Scenarios ready to render below (full triptychs land with the site's visual slice):\n\n"
-        + "\n".join(f"- `{n}`" for n in names)
-    )
-out
+    for n in names:
+        display(Markdown(f"## {n}"))
+        display(HTML(triptych_html(n)))
 ```
-
-*The three panels render Great Tables output natively (real tables, not screenshots), built from the
-committed artifacts under `harness/out/`.*

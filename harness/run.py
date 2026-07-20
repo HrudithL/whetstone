@@ -152,10 +152,12 @@ def _persist(result: GenerationResult, workdir: Path, phase_dir: Path) -> None:
     """Copy the generated artifacts out of the (soon-deleted) workdir into ``phase_dir``."""
     phase_dir.mkdir(parents=True, exist_ok=True)
     (phase_dir / "table.py").write_text(result.code, encoding="utf-8")
-    # The live agent renders table.png in the workdir; capture it before the workdir is torn down.
-    png = workdir / "table.png"
-    if png.is_file():
-        shutil.copy2(png, phase_dir / "table.png")
+    # Capture the rendered outputs from the workdir before it is torn down: table.png (raster) and
+    # table.html (self-contained, embedded natively by the triptych). Both are best-effort.
+    for artifact in ("table.png", "table.html"):
+        src = workdir / artifact
+        if src.is_file():
+            shutil.copy2(src, phase_dir / artifact)
     if result.transcript:
         (phase_dir / "transcript.json").write_text(
             json.dumps(result.transcript, indent=2), encoding="utf-8"
@@ -267,12 +269,14 @@ def _run_scenario_into(
 
     # ---- WARM (runs 2..N): recall + inject + regenerate + reinforce -----------------------------
     run_no = 1
+    final_learned = ""
     while run_no < max_runs:
         run_no += 1
         payload = _recall(scenario.name, intent)
         final_recall = payload
         warm_run_id = payload.get("run_id")
         learned = format_learned_layer(payload)
+        final_learned = learned
         with _make_workdir(scenario) as wd:
             warm = generator.generate(scenario, learned, wd)
             _persist(warm, wd, out_dir / "warm")
@@ -297,6 +301,9 @@ def _run_scenario_into(
             break
 
     _write_outputs(out_dir, scenario, prefs, runs, cold_code, warm_code, final_recall)
+    # The exact learned-layer text injected into the final warm run's prompt — this, not the raw
+    # recall.json, is "what the model was told", so the triptych's middle panel renders it verbatim.
+    (out_dir / "learned_layer.txt").write_text(final_learned, encoding="utf-8")
     summary = _scenario_summary(
         scenario, generator, runs, stick_streak, max_runs, usage_kpis=_metrics(scenario.name)
     )

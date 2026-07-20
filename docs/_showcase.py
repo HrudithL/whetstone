@@ -8,6 +8,8 @@ yet" note instead of erroring), and renders the real artifacts once ``python -m 
 
 from __future__ import annotations
 
+import base64
+import html as _html
 import json
 from pathlib import Path
 
@@ -43,6 +45,66 @@ def read_text(scenario: str, *parts: str) -> str | None:
     """Read a committed artifact file (e.g. ``read_text(name, 'warm', 'table.py')``) or ``None``."""
     p = out_root().joinpath(scenario, *parts)
     return p.read_text(encoding="utf-8") if p.is_file() else None
+
+
+def _panel_body(scenario: str, phase: str) -> str:
+    """HTML for one table panel: native ``table.html`` if present, else a base64 PNG, else the code.
+
+    PNGs are embedded as self-contained data URIs (the committed images live outside ``docs/_site``,
+    so a relative path would not resolve in the deployed site).
+    """
+    native = read_text(scenario, phase, "table.html")
+    if native and native.strip():
+        return native
+    png = out_root() / scenario / phase / "table.png"
+    if png.is_file():
+        b64 = base64.b64encode(png.read_bytes()).decode("ascii")
+        return f'<img alt="{phase} table" style="max-width:100%" src="data:image/png;base64,{b64}">'
+    code = read_text(scenario, phase, "table.py")
+    if code:
+        return f"<pre><code>{_html.escape(code)}</code></pre>"
+    return "<em>not generated</em>"
+
+
+def learned_layer_html(scenario: str) -> str:
+    """Render the middle panel: the **exact learned-layer text injected into the warm prompt**.
+
+    ``learned_layer.txt`` is the literal string the runner fed the model (from
+    ``format_learned_layer``), so it is precisely "what the model was told". If it is absent (older
+    runs), fall back to the raw ``recall.json`` and say so, rather than misclaiming the prompt text.
+    """
+    injected = read_text(scenario, "learned_layer.txt")
+    if injected and injected.strip():
+        return (
+            "<p><small>The learned layer injected into the warm run's prompt, verbatim:</small></p>"
+            f"<pre style='max-height:32rem;overflow:auto'><code>{_html.escape(injected)}"
+            "</code></pre>"
+        )
+    p = out_root() / scenario / "recall.json"
+    if not p.is_file():
+        return "<em>not generated</em>"
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    if not raw.get("learnings") and not raw.get("issues"):
+        return "<em>empty recall — nothing was retrieved</em>"
+    pretty = json.dumps(raw, indent=2, ensure_ascii=False)
+    return (
+        "<p><small>The stored <code>recall()</code> data (source of the injected layer):</small>"
+        f"</p><pre style='max-height:32rem;overflow:auto'><code>{_html.escape(pretty)}</code></pre>"
+    )
+
+
+def triptych_html(scenario: str) -> str:
+    """A three-column before / learned-layer / after block for one scenario."""
+    return (
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;'
+        'align-items:start;margin:0.5rem 0 2rem">'
+        f'<div><h4>Before <small>(empty store)</small></h4>{_panel_body(scenario, "cold")}</div>'
+        f'<div><h4>The learned layer <small>(injected, verbatim)</small></h4>'
+        f"{learned_layer_html(scenario)}</div>"
+        f'<div><h4>After <small>(learned layer applied)</small></h4>'
+        f'{_panel_body(scenario, "warm")}</div>'
+        "</div>"
+    )
 
 
 def not_generated_note(what: str = "These panels"):
