@@ -270,10 +270,16 @@ class AgentGenerator:
         mounted.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(self.skill_dir, mounted, dirs_exist_ok=True)
 
+        # Restrict the capability set with `tools` (allowed_tools only auto-approves; it does not
+        # limit). Confining generation to filesystem/shell tools — no WebSearch/WebFetch — keeps a
+        # committed artifact run reproducible and free of external state.
+        fs_tools = ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
         options = ClaudeAgentOptions(
             skills=[skill_name],
             setting_sources=["project"],
-            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+            tools=fs_tools,
+            allowed_tools=fs_tools,
+            disallowed_tools=["WebSearch", "WebFetch"],
             cwd=str(workdir),
             permission_mode="default",
             model=self.model,

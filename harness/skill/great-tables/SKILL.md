@@ -1,6 +1,6 @@
 ---
 name: great-tables
-description: Use when the user's request involves building any table with `great_tables`, `gt.GT`, `gtsave`, or turning tabular data (CSV, DataFrame, spreadsheet) into a rendered PNG. Drives every table through one deterministic 7-step flowchart — understand data, organize columns, Big Color (≤2 colored measures), heading band, Small-Color checklist, titles/annotations, render+verify — so the same input characteristics always produce the same publication-ready design. Before writing any Python, read `references/REFERENCE.md`: it routes every color, band, polish, and API decision to the exact reference file that pins its value. The mandatory renderer is `GT.gtsave("table.png")` (the GT instance method). Invoke before reading the data or writing any Python — the flowchart shapes the whole script.
+description: Use when the user's request involves building any table with `great_tables`, `gt.GT`, `gtsave`, or turning tabular data (CSV, DataFrame, spreadsheet) into a rendered PNG. Drives every table through one deterministic 7-step flowchart — understand data, organize columns, Big Color (≤2 colored measures), heading band, Small-Color checklist, titles/annotations, render+verify — so the same input characteristics always produce the same publication-ready design. Before writing any Python, read `references/REFERENCE.md`: it routes every color, band, polish, and API decision to the exact reference file that pins its value. The mandatory renderer is `.gtsave("table.png")`. Invoke before reading the data or writing any Python — the flowchart shapes the whole script.
 ---
 
 # Great Tables Skill
@@ -43,7 +43,7 @@ conflicting default silently — do not fight it or add it back later.
                          fmt_* per column · grey-budget rule
 6. TITLES & ANNOTATIONS  title + subtitle (both required) · caption (≥5 rows) +
                          source (when known), stacked footer notes
-7. RENDER & VERIFY       GT.gtsave("table.png") · read it back · audit every rule
+7. RENDER & VERIFY       .gtsave("table.png") · read it back · audit every rule
 ```
 
 The order is fixed: color intent (Step 3) is decided before the quiet polish (Step 5),
@@ -107,7 +107,7 @@ numeric values live in the references.
 - **Row indices in `loc.body()`** are 0-based display positions, not the DataFrame index.
 - **Method chaining.** Build the whole table in one chained expression; collect row
   indices into lists rather than looping `tab_style` per row.
-- **Renderer.** End with **`GT.gtsave("table.png")` (the GT instance method)** only. `gtsave()` renders
+- **Renderer.** End with **`.gtsave("table.png")`** only. `gtsave()` renders
   through headless Chrome, so a launchable **Chrome/Chromium is a prerequisite**
   (assume one is installed; do not provision it). Never fall back to `gt.save()`
   (deprecated), `.as_raw_html()` + a screenshot tool, PIL/Pillow,

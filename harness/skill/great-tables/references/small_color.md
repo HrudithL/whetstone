@@ -279,7 +279,7 @@ gt = gt.tab_options(
 )
 ```
 
-**Outer margin.** `GT.gtsave("table.png", expand=15)` — raise from the 5px default to
+**Outer margin.** `.gtsave("table.png", expand=15)` — raise from the 5px default to
 **~15–20** so the box has breathing room. (Scripted variant: `finalize(gt)` applies
 this.)
 

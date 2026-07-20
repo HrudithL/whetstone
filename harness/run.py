@@ -366,11 +366,14 @@ def main() -> int:
         print("error: no scenarios selected", file=sys.stderr)
         return 2
 
-    # Only --agent writes the committed artifacts. --stub is a verification-only run, so route it to
-    # a throwaway output root — a stub run must never delete/replace the committed out/ artifacts.
+    # Only --agent writes the committed artifacts. --stub is a verification-only run, so route BOTH
+    # its output root AND its Whetstone store to throwaway temp dirs — a stub run must never
+    # delete/replace the committed out/ artifacts, and (since run_scenario resets each scenario's
+    # store) it must not wipe the real .store/events.jsonl telemetry a prior --agent run produced.
     if args.stub:
         out_root = Path(tempfile.mkdtemp(prefix="whetstone-stub-out-"))
-        print(f"stub mode: throwaway artifacts -> {out_root} (committed out/ untouched)")
+        os.environ["WHETSTONE_STORE_ROOT"] = tempfile.mkdtemp(prefix="whetstone-stub-store-")
+        print(f"stub mode: throwaway artifacts -> {out_root} (committed out/ + .store untouched)")
     else:
         out_root = OUT_ROOT
 

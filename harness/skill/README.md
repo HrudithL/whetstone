@@ -11,6 +11,7 @@ The upstream `gtskill` skill instructs the renderer as a **module-level** `gt.gt
 works there only via that repo's `gtskill_sidecar.py` shim. `great_tables` exposes no module-level
 `gtsave` — only the `GT` instance methods `.gtsave()` / `.save()`. Since this vendored copy is mounted
 **without** the sidecar, every module-level `gt.gtsave(...)` mention across `SKILL.md` and the
-`references/` (`api.md`, `small_color.md`) was corrected to the instance form `GT.gtsave(...)`, and the
-runner's prompt likewise instructs `table.gtsave("table.png")`. The runner additionally fails a live
-run that produces `table.py` but no rendered `table.png`.
+`references/` (`api.md`, `small_color.md`) was corrected to the **instance method** call
+`.gtsave(...)` (on the constructed `GT` object), and the runner's prompt likewise instructs
+`table.gtsave("table.png")`. The runner additionally fails a live run that produces `table.py` but
+no rendered `table.png`.
