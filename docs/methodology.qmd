@@ -53,25 +53,30 @@ is the exact deterministic test that decides whether a generated table honored t
 ```{python}
 # | echo: false
 # | output: asis
+import html
 import sys
 
 sys.path.insert(0, ".")
 from _showcase import scenarios_meta  # noqa: E402
-from IPython.display import Markdown, display  # noqa: E402
+from IPython.display import HTML, display  # noqa: E402
 
-rows = [
-    "| scenario | diff. | preference | polarity | scope | rule | check |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
-]
+# An HTML table (not Markdown), so a check pattern containing regex metacharacters like `|` is shown
+# EXACTLY — a Markdown pipe table would split the cell and corrupt the audited check.
+def td(text: str) -> str:
+    return f"<td>{html.escape(' '.join(str(text).split()))}</td>"
+
+
+head = ("<tr><th>scenario</th><th>diff.</th><th>preference</th><th>polarity</th>"
+        "<th>scope</th><th>rule</th><th>check</th></tr>")
+body = []
 for s in scenarios_meta():
     for p in s["preferences"]:
-        rule = " ".join(str(p["body"]).split())
-        chk = f"`{p['check']['kind']}` · `{p['check']['pattern']}`"
-        rows.append(
-            f"| {s['name']} | {s['difficulty']} | `{p['id']}` | {p['polarity']} | {p['scope']} | "
-            f"{rule} | {chk} |"
+        chk = f"{html.escape(p['check']['kind'])} · <code>{html.escape(p['check']['pattern'])}</code>"
+        body.append(
+            f"<tr>{td(s['name'])}{td(s['difficulty'])}<td><code>{html.escape(p['id'])}</code></td>"
+            f"{td(p['polarity'])}{td(p['scope'])}{td(p['body'])}<td>{chk}</td></tr>"
         )
-display(Markdown("\n".join(rows)))
+display(HTML(f"<table class='table'><thead>{head}</thead><tbody>{''.join(body)}</tbody></table>"))
 ```
 
 ## Where every number comes from
