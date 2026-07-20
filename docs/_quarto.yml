@@ -1,0 +1,35 @@
+project:
+  type: website
+  output-dir: _site
+  # Execute page code from the project dir (docs/) so `_showcase.py` imports resolve consistently.
+  execute-dir: project
+
+website:
+  title: "Whetstone"
+  description: "A local MCP server that makes any skill learn from use — and the proof that it does."
+  navbar:
+    pinned: true
+    left:
+      - href: index.qmd
+        text: Home
+      - href: triptych.qmd
+        text: Before / After
+      - href: metrics.qmd
+        text: Metrics
+      - href: methodology.qmd
+        text: Methodology
+    right:
+      - icon: github
+        href: https://github.com/HrudithL/whetstone
+        aria-label: GitHub
+  page-footer:
+    center: "Whetstone — the website and its numbers are generated from real runs; see Methodology."
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: true
+    code-tools: true
+    grid:
+      body-width: 1100px
