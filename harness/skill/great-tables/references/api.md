@@ -455,7 +455,7 @@ Row groups are set via `groupname_col=` in the GT constructor. The order of grou
 ## Saving
 
 ```python
-gt.gtsave(
+GT.gtsave(
     "table.png",
     # Optional kwargs forwarded to the renderer:
     # selector="table",         # CSS selector to capture (defaults to the whole page)
@@ -468,7 +468,7 @@ gt.gtsave(
 `gtsave()` is the current `great_tables >= 0.22.0` API. It renders the table to an image (or PDF, depending on the file extension) via a headless Chromium browser.
 
 - Do **not** use `gt.save()` — it is deprecated (removed mid-2027) and uses Selenium/chromedriver.
-- If `gt.gtsave()` ever fails, **stop and surface the full error**. Do not silently swap in a PIL/imgkit/wkhtmltoimage/Playwright/HTML fallback. The deliverable is the actual `great_tables` PNG render and nothing else qualifies.
+- If `GT.gtsave()` ever fails, **stop and surface the full error**. Do not silently swap in a PIL/imgkit/wkhtmltoimage/Playwright/HTML fallback. The deliverable is the actual `great_tables` PNG render and nothing else qualifies.
 
 ## Helpers
 

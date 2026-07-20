@@ -239,21 +239,29 @@ def run_scenario(
 
 
 def _all_stuck(runs: list[dict], prefs, streak: int) -> bool:
-    """True once every preference has been honored for the last ``streak`` runs."""
-    if len(runs) < streak:
+    """True once every preference has been honored for the last ``streak`` **warm** runs.
+
+    Only warm (post-seeding) runs count: a cold run that coincidentally satisfies a broad check must
+    not contribute to "stuck", or a lucky before-state would end the loop before the learned layer
+    has actually been applied ``streak`` times.
+    """
+    warm = [r for r in runs if r.get("phase") == "warm"]
+    if len(warm) < streak:
         return False
-    tail = runs[-streak:]
+    tail = warm[-streak:]
     return all(all(r["honored"].get(p.id) for r in tail) for p in prefs)
 
 
 def _runs_to_stick(runs: list[dict], pref_id: str, stick_streak: int) -> int | None:
-    """First run from which ``pref_id`` is honored to the end for at least ``stick_streak`` runs.
+    """First **warm** run from which ``pref_id`` is honored to the end for ≥ ``stick_streak`` runs.
 
-    ``None`` if it never stuck — including the truncated case where ``--max-runs`` was hit before
-    the preference achieved the required consecutive-honored streak, so a lone final-run success is
-    not miscounted as "stuck".
+    Only warm (post-seeding) runs count — the cold baseline is excluded, so a cold run that happens
+    to satisfy a broad check can't report the preference as stuck before it was even captured.
+    ``None`` if it never stuck, including the truncated case where ``--max-runs`` was hit before the
+    required consecutive-honored streak was reached.
     """
-    honored = [(r["run"], bool(r["honored"].get(pref_id))) for r in runs]
+    warm = [r for r in runs if r.get("phase") == "warm"]
+    honored = [(r["run"], bool(r["honored"].get(pref_id))) for r in warm]
     for i, (run_no, ok) in enumerate(honored):
         tail = honored[i:]
         if ok and len(tail) >= stick_streak and all(h for _, h in tail):
@@ -331,6 +339,16 @@ def main() -> int:
     parser.add_argument("--stick-streak", type=int, default=DEFAULT_STICK_STREAK)
     args = parser.parse_args()
 
+    # Validate BEFORE any destructive work (run_scenario clears out/<scenario>/). max_runs must
+    # allow at least one warm run (run 1 is always cold), else a run would wipe artifacts and write
+    # no warm output / a diff against an empty string.
+    if args.max_runs < 2:
+        print("error: --max-runs must be >= 2 (run 1 is cold; warm needs >= 2)", file=sys.stderr)
+        return 2
+    if args.stick_streak < 1:
+        print("error: --stick-streak must be >= 1", file=sys.stderr)
+        return 2
+
     # Load harness/.env (ANTHROPIC_API_KEY for --agent) before anything else, then pin the ST
     # backend + isolated store/config for the whole process before touching Whetstone.
     _load_harness_env()
@@ -348,11 +366,20 @@ def main() -> int:
         print("error: no scenarios selected", file=sys.stderr)
         return 2
 
+    # Only --agent writes the committed artifacts. --stub is a verification-only run, so route it to
+    # a throwaway output root — a stub run must never delete/replace the committed out/ artifacts.
+    if args.stub:
+        out_root = Path(tempfile.mkdtemp(prefix="whetstone-stub-out-"))
+        print(f"stub mode: throwaway artifacts -> {out_root} (committed out/ untouched)")
+    else:
+        out_root = OUT_ROOT
+
     generator = _build_generator(args)
-    print(f"generator: {generator.name}  |  scenarios: {len(scenarios)}  |  out: {OUT_ROOT}")
+    print(f"generator: {generator.name}  |  scenarios: {len(scenarios)}  |  out: {out_root}")
     for s in scenarios:
         summary = run_scenario(
-            s, generator, max_runs=args.max_runs, stick_streak=args.stick_streak
+            s, generator, max_runs=args.max_runs, stick_streak=args.stick_streak,
+            out_root=out_root,
         )
         stick = ", ".join(f"{k}:{v}" for k, v in summary["runs_to_stick"].items())
         print(f"  {s.name:32} runs={summary['runs']}  runs_to_stick[{stick}]")

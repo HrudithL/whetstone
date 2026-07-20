@@ -25,6 +25,7 @@ preferences:
     feedback: >
       Don't use a red-green color scale — it isn't colorblind-safe.
     check:
-      # The canonical red-green palette by name, or a "red...green" scale spelled out.
+      # The canonical red-green palette by name, a "red...green" scale spelled out, or the red/green
+      # hex stops such a scale is built from (a name-only check is evadable by hex).
       kind: regex_absent
-      pattern: "(?i)rdylgn|red[-_ ]?green|green[-_ ]?red"
+      pattern: "(?i)rdylgn|red[-_ ]?green|green[-_ ]?red|#d73027|#b2182b|#f46d43|#1a9850|#1b7837|#4d9221"
