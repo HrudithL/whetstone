@@ -355,9 +355,13 @@ class AgentGenerator:
             ("table.html", "did the script write <GT>.as_raw_html() to table.html?"),
         ):
             f = workdir / artifact
-            # Require a NON-EMPTY file: a touched/truncated table.html passes is_file() but the
-            # triptych would treat it as absent and silently fall back to the PNG screenshot.
-            if not f.is_file() or f.stat().st_size == 0:
+            # Require a non-empty artifact. For table.html require non-WHITESPACE content too: a
+            # whitespace-only file passes a size check but the triptych ignores it (native.strip()
+            # is falsy) and silently falls back to the PNG screenshot.
+            ok = f.is_file() and f.stat().st_size > 0
+            if ok and artifact.endswith(".html"):
+                ok = bool(f.read_text(encoding="utf-8", errors="ignore").strip())
+            if not ok:
                 raise RuntimeError(
                     f"{scenario.name}: agent produced table.py but no non-empty {artifact} in "
                     f"{workdir} ({hint})"

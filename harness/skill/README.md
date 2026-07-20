@@ -13,5 +13,8 @@ works there only via that repo's `gtskill_sidecar.py` shim. `great_tables` expos
 **without** the sidecar, every module-level `gt.gtsave(...)` mention across `SKILL.md` and the
 `references/` (`api.md`, `small_color.md`) was corrected to the **instance method** call
 `.gtsave(...)` (on the constructed `GT` object), and the runner's prompt likewise instructs
-`table.gtsave("table.png")`. The runner additionally fails a live run that produces `table.py` but
-no rendered `table.png`.
+`table.gtsave("table.png")`. The renderer bullet was also updated to **additionally** write the
+table's HTML via `.as_raw_html()` to `table.html` (the site embeds it natively): the upstream skill
+*forbade* writing `table.html`, treating it as a screenshot substitute — here it is an *extra*
+artifact, not a replacement for the real PNG render. The runner fails a live run that produces
+`table.py` but no non-empty `table.png` **and** `table.html`.
