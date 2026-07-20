@@ -163,6 +163,7 @@ def _require_relpath(mapping: object, key: str, where: str) -> str:
         or value.startswith(("/", "~"))
         or posix.is_absolute()
         or win.is_absolute()
+        or bool(win.drive)  # drive-qualified, incl. drive-relative like ``C:foo.csv``
         or ".." in posix.parts
         or ".." in win.parts
     )
