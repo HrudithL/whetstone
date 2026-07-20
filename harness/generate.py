@@ -18,7 +18,10 @@ into the instruction block injected on WARM runs — the same text saved verbati
 
 from __future__ import annotations
 
+import io
 import re
+import shutil
+import tokenize
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
@@ -34,14 +37,38 @@ class GenerationResult:
     transcript: list = field(default_factory=list)  # raw model messages; empty for the stub
 
 
+def strip_comments(code: str) -> str:
+    """Return ``code`` with Python comments removed (string literals preserved).
+
+    A live agent is asked to write explanatory table code, so a comment like ``# avoid green`` or
+    ``# use fmt_currency`` would otherwise fool the checks (a false ``code_absent`` failure or a
+    false ``code_contains`` pass). Tokenizing keeps ``#`` inside strings (e.g. hex ``"#1b7837"``)
+    intact; if the agent's code doesn't tokenize, fall back to a naive per-line strip.
+    """
+    try:
+        toks = [
+            (t.type, t.string)
+            for t in tokenize.generate_tokens(io.StringIO(code).readline)
+            if t.type != tokenize.COMMENT
+        ]
+        return tokenize.untokenize(toks)
+    except (tokenize.TokenError, IndentationError, SyntaxError, ValueError):
+        return "\n".join(line.split("#", 1)[0] for line in code.splitlines())
+
+
 def honors(code: str, check: Check) -> bool:
-    """Does ``code`` satisfy ``check``? The runner's one source of truth for "was it applied?"."""
+    """Does ``code`` satisfy ``check``? The runner's one source of truth for "was it applied?".
+
+    Checks run against the **comment-stripped** source so an explanatory comment can neither satisfy
+    nor break a check — only real code counts.
+    """
+    stripped = strip_comments(code)
     if check.kind == "code_contains":
-        return check.pattern in code
+        return check.pattern in stripped
     if check.kind == "code_absent":
-        return check.pattern not in code
+        return check.pattern not in stripped
     if check.kind == "regex":
-        return re.search(check.pattern, code) is not None
+        return re.search(check.pattern, stripped) is not None
     raise ValueError(f"unknown check kind: {check.kind!r}")  # pragma: no cover - schema-guarded
 
 
@@ -188,8 +215,9 @@ class AgentGenerator:
             scenario.prompt.strip(),
             "",
             f"The data is in `{data_name}` in the current directory. Write a Python script "
-            "`table.py` that builds the requested table with `great_tables` and saves it with "
-            "`gt.gtsave(table, \"table.png\")`. Then run it to confirm it works.",
+            "`table.py` that builds the requested table with `great_tables`, then render it to "
+            "`table.png` with Great Tables' gtsave (the skill's mandatory renderer, "
+            '`table.gtsave("table.png")`). Run the script to confirm it works.',
         ]
         return "\n".join(parts)
 
@@ -198,8 +226,16 @@ class AgentGenerator:
     ) -> GenerationResult:
         from claude_agent_sdk import ClaudeAgentOptions, query  # lazy: only for the paid path
 
+        # The SDK discovers *project* skills by name from the cwd's `.claude/skills/`. cwd is a temp
+        # workdir, so mount the vendored skill into it and reference it by its directory name — a
+        # bare filesystem path in `skills=` is not how the SDK resolves skills.
+        skill_name = self.skill_dir.name
+        mounted = workdir / ".claude" / "skills" / skill_name
+        mounted.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(self.skill_dir, mounted, dirs_exist_ok=True)
+
         options = ClaudeAgentOptions(
-            skills=[str(self.skill_dir)],
+            skills=[skill_name],
             setting_sources=["project"],
             allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
             cwd=str(workdir),

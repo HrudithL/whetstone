@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -71,17 +72,34 @@ def _recall(skill: str, intent: str) -> dict:
     return recall(skill=skill, intent=intent)
 
 
-def _capture(skill: str, polarity: str, body: str, scope: str, provenance: str) -> dict:
+def _capture(
+    skill: str, polarity: str, body: str, scope: str, provenance: str, run_id: str | None
+) -> dict:
     from whetstone.server import capture
 
+    # Forward the recall run_id so the capture event is associated with the run that recalled — the
+    # telemetry the metrics slice reads to tie corrections/reinforcements to runs.
     return capture(
-        skill=skill, polarity=polarity, body=body, scope=scope, provenance=provenance
+        skill=skill, polarity=polarity, body=body, scope=scope, provenance=provenance,
+        run_id=run_id,
     )
 
 
+def _store_dir(skill: str) -> Path:
+    """The real on-disk store directory for ``skill`` (Whetstone slugs it as ``<name>-<hash>``)."""
+    from whetstone.config import load_config
+    from whetstone.store.layout import store_location
+
+    return store_location(skill, load_config()).path
+
+
 def _reset_store(skill: str) -> None:
-    """Delete a scenario's per-skill store so its COLD run sees a genuinely empty store."""
-    shutil.rmtree(config.STORE_ROOT / skill, ignore_errors=True)
+    """Delete a scenario's per-skill store so its COLD run sees a genuinely empty store.
+
+    Whetstone resolves the store through ``skill_slug`` (``<name>-<hash>``), so deleting
+    ``.store/<name>`` would miss it and leave stale entries that corrupt the cold baseline.
+    """
+    shutil.rmtree(_store_dir(skill), ignore_errors=True)
 
 
 def _weight_recurrence(payload: dict, entry_id: str) -> tuple[float | None, int | None]:
@@ -120,9 +138,14 @@ def _make_workdir(scenario: Scenario) -> _Work:
     return _Work(d)
 
 
-def _persist(result: GenerationResult, phase_dir: Path) -> None:
+def _persist(result: GenerationResult, workdir: Path, phase_dir: Path) -> None:
+    """Copy the generated artifacts out of the (soon-deleted) workdir into ``phase_dir``."""
     phase_dir.mkdir(parents=True, exist_ok=True)
     (phase_dir / "table.py").write_text(result.code, encoding="utf-8")
+    # The live agent renders table.png in the workdir; capture it before the workdir is torn down.
+    png = workdir / "table.png"
+    if png.is_file():
+        shutil.copy2(png, phase_dir / "table.png")
     if result.transcript:
         (phase_dir / "transcript.json").write_text(
             json.dumps(result.transcript, indent=2), encoding="utf-8"
@@ -140,6 +163,8 @@ def run_scenario(
     """Run the cold→seed→warm loop for one scenario; write ``out/<name>/`` and return a summary."""
     _reset_store(scenario.name)
     out_dir = out_root / scenario.name
+    # Clear any prior generation so committed artifacts never mix two runs (stale png/transcript).
+    shutil.rmtree(out_dir, ignore_errors=True)
     out_dir.mkdir(parents=True, exist_ok=True)
     intent = elaborated_intent(scenario)
     prefs = scenario.preferences
@@ -149,11 +174,12 @@ def run_scenario(
 
     # ---- COLD (run 1): empty store, nothing injected -------------------------------------------
     # Recall anyway (the model consults the skill and finds nothing) so the cold run is a real,
-    # empty-payload recall event in the store's telemetry.
-    _recall(scenario.name, intent)
+    # empty-payload recall event; its run_id ties the seeding corrections to this run.
+    cold_recall = _recall(scenario.name, intent)
+    cold_run_id = cold_recall.get("run_id")
     with _make_workdir(scenario) as wd:
         cold = generator.generate(scenario, "", wd)
-        _persist(cold, out_dir / "cold")
+        _persist(cold, wd, out_dir / "cold")
     cold_code = cold.code
     runs.append(
         {
@@ -168,7 +194,9 @@ def run_scenario(
     # ---- SEED: the user corrects the skill after the cold output --------------------------------
     entry_ids: dict[str, str | None] = {}
     for p in prefs:
-        res = _capture(scenario.name, p.polarity, p.body, p.scope, f"showcase:{scenario.name}")
+        res = _capture(
+            scenario.name, p.polarity, p.body, p.scope, f"showcase:{scenario.name}", cold_run_id
+        )
         entry_ids[p.id] = res.get("entry_id")
 
     # ---- WARM (runs 2..N): recall + inject + regenerate + reinforce -----------------------------
@@ -177,10 +205,11 @@ def run_scenario(
         run_no += 1
         payload = _recall(scenario.name, intent)
         final_recall = payload
+        warm_run_id = payload.get("run_id")
         learned = format_learned_layer(payload)
         with _make_workdir(scenario) as wd:
             warm = generator.generate(scenario, learned, wd)
-            _persist(warm, out_dir / "warm")
+            _persist(warm, wd, out_dir / "warm")
         warm_code = warm.code
         weights, recurrence, honored = {}, {}, {}
         for p in prefs:
@@ -194,7 +223,10 @@ def run_scenario(
         # Reinforce the learnings (a repeat correction) so value-over-time grows next run.
         for p in prefs:
             if p.polarity == "learning":
-                _capture(scenario.name, p.polarity, p.body, p.scope, f"showcase:{scenario.name}")
+                _capture(
+                    scenario.name, p.polarity, p.body, p.scope,
+                    f"showcase:{scenario.name}", warm_run_id,
+                )
         if _all_stuck(runs, prefs, stick_streak):
             break
 
@@ -245,6 +277,27 @@ def _write_outputs(
             fh.write(json.dumps(r) + "\n")
 
 
+def _load_harness_env() -> None:
+    """Load ``harness/.env`` (KEY=VALUE lines) into the environment for the documented workflow.
+
+    ``--agent`` authenticates via ``ANTHROPIC_API_KEY``, which the harness README tells maintainers
+    to put in ``harness/.env`` (gitignored). Existing environment vars win (``setdefault``), so an
+    explicitly-exported key is never overridden.
+    """
+    env_file = config.HARNESS_ROOT / ".env"
+    if not env_file.is_file():
+        return
+    for raw in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        line = line.removeprefix("export ").strip()
+        if "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        os.environ.setdefault(key.strip(), val.strip().strip("\"'"))
+
+
 def _build_generator(args: argparse.Namespace) -> Generator:
     if args.agent:
         if not SKILL_DIR.is_dir():
@@ -266,7 +319,9 @@ def main() -> int:
     parser.add_argument("--stick-streak", type=int, default=DEFAULT_STICK_STREAK)
     args = parser.parse_args()
 
-    # Pin the ST backend + isolated store/config for the whole process before touching Whetstone.
+    # Load harness/.env (ANTHROPIC_API_KEY for --agent) before anything else, then pin the ST
+    # backend + isolated store/config for the whole process before touching Whetstone.
+    _load_harness_env()
     config.apply_showcase_env()
 
     scenarios = load_scenarios(SCENARIOS_DIR)
