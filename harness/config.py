@@ -29,6 +29,13 @@ HARNESS_ROOT = Path(__file__).resolve().parent
 # store under it is its own nested git repo, so it is never committed — the proof is harness/out/.
 STORE_ROOT = HARNESS_ROOT / ".store"
 
+# An isolated XDG config home. `whetstone.config.load_config()` reads `<XDG_CONFIG_HOME>/whetstone/
+# config.toml` *before* applying `WHETSTONE_*` env overrides, so clearing/pinning env vars alone is
+# not enough — a maintainer's real config.toml would still supply any field we do not pin. Pointing
+# XDG_CONFIG_HOME here (a dir with no whetstone/config.toml; it need not even exist) makes the TOML
+# layer contribute nothing, so the config is fully determined by the dataclass defaults + our pins.
+CONFIG_HOME = STORE_ROOT / "xdg-config"
+
 # Pinned embedding backend + model for the showcase. Must match the M2.5-calibrated ST config.
 EMBEDDING_BACKEND = "sentence-transformers"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
@@ -45,25 +52,31 @@ PROMOTION_THRESHOLD = 100000
 
 
 def showcase_env() -> dict[str, str]:
-    """Return the ``WHETSTONE_*`` env overrides that pin the showcase environment."""
+    """Return the env overrides that pin the showcase environment.
+
+    ``WHETSTONE_*`` pins override the top precedence layer; ``XDG_CONFIG_HOME`` neutralizes the TOML
+    layer beneath it (see :data:`CONFIG_HOME`). Together they fully determine ``whetstone.config``.
+    """
     return {
         "WHETSTONE_EMBEDDING_BACKEND": EMBEDDING_BACKEND,
         "WHETSTONE_EMBEDDING_MODEL": EMBEDDING_MODEL,
         "WHETSTONE_STORE_ROOT": str(STORE_ROOT),
         "WHETSTONE_SUPERVISION": SUPERVISION,
         "WHETSTONE_PROMOTION_THRESHOLD": str(PROMOTION_THRESHOLD),
+        "XDG_CONFIG_HOME": str(CONFIG_HOME),
     }
 
 
 def apply_showcase_env(environ: dict[str, str] | None = None) -> dict[str, str]:
     """Pin the showcase environment on ``environ`` (defaults to ``os.environ``); return the pins.
 
-    A showcase run must be reproducible regardless of the maintainer's shell, so this first **clears
-    every** ``WHETSTONE_*`` var, then sets our pins. Clearing matters: ``whetstone.config`` consumes
-    *all* ``WHETSTONE_*`` fields, so a stray override such as ``WHETSTONE_DEDUP_SIMILARITY`` or
-    ``WHETSTONE_LEARNINGS_CUTOFF`` left in the environment would otherwise run the showcase on
-    non-calibrated thresholds. After clearing, the tunables we do not pin fall back to the
-    ST-calibrated dataclass defaults.
+    A showcase run must be reproducible regardless of the maintainer's shell/config, so this first
+    **clears every** ``WHETSTONE_*`` var, then sets our pins (which include ``XDG_CONFIG_HOME``, so
+    a real ``config.toml`` cannot leak in either — see :func:`showcase_env` / :data:`CONFIG_HOME`).
+    Clearing matters: ``whetstone.config`` consumes *all* ``WHETSTONE_*`` fields, so a stray
+    override such as ``WHETSTONE_DEDUP_SIMILARITY`` left in the environment would otherwise run the
+    showcase on non-calibrated thresholds. With env cleared and the TOML layer neutralized, every
+    tunable we do not pin falls back to the ST-calibrated dataclass defaults.
     """
     target = os.environ if environ is None else environ
     for key in [k for k in target if k.startswith("WHETSTONE_")]:
