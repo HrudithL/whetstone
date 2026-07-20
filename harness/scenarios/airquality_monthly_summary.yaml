@@ -1,0 +1,29 @@
+name: airquality_monthly_summary
+difficulty: medium
+prompt: >
+  Create a table comparing the average temperature, wind speed, and ozone levels for each month in
+  the air quality data.
+data: data/airquality.csv
+preferences:
+  - id: one-decimal
+    polarity: learning
+    scope: number formatting
+    body: >
+      Round the temperature, wind, and ozone values to one decimal place.
+    feedback: >
+      Keep those numbers to one decimal place.
+    check:
+      kind: regex
+      pattern: decimals\s*=\s*1
+  - id: no-redgreen-scale
+    polarity: issue
+    scope: color encoding
+    # A hard rule (ISSUE): objective + permanent, not a soft taste.
+    body: >
+      Never encode values with a red-to-green color scale (it is not colorblind-safe). Use a
+      blue/orange sequential palette instead.
+    feedback: >
+      Don't use a red-green color scale — it isn't colorblind-safe.
+    check:
+      kind: code_absent
+      pattern: RdYlGn

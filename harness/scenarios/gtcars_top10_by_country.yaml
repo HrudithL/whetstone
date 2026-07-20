@@ -1,0 +1,17 @@
+name: gtcars_top10_by_country
+difficulty: medium
+prompt: >
+  Build a table showing the top 10 most expensive gt cars, grouped by country of origin, including
+  their drivetrain and transmission details.
+data: data/gtcars.csv
+preferences:
+  - id: powertrain-spanner
+    polarity: learning
+    scope: column grouping
+    body: >
+      Group the drivetrain and transmission columns under a single "Powertrain" spanner.
+    feedback: >
+      Put drivetrain and transmission under one "Powertrain" spanner header.
+    check:
+      kind: code_contains
+      pattern: tab_spanner
