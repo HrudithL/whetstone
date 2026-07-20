@@ -27,5 +27,11 @@ htmlcov/
 harness/.store/
 harness/.env
 
+# M3 Quarto site: rendered output + caches are built by CI (slice 9), not committed. The .qmd
+# sources under docs/ ARE committed.
+docs/_site/
+docs/.quarto/
+.quarto/
+
 # OS / editor
 .DS_Store

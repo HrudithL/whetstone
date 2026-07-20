@@ -35,6 +35,10 @@ showcase = [
     "claude-agent-sdk",
     "matplotlib",
     "pyyaml",
+    # Quarto site render (jupyter engine): the docs/ pages execute Python to read out/ and render
+    # great-tables natively + matplotlib charts.
+    "jupyter",
+    "ipykernel",
 ]
 
 [project.scripts]
