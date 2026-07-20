@@ -13,31 +13,44 @@ runs — never hand-set:
 
 ```{python}
 # | echo: false
+# | output: asis
 import sys
 
 sys.path.insert(0, ".")
+from _charts import charts_html  # noqa: E402
 from _showcase import load_metrics, not_generated_note  # noqa: E402
-from IPython.display import Markdown  # noqa: E402
+from IPython.display import HTML, Markdown, display  # noqa: E402
 
 m = load_metrics()
 if m is None:
-    out = not_generated_note("The runs-to-stick chart and value-over-time trajectories")
+    display(not_generated_note("The runs-to-stick chart and value-over-time trajectories"))
 else:
     a = m["aggregate"]
-    lines = [
-        "### Aggregate\n",
-        f"| metric | value |\n| --- | --- |",
-        f"| scenarios | {a['scenarios']} |",
-        f"| preferences (total) | {a['preferences_total']} |",
-        f"| wrong in the cold run | {a['preferences_wrong_in_cold']} |",
-        f"| stuck after correction | {a['preferences_stuck']} ({a['stuck_rate']}) |",
-        f"| median runs-to-stick | {a['median_runs_to_stick']} |",
-    ]
-    out = Markdown("\n".join(lines))
-out
+    display(Markdown(
+        "### Aggregate\n\n"
+        "| metric | value |\n| --- | --- |\n"
+        f"| scenarios | {a['scenarios']} |\n"
+        f"| preferences (total) | {a['preferences_total']} |\n"
+        f"| wrong in the cold run | {a['preferences_wrong_in_cold']} |\n"
+        f"| stuck after correction | {a['preferences_stuck']} ({a['stuck_rate']}) |\n"
+        f"| median runs-to-stick | {a['median_runs_to_stick']} |\n"
+    ))
+    # The charts (static SVG, light + dark surfaces from the validated dataviz palette).
+    display(HTML(charts_html(m)))
+    # Companion table view (the relief the light-surface contrast WARN requires): final weight +
+    # runs-to-stick per preference, in the same order as the charts.
+    rows = ["\n### Per-preference detail\n", "| scenario | preference | polarity | runs-to-stick |"
+            " final weight |", "| --- | --- | --- | --- | --- |"]
+    for scn, s in m["scenarios"].items():
+        for pid, pref in s["preferences"].items():
+            traj = [v for v in pref.get("value_over_time", []) if v.get("weight") is not None]
+            fw = f"{traj[-1]['weight']:.3f}" if traj else "—"
+            rts = pref.get("runs_to_stick")
+            display_rts = "didn't stick" if rts is None else rts
+            rows.append(f"| {scn} | {pid} | {pref['polarity']} | {display_rts} | {fw} |")
+    display(Markdown("\n".join(rows)))
 ```
 
-The charts (static, light + dark) land with the dashboard slice. The three §11 *labeled* KPIs
-(`capture_rate`, `regressions_prevented`, `retrieval_precision`) are reported **`null` with a note** —
-the showcase drives capture directly against per-scenario isolated stores, so they have no honest
-denominator here. We show only what we can measure honestly.
+The three §11 *labeled* KPIs (`capture_rate`, `regressions_prevented`, `retrieval_precision`) are
+reported **`null` with a note** — the showcase drives capture directly against per-scenario isolated
+stores, so they have no honest denominator here. We show only what we can measure honestly.

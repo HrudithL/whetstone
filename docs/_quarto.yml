@@ -27,7 +27,10 @@ website:
 
 format:
   html:
-    theme: cosmo
+    theme:
+      light: cosmo
+      dark: darkly
+    css: styles.css
     toc: true
     code-fold: true
     code-tools: true
