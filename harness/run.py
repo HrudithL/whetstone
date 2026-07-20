@@ -93,6 +93,12 @@ def _store_dir(skill: str) -> Path:
     return store_location(skill, load_config()).path
 
 
+def _metrics(skill: str) -> dict:
+    from whetstone.server import metrics
+
+    return metrics(skill=skill)
+
+
 def _reset_store(skill: str) -> None:
     """Delete a scenario's per-skill store so its COLD run sees a genuinely empty store.
 
@@ -291,10 +297,46 @@ def _run_scenario_into(
             break
 
     _write_outputs(out_dir, scenario, prefs, runs, cold_code, warm_code, final_recall)
+    summary = _scenario_summary(
+        scenario, generator, runs, stick_streak, max_runs, usage_kpis=_metrics(scenario.name)
+    )
+    (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    return summary
+
+
+def _scenario_summary(
+    scenario: Scenario, generator: Generator, runs: list[dict], stick_streak: int,
+    max_runs: int, usage_kpis: dict,
+) -> dict:
+    """Per-scenario facts the metrics slice aggregates (committed as ``out/<name>/summary.json``).
+
+    Carries the two headline metrics per preference — ``runs_to_stick`` and the value-over-time
+    (weight/recurrence) trajectory — plus the cold baseline and the store's usage KPIs captured
+    while the store still exists (``.store`` is gitignored, so this is the durable copy).
+    """
+    warm = [r for r in runs if r.get("phase") == "warm"]
+    cold = next((r for r in runs if r.get("phase") == "cold"), None)
+    prefs_out: dict[str, dict] = {}
+    for p in scenario.preferences:
+        prefs_out[p.id] = {
+            "polarity": p.polarity,
+            "scope": p.scope,
+            "cold_honored": bool(cold["honored"].get(p.id)) if cold else None,
+            "runs_to_stick": _runs_to_stick(runs, p.id, stick_streak),
+            "value_over_time": [
+                {"run": r["run"], "weight": r["weights"].get(p.id),
+                 "recurrence": r["recurrence"].get(p.id)}
+                for r in warm
+            ],
+        }
     return {
         "scenario": scenario.name,
+        "difficulty": scenario.difficulty,
+        "generator": generator.name,
+        "params": {"max_runs": max_runs, "stick_streak": stick_streak},
         "runs": len(runs),
-        "runs_to_stick": {p.id: _runs_to_stick(runs, p.id, stick_streak) for p in prefs},
+        "preferences": prefs_out,
+        "usage_kpis": usage_kpis,
     }
 
 
@@ -444,7 +486,7 @@ def main() -> int:
             s, generator, max_runs=args.max_runs, stick_streak=args.stick_streak,
             out_root=out_root,
         )
-        stick = ", ".join(f"{k}:{v}" for k, v in summary["runs_to_stick"].items())
+        stick = ", ".join(f"{k}:{v['runs_to_stick']}" for k, v in summary["preferences"].items())
         print(f"  {s.name:32} runs={summary['runs']}  runs_to_stick[{stick}]")
     return 0
 
