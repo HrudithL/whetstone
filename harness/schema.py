@@ -64,7 +64,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import yaml
 
@@ -155,11 +155,21 @@ def _require_relpath(mapping: object, key: str, where: str) -> str:
     """
     value = _require(mapping, key, where, str)
     assert isinstance(value, str)
-    parts = PurePosixPath(value).parts
-    if value.startswith(("/", "~", "\\")) or PurePosixPath(value).is_absolute() or ".." in parts:
+    # Parse as both POSIX and Windows so a backslash escape (``data\..\..\x`` or ``C:\...``) can't
+    # sneak past a POSIX-only check and become traversal/absolute once the runner opens the file.
+    posix, win = PurePosixPath(value), PureWindowsPath(value)
+    bad = (
+        "\\" in value
+        or value.startswith(("/", "~"))
+        or posix.is_absolute()
+        or win.is_absolute()
+        or ".." in posix.parts
+        or ".." in win.parts
+    )
+    if bad:
         raise ScenarioError(
             f"{where}: field {key!r} must be a relative path under the harness root "
-            f"(no leading '/'/'~', no '..'), got {value!r}"
+            f"(no leading '/'/'~', no '..', no backslashes), got {value!r}"
         )
     return value
 
