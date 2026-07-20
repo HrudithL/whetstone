@@ -136,6 +136,41 @@ class Generator(Protocol):
     ) -> GenerationResult: ...
 
 
+# Shell tokens that reach the network or install packages — denied so a committed artifact run is
+# reproducible and offline. Local inspection and running `table.py` (python ...) stay allowed.
+_NETWORK_BASH_TOKENS = (
+    "curl", "wget", "nc ", "ncat", "ssh", "scp", "sftp", "telnet",
+    "pip install", "pip3 install", "pip download", "uv pip", "conda install",
+    "npm ", "npx ", "pnpm", "yarn", "apt", "apt-get", "brew ", "gem install",
+    "git clone", "git pull", "git fetch", "git remote",
+)
+
+
+def bash_command_is_networked(command: str) -> bool:
+    """True if a Bash ``command`` looks like it fetches remote state or installs packages."""
+    low = command.lower()
+    return any(tok in low for tok in _NETWORK_BASH_TOKENS)
+
+
+async def _deny_networked_bash(tool_name, tool_input, _ctx):  # noqa: ANN001 - SDK callback shape
+    """``can_use_tool`` callback: deny network/install Bash, allow everything else.
+
+    Bash is not auto-approved (it is kept out of ``allowed_tools``), so this gate runs for every
+    shell command. WebSearch/WebFetch are already disallowed at the tool level; this closes the
+    shell escape hatch (``curl``/``pip install``/...) that would otherwise make generation depend on
+    external state.
+    """
+    from claude_agent_sdk import PermissionResultAllow, PermissionResultDeny
+
+    if tool_name == "Bash":
+        command = (tool_input or {}).get("command", "") or ""
+        if bash_command_is_networked(command):
+            return PermissionResultDeny(
+                message="network/install shell commands are disabled for reproducible generation"
+            )
+    return PermissionResultAllow()
+
+
 # --------------------------------------------------------------------------------------------------
 # Deterministic stub (no API spend) — verifies the whole pipeline against real Whetstone.
 # --------------------------------------------------------------------------------------------------
@@ -276,12 +311,17 @@ class AgentGenerator:
         # base `tools` list: `skills=[...]` only appends Skill(name) to the auto-approve set, so
         # dropping Skill from `tools` would make the mounted great-tables skill uninvokable.
         fs_tools = ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"]
+        # Auto-approve everything except Bash; Bash is gated by `can_use_tool` so a bare shell can't
+        # `curl`/`pip install` around the WebSearch/WebFetch denial. (An unscoped `Bash` in
+        # allowed_tools would auto-approve the whole tool.)
+        auto_approve = [t for t in fs_tools if t != "Bash"]
         options = ClaudeAgentOptions(
             skills=[skill_name],
             setting_sources=["project"],
             tools=fs_tools,
-            allowed_tools=fs_tools,
+            allowed_tools=auto_approve,
             disallowed_tools=["WebSearch", "WebFetch"],
+            can_use_tool=_deny_networked_bash,
             cwd=str(workdir),
             permission_mode="default",
             model=self.model,

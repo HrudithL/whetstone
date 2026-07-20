@@ -131,10 +131,14 @@ class _Work:
 
 
 def _make_workdir(scenario: Scenario) -> _Work:
-    d = Path(tempfile.mkdtemp(prefix=f"whetstone-showcase-{scenario.name}-"))
     src = (config.HARNESS_ROOT / scenario.data).resolve()
-    if src.is_file():
-        shutil.copy2(src, d / src.name)
+    if not src.is_file():
+        # Fail before spending a live generation on a prompt that claims the data is present.
+        raise FileNotFoundError(
+            f"{scenario.name}: data file not found: {scenario.data} (resolved {src})"
+        )
+    d = Path(tempfile.mkdtemp(prefix=f"whetstone-showcase-{scenario.name}-"))
+    shutil.copy2(src, d / src.name)
     return _Work(d)
 
 
@@ -160,11 +164,38 @@ def run_scenario(
     stick_streak: int = DEFAULT_STICK_STREAK,
     out_root: Path = OUT_ROOT,
 ) -> dict:
-    """Run the cold→seed→warm loop for one scenario; write ``out/<name>/`` and return a summary."""
+    """Run the cold→seed→warm loop for one scenario; write ``out/<name>/`` and return a summary.
+
+    Artifacts are written to a staging dir and swapped into ``out/<name>`` **only after the whole
+    scenario succeeds**, so a mid-run failure (e.g. the agent renders no PNG, or the API aborts)
+    leaves the previously committed artifacts intact rather than half-deleted.
+    """
     _reset_store(scenario.name)
+    stage = Path(tempfile.mkdtemp(prefix=f"whetstone-stage-{scenario.name}-"))
+    try:
+        summary = _run_scenario_into(
+            scenario, generator, stage, max_runs=max_runs, stick_streak=stick_streak
+        )
+    except BaseException:
+        shutil.rmtree(stage, ignore_errors=True)
+        raise
+    # Success: atomically-ish swap the staged artifacts into place (old dir removed only now).
     out_dir = out_root / scenario.name
-    # Clear any prior generation so committed artifacts never mix two runs (stale png/transcript).
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.rmtree(out_dir, ignore_errors=True)
+    shutil.move(str(stage), str(out_dir))
+    return summary
+
+
+def _run_scenario_into(
+    scenario: Scenario,
+    generator: Generator,
+    out_dir: Path,
+    *,
+    max_runs: int,
+    stick_streak: int,
+) -> dict:
+    """The cold→seed→warm loop, writing all artifacts under ``out_dir`` (a staging dir)."""
     out_dir.mkdir(parents=True, exist_ok=True)
     intent = elaborated_intent(scenario)
     prefs = scenario.preferences
