@@ -76,7 +76,12 @@ for s in scenarios_meta():
             f"<tr>{td(s['name'])}{td(s['difficulty'])}<td><code>{html.escape(p['id'])}</code></td>"
             f"{td(p['polarity'])}{td(p['scope'])}{td(p['body'])}<td>{chk}</td></tr>"
         )
-display(HTML(f"<table class='table'><thead>{head}</thead><tbody>{''.join(body)}</tbody></table>"))
+# Wrap in a horizontally-scrollable container: this table is wide (the rule + check columns carry
+# long text), so it scrolls within the content column instead of spilling past the "On this page" TOC.
+display(HTML(
+    "<div style='overflow-x:auto;max-width:100%'>"
+    f"<table class='table'><thead>{head}</thead><tbody>{''.join(body)}</tbody></table></div>"
+))
 ```
 
 ## Where every number comes from

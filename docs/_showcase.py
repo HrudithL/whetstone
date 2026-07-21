@@ -47,6 +47,13 @@ def read_text(scenario: str, *parts: str) -> str | None:
     return p.read_text(encoding="utf-8") if p.is_file() else None
 
 
+def _scroll(inner: str) -> str:
+    """Wrap wide embedded content so it scrolls *within* its column instead of forcing horizontal
+    page scroll or spilling past the "On this page" TOC. A native Great Tables table has many
+    fixed-width columns and cannot reflow, so contain it rather than let it widen the layout."""
+    return f'<div style="overflow-x:auto;max-width:100%">{inner}</div>'
+
+
 def _panel_body(scenario: str, phase: str) -> str:
     """HTML for one table panel: native ``table.html`` if present, else a base64 PNG, else the code.
 
@@ -55,14 +62,14 @@ def _panel_body(scenario: str, phase: str) -> str:
     """
     native = read_text(scenario, phase, "table.html")
     if native and native.strip():
-        return native
+        return _scroll(native)
     png = out_root() / scenario / phase / "table.png"
     if png.is_file():
         b64 = base64.b64encode(png.read_bytes()).decode("ascii")
         return f'<img alt="{phase} table" style="max-width:100%" src="data:image/png;base64,{b64}">'
     code = read_text(scenario, phase, "table.py")
     if code:
-        return f"<pre><code>{_html.escape(code)}</code></pre>"
+        return _scroll(f"<pre><code>{_html.escape(code)}</code></pre>")
     return "<em>not generated</em>"
 
 
@@ -77,8 +84,8 @@ def learned_layer_html(scenario: str) -> str:
     if injected and injected.strip():
         return (
             "<p><small>The learned layer injected into the warm run's prompt, verbatim:</small></p>"
-            f"<pre style='max-height:32rem;overflow:auto'><code>{_html.escape(injected)}"
-            "</code></pre>"
+            "<pre style='max-height:32rem;overflow:auto;white-space:pre-wrap;"
+            f"overflow-wrap:anywhere'><code>{_html.escape(injected)}</code></pre>"
         )
     p = out_root() / scenario / "recall.json"
     if not p.is_file():
@@ -89,21 +96,29 @@ def learned_layer_html(scenario: str) -> str:
     pretty = json.dumps(raw, indent=2, ensure_ascii=False)
     return (
         "<p><small>The stored <code>recall()</code> data (source of the injected layer):</small>"
-        f"</p><pre style='max-height:32rem;overflow:auto'><code>{_html.escape(pretty)}</code></pre>"
+        "</p><pre style='max-height:32rem;overflow:auto;white-space:pre-wrap;"
+        f"overflow-wrap:anywhere'><code>{_html.escape(pretty)}</code></pre>"
     )
 
 
 def triptych_html(scenario: str) -> str:
-    """A three-column before / learned-layer / after block for one scenario."""
+    """Before / after tables side by side, with the learned layer full-width beneath them.
+
+    ``minmax(0,1fr)`` + ``min-width:0`` on the children let the two table columns shrink below their
+    content's intrinsic width so a wide table scrolls inside its own panel (via ``_scroll``) instead
+    of widening the grid past the page / TOC. The learned layer sits below at full width, where its
+    injected text has room to wrap rather than run off to the right."""
     return (
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;'
-        'align-items:start;margin:0.5rem 0 2rem">'
-        f'<div><h4>Before <small>(empty store)</small></h4>{_panel_body(scenario, "cold")}</div>'
-        f'<div><h4>The learned layer <small>(injected, verbatim)</small></h4>'
-        f"{learned_layer_html(scenario)}</div>"
-        f'<div><h4>After <small>(learned layer applied)</small></h4>'
+        '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;'
+        'align-items:start;margin:0.5rem 0 1rem">'
+        f'<div style="min-width:0"><h4>Before <small>(empty store)</small></h4>'
+        f'{_panel_body(scenario, "cold")}</div>'
+        f'<div style="min-width:0"><h4>After <small>(learned layer applied)</small></h4>'
         f'{_panel_body(scenario, "warm")}</div>'
         "</div>"
+        '<div style="min-width:0;margin:0 0 2rem">'
+        '<h4>The learned layer <small>(injected into the warm run, verbatim)</small></h4>'
+        f"{learned_layer_html(scenario)}</div>"
     )
 
 

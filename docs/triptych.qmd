@@ -3,14 +3,15 @@ title: "Before / After"
 subtitle: "See the learned layer change the output."
 ---
 
-Each scenario runs the Great Tables skill three ways, left to right:
+Each scenario runs the Great Tables skill three ways. **Before** and **After** are shown side by
+side, with **the learned layer** beneath them:
 
 1. **Before** — the table generated with an **empty** Whetstone store. The subjective preference we
    later teach is (typically) not honored.
-2. **The learned layer** — the **exact text injected into the warm run's prompt** (rendered by
+2. **After** — the table generated once that learned layer was applied. The preference is honored.
+3. **The learned layer** — the **exact text injected into the warm run's prompt** (rendered by
    Whetstone from the recalled learnings and issues, with their ids, scopes, and weights). This is
    verbatim what the model was told — not a paraphrase.
-3. **After** — the table generated once that learned layer was applied. The preference is honored.
 
 *The three panels render Great Tables output natively (real tables, not screenshots) from the
 committed artifacts under `harness/out/`; a PNG fallback is used only if a scenario has no native

@@ -14,3 +14,28 @@ body.quarto-dark .chart-light,
 [data-bs-theme="dark"] .chart-light {
   display: none;
 }
+
+/* No page should scroll horizontally or push text past the "On this page" TOC. Two safety nets on
+   top of the per-panel scroll wrappers used for embedded tables:
+   1. Preformatted blocks (learned-layer text, code-fold source) wrap instead of running off right. */
+#quarto-document-content pre,
+main pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* Bootstrap/Quarto set an explicit `white-space: pre` on `code`, which overrides the pre-wrap
+   inherited from the parent <pre> — so the code would scroll instead of wrap. Force the code inside
+   our custom, inline-styled <pre> blocks (the learned-layer / recall dumps) to follow the pre and
+   wrap. Quarto's own code-fold source blocks use classes, not an inline style, so they're untouched. */
+#quarto-document-content pre[style] code,
+main pre[style] code {
+  white-space: inherit;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* 2. Any embedded HTML table scrolls within the content column rather than widening the layout. */
+#quarto-document-content .table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
