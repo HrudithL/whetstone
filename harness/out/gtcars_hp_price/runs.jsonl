@@ -1,3 +1,3 @@
-{"run": 1, "phase": "cold", "honored": {"price-usd": true}, "weights": {"price-usd": null}, "recurrence": {"price-usd": null}}
-{"run": 2, "phase": "warm", "honored": {"price-usd": true}, "weights": {"price-usd": 0.5}, "recurrence": {"price-usd": 1}}
-{"run": 3, "phase": "warm", "honored": {"price-usd": true}, "weights": {"price-usd": 0.6667}, "recurrence": {"price-usd": 2}}
+{"run": 1, "phase": "cold", "honored": {"price-usd": true, "price-heatmap-warm": false}, "weights": {"price-usd": null, "price-heatmap-warm": null}, "recurrence": {"price-usd": null, "price-heatmap-warm": null}}
+{"run": 2, "phase": "warm", "honored": {"price-usd": true, "price-heatmap-warm": true}, "weights": {"price-usd": 0.5, "price-heatmap-warm": 0.5}, "recurrence": {"price-usd": 1, "price-heatmap-warm": 1}}
+{"run": 3, "phase": "warm", "honored": {"price-usd": true, "price-heatmap-warm": true}, "weights": {"price-usd": 0.6667, "price-heatmap-warm": 0.6667}, "recurrence": {"price-usd": 2, "price-heatmap-warm": 2}}

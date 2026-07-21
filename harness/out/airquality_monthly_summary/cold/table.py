@@ -1,96 +1,107 @@
-"""Monthly air-quality summary — average Temp, Wind, and Ozone per month.
+"""Monthly air-quality summary built with great_tables.
 
-Data:  airquality.csv (NYC daily readings, May–September 1973)
-Table: one row per month; averages of temperature, wind speed, and ozone.
-Built with great_tables per the 7-step flowchart.
+Grain of source: one row per day (New York, May-Sep 1973 -- base R `airquality`).
+We aggregate to one row per month and report the mean of each daily reading,
+skipping missing observations (pandas .mean() drops NaN).
+
+Big Color: three neutral magnitudes qualify (Temperature, Wind, Ozone) over 5
+rows, so the >=5-row gradient rule makes each eligible; the <=2 ceiling colours
+exactly two. Prompt order (temperature, wind speed, ozone) selects Temperature
+(primary -> Blues) and Wind (secondary -> Greens by the neutral tie-breaker
+ladder). Ozone is carried by the number alone. Big Color present => LIGHT band.
 """
+
 import numpy as np
 import pandas as pd
-from great_tables import GT, html, style, loc
+from great_tables import GT, md, loc, style
 
-# ── Step 1 — UNDERSTAND & CLEAN ────────────────────────────────────────────
-# Grain of the source is one daily reading; the request wants one row per
-# month, so aggregate to monthly means. Ozone/Wind/Temp are already numeric.
-# Means skip NaN by default (pandas), so missing daily readings are excluded.
-df = pd.read_csv("airquality.csv")
+# ---- Step 1: understand + clean -> one correctly-typed DataFrame ----------
+raw = pd.read_csv("airquality.csv")
 
-month_name = {5: "May", 6: "June", 7: "July", 8: "August", 9: "September"}
+MONTHS = {5: "May", 6: "June", 7: "July", 8: "August", 9: "September"}
 
 monthly = (
-    df.groupby("Month")
-      .agg(temp_mean=("Temp", "mean"),
-           wind_mean=("Wind", "mean"),
-           ozone_mean=("Ozone", "mean"))
-      .reset_index()
+    raw.groupby("Month")
+    .agg(avg_temp=("Temp", "mean"),
+         avg_wind=("Wind", "mean"),
+         avg_ozone=("Ozone", "mean"))
+    .reset_index()
+    .sort_values("Month")
 )
-monthly["month_label"] = monthly["Month"].map(month_name)
+monthly["Month"] = monthly["Month"].map(MONTHS)
+df = monthly[["Month", "avg_temp", "avg_wind", "avg_ozone"]].reset_index(drop=True)
 
-# ── Step 2 — ORGANIZE COLUMNS ──────────────────────────────────────────────
-# Stub = month identifier (PP-13). Columns in prompt order: temp, wind, ozone.
-monthly = monthly[["month_label", "temp_mean", "wind_mean", "ozone_mean"]]
+# ---- Step 3: Big Color -- data-driven, one shared domain per measure ------
+temp_cols = ["avg_temp"]
+wind_cols = ["avg_wind"]
+temp_lo = float(np.nanmin(df[temp_cols].to_numpy()))
+temp_hi = float(np.nanmax(df[temp_cols].to_numpy()))
+wind_lo = float(np.nanmin(df[wind_cols].to_numpy()))
+wind_hi = float(np.nanmax(df[wind_cols].to_numpy()))
 
-# ── Step 3 — BIG COLOR ─────────────────────────────────────────────────────
-# Three ordered magnitudes over 5 rows all qualify, but the ceiling is 2.
-# Prompt names temperature first, wind second → colour those two.
-# Both are NEUTRAL magnitudes → primary (temp) keeps Blues, secondary (wind)
-# takes the next distinct hue Greens. Ozone stays uncoloured (number only).
-temp_lo = float(np.nanmin(monthly[["temp_mean"]].to_numpy()))
-temp_hi = float(np.nanmax(monthly[["temp_mean"]].to_numpy()))
-wind_lo = float(np.nanmin(monthly[["wind_mean"]].to_numpy()))
-wind_hi = float(np.nanmax(monthly[["wind_mean"]].to_numpy()))
-
+# ---- Steps 2, 4, 5, 6: build the whole table in one chained expression ----
 gt = (
-    GT(monthly, rowname_col="month_label")
-    # ── Step 6 — TITLES ────────────────────────────────────────────────────
+    GT(df, rowname_col="Month")                       # Step 2: Month is the stub
     .tab_header(
         title="New York Air Quality by Month",
-        subtitle="Average temperature, wind speed, and ozone — May–September 1973",
+        subtitle=md("Monthly means of daily readings &mdash; May to September 1973"),
+    )
+    .tab_spanner(
+        label="Monthly average conditions",
+        columns=["avg_temp", "avg_wind", "avg_ozone"],
     )
     .cols_label(
-        temp_mean=html("Temperature<br>(&deg;F)"),
-        wind_mean=html("Wind speed<br>(mph)"),
-        ozone_mean=html("Ozone<br>(ppb)"),
+        avg_temp=md("Temperature<br>(&deg;F)"),
+        avg_wind=md("Wind speed<br>(mph)"),
+        avg_ozone=md("Ozone<br>(ppb)"),
     )
-    # ── Step 5(e) — FORMAT PER COLUMN ───────────────────────────────────────
-    .fmt_number(columns=["temp_mean", "wind_mean", "ozone_mean"], decimals=1)
-    .sub_missing(columns=["temp_mean", "wind_mean", "ozone_mean"], missing_text="—")
-    # Big Color: two neutral measures, distinct hues, per-measure domains.
-    .data_color(columns=["temp_mean"], palette="Blues",
-                domain=[temp_lo, temp_hi], truncate=False, na_color="#808080")
-    .data_color(columns=["wind_mean"], palette="Greens",
-                domain=[wind_lo, wind_hi], truncate=False, na_color="#808080")
-    # ── Step 4 — LIGHT heading band (Big Color present) ─────────────────────
-    # Washed tint of the dominant Blues hue; dark bold labels.
+    .tab_stubhead(label="Month")
+    # Step 5(e): meaningful precision, thousands seps, missing glyph
+    .fmt_number(columns=["avg_temp", "avg_wind", "avg_ozone"], decimals=1, use_seps=True)
+    .sub_missing(columns=["avg_temp", "avg_wind", "avg_ozone"], missing_text="—")
+    .cols_align(align="center", columns=["avg_temp", "avg_wind", "avg_ozone"])
+    # Step 3: colour the two selected measures (Temperature -> Blues, Wind -> Greens)
+    .data_color(
+        columns=temp_cols, palette="Blues",
+        domain=[temp_lo, temp_hi], truncate=False, na_color="#808080",
+    )
+    .data_color(
+        columns=wind_cols, palette="Greens",
+        domain=[wind_lo, wind_hi], truncate=False, na_color="#808080",
+    )
+    # Step 4: LIGHT heading band (washed tint of dominant Blues hue) + bottom rule
     .tab_options(
         column_labels_background_color="#EAF0F6",
         column_labels_font_weight="bold",
         column_labels_border_bottom_color="#CCCCCC",
         column_labels_border_bottom_width="2px",
-        # (a) cell hairlines between every body row
+        # Step 5(a): hairline between body rows
         table_body_hlines_style="solid",
         table_body_hlines_color="#E8E8E8",
         table_body_hlines_width="1px",
-        # Frame — boxed enclosing border on all four sides
-        table_border_top_style="solid",    table_border_top_color="#CCCCCC",    table_border_top_width="1px",
+        # Frame: boxed light border on all four sides
+        table_border_top_style="solid", table_border_top_color="#CCCCCC", table_border_top_width="1px",
         table_border_bottom_style="solid", table_border_bottom_color="#CCCCCC", table_border_bottom_width="1px",
-        table_border_left_style="solid",   table_border_left_color="#CCCCCC",   table_border_left_width="1px",
-        table_border_right_style="solid",  table_border_right_color="#CCCCCC",  table_border_right_width="1px",
+        table_border_left_style="solid", table_border_left_color="#CCCCCC", table_border_left_width="1px",
+        table_border_right_style="solid", table_border_right_color="#CCCCCC", table_border_right_width="1px",
     )
-    # ── Step 5(d) — stub tint harmonized to the Blues washed tint ───────────
-    .tab_style(style=style.fill(color="#EAF0F6"), locations=loc.stub())
-    .tab_stubhead(label="Month")
-    .cols_align(align="center", columns=["temp_mean", "wind_mean", "ozone_mean"])
-    # ── Step 6 — source / caption ───────────────────────────────────────────
+    # Step 5(d): stub tint (grey default -- band already carries the washed blue)
+    .tab_style(style=style.fill(color="#F0F0F0"), locations=loc.stub())
+    .tab_style(style=style.text(weight="bold"), locations=loc.stub())
+    # Step 6: source note (>=5 rows) -- state the canonical metric
     .tab_source_note(
-        source_note="Averages computed over available daily readings; missing values excluded."
-    )
-    .tab_source_note(
-        source_note="Source: New York State Department of Conservation & NASA — daily measurements, May–September 1973."
+        source_note=md(
+            "Values are means of available daily observations; missing days are "
+            "excluded. Source: base R `airquality` (New York, 1973)."
+        )
     )
 )
 
-# ── Step 7 — RENDER & VERIFY ────────────────────────────────────────────────
+# ---- Step 7: render the real PNG + the embeddable HTML --------------------
 gt.gtsave("table.png", expand=15)
+
 with open("table.html", "w") as f:
     f.write(gt.as_raw_html())
-print("Wrote table.png and table.html")
+
+print(df.to_string(index=False))
+print("\nWrote table.png and table.html")

@@ -219,8 +219,12 @@ def _stub_line(pref: Preference, honor: bool) -> str | None:
         return f"    .data_color(palette={token!r})  # {pref.id}"
     if not honor:
         return None
+    # Embed the token as a STRING LITERAL argument so ANY presence pattern survives AST-unparse and
+    # satisfies its check — including a bare color hex ("#0F766E") or a regex fragment, which as a
+    # raw call argument would be a comment or a syntax error. The stub's table.py is only parsed for
+    # checking (via ``code_for_check``), never executed, so the call need not be real GT API.
     token = check.pattern if check.kind == "code_contains" else _regex_sample(check.pattern)
-    return f"    .{token if '(' in token else f'fmt({token})'}  # {pref.id}"
+    return f"    .tab_style(style=[{token!r}])  # {pref.id}"
 
 
 @dataclass

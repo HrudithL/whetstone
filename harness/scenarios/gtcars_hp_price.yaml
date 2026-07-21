@@ -1,7 +1,7 @@
 name: gtcars_hp_price
 difficulty: easy
 prompt: >
-  Show me a table of the gt cars with their horsepower and price.
+  Give me a clean table of the GT cars listing each car's model, horsepower, and price.
 data: data/gtcars.csv
 preferences:
   - id: price-usd
@@ -16,3 +16,17 @@ preferences:
     check:
       kind: code_contains
       pattern: fmt_currency
+  - id: price-heatmap-warm
+    polarity: learning
+    scope: color encoding
+    # Stylistic + deliberately against the grain: the skill's default hue for money/finance is a
+    # muted forest green, so a warm yellow-orange-brown heatmap is a taste the cold run won't reach
+    # for on its own. Not right or wrong — just this user's look.
+    body: >
+      Heat-map the price (msrp) column with a warm yellow-orange-brown ramp — use the ColorBrewer
+      `YlOrBr` palette via data_color(columns="msrp", palette="YlOrBr"). Never a green or blue scale.
+    feedback: >
+      Use the YlOrBr (yellow-orange-brown) palette for the price heatmap, not a green one.
+    check:
+      kind: code_contains
+      pattern: YlOrBr

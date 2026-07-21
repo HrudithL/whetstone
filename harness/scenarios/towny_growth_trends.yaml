@@ -1,9 +1,9 @@
 name: towny_growth_trends
 difficulty: hard
 prompt: >
-  Create a table showing population growth trends for the top 15 fastest-growing Ontario towns,
-  comparing their density changes across all census years from 1996 to 2021, with the percentage
-  changes between each period.
+  Create a table showing population-density growth for the 15 fastest-growing Ontario towns,
+  comparing density across the census years from 1996 to 2021, with the percentage change between
+  each period.
 data: data/towny.csv
 preferences:
   - id: pct-force-sign
@@ -16,15 +16,17 @@ preferences:
     check:
       kind: regex
       pattern: force_sign\s*=\s*True
-  - id: no-green-growth
+  - id: density-magenta
     polarity: issue
     scope: color encoding
+    # A hard house rule (ISSUE) that deliberately overrides the default: the skill signals
+    # growth/nature with a forest green, so this shop's standing rule is "growth is magenta, never
+    # green" — a stylistic house identity, enforced as a constraint rather than a soft taste.
     body: >
-      Do not use green to signal growth (not colorblind-safe); use a single neutral accent color for
-      emphasis instead.
+      Never fill growth with green here (house rule). Heat-map the density columns with a magenta ramp
+      instead — use the ColorBrewer `PuRd` palette via data_color(columns=[...], palette="PuRd").
     feedback: >
-      Stop using green to mark growth — it isn't colorblind-safe.
+      House rule: growth is magenta (use the PuRd palette), never green.
     check:
-      # Catch green by name OR by common green hex codes (a name-only check is evadable by hex).
-      kind: regex_absent
-      pattern: "(?i)green|#1b7837|#2f4a38|#4d9221|#1a9850"
+      kind: code_contains
+      pattern: PuRd

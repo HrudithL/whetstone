@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-20T23:12:44.072971+00:00",
+  "generated_at": "2026-07-21T03:57:13.320464+00:00",
   "scenarios": {
     "airquality_monthly_summary": {
       "scenario": "airquality_monthly_summary",
@@ -30,21 +30,21 @@
             }
           ]
         },
-        "no-redgreen-scale": {
-          "polarity": "issue",
-          "scope": "color encoding",
-          "cold_honored": true,
+        "labels-darkgreen": {
+          "polarity": "learning",
+          "scope": "header styling",
+          "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         }
@@ -52,17 +52,17 @@
       "usage_kpis": {
         "skill": "airquality_monthly_summary",
         "runs": 3,
-        "avg_learnings_applied_per_run": 0.6667,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
           "committed": 2,
-          "reinforced": 2,
+          "reinforced": 4,
           "noop": 0,
           "conflict": 0
         },
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.6667,
-          "reinforcements": 2,
-          "learnings_created": 1
+          "reinforcements": 4,
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -109,22 +109,40 @@
               "recurrence": 2
             }
           ]
+        },
+        "price-heatmap-warm": {
+          "polarity": "learning",
+          "scope": "color encoding",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
         }
       },
       "usage_kpis": {
         "skill": "gtcars_hp_price",
         "runs": 3,
-        "avg_learnings_applied_per_run": 0.6667,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
-          "committed": 1,
-          "reinforced": 2,
+          "committed": 2,
+          "reinforced": 4,
           "noop": 0,
           "conflict": 0
         },
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.6667,
-          "reinforcements": 2,
-          "learnings_created": 1
+          "reinforcements": 4,
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -157,7 +175,25 @@
         "powertrain-spanner": {
           "polarity": "learning",
           "scope": "column grouping",
-          "cold_honored": true,
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "country-group-teal": {
+          "polarity": "learning",
+          "scope": "row group styling",
+          "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [
             {
@@ -176,17 +212,17 @@
       "usage_kpis": {
         "skill": "gtcars_top10_by_country",
         "runs": 3,
-        "avg_learnings_applied_per_run": 0.6667,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
-          "committed": 1,
-          "reinforced": 2,
+          "committed": 2,
+          "reinforced": 4,
           "noop": 0,
           "conflict": 0
         },
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.6667,
-          "reinforcements": 2,
-          "learnings_created": 1
+          "reinforcements": 4,
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -233,22 +269,40 @@
               "recurrence": 2
             }
           ]
+        },
+        "size-heatmap-purple": {
+          "polarity": "learning",
+          "scope": "color encoding",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
         }
       },
       "usage_kpis": {
         "skill": "islands_sizes",
         "runs": 3,
-        "avg_learnings_applied_per_run": 0.6667,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
-          "committed": 1,
-          "reinforced": 2,
+          "committed": 2,
+          "reinforced": 4,
           "noop": 0,
           "conflict": 0
         },
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.6667,
-          "reinforcements": 2,
-          "learnings_created": 1
+          "reinforcements": 4,
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -296,9 +350,9 @@
             }
           ]
         },
-        "prices-usd": {
+        "pctchange-heatmap-amber": {
           "polarity": "learning",
-          "scope": "currency formatting",
+          "scope": "color encoding",
           "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [
@@ -376,7 +430,7 @@
             }
           ]
         },
-        "no-green-growth": {
+        "density-magenta": {
           "polarity": "issue",
           "scope": "color encoding",
           "cold_honored": false,
@@ -431,12 +485,12 @@
   },
   "aggregate": {
     "scenarios": 6,
-    "preferences_total": 9,
-    "preferences_wrong_in_cold": 3,
-    "preferences_stuck": 9,
+    "preferences_total": 12,
+    "preferences_wrong_in_cold": 8,
+    "preferences_stuck": 12,
     "stuck_rate": 1.0,
-    "corrected_and_stuck": 3,
-    "median_runs_to_stick": 2
+    "corrected_and_stuck": 8,
+    "median_runs_to_stick": 2.0
   },
   "showcase_only_kpis": {
     "capture_rate": {

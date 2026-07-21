@@ -26,7 +26,7 @@
         }
       ]
     },
-    "no-green-growth": {
+    "density-magenta": {
       "polarity": "issue",
       "scope": "color encoding",
       "cold_honored": false,

@@ -6,6 +6,13 @@
       "scope": "column grouping",
       "recurrence": 2,
       "weight": 0.6667
+    },
+    {
+      "id": "L2",
+      "rule": "Give the country row-group label rows a teal background (#0F766E) with white text \u2014 apply it to loc.row_groups() with style.fill(color=\"#0F766E\") and style.text(color=\"white\").",
+      "scope": "row group styling",
+      "recurrence": 2,
+      "weight": 0.6667
     }
   ],
   "issues": []

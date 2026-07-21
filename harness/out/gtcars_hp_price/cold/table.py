@@ -1,64 +1,41 @@
-"""Build a Great Tables display of GT cars with horsepower and price."""
+"""GT cars — model, horsepower, and price, built with great_tables."""
 
 import numpy as np
 import pandas as pd
 from great_tables import GT, md, style, loc
 
-# ---------------------------------------------------------------------------
-# Step 1 — Understand & clean the data → ONE correctly-typed DataFrame
-# Grain: one row per car. Identifiers: mfr + model. Measures: hp, msrp (price).
-# ---------------------------------------------------------------------------
-df = pd.read_csv("gtcars.csv")
+# --- Step 1: understand + clean the data ------------------------------------
+# One row per car. Identifiers: mfr + model. Measures: hp (horsepower), msrp (price).
+# CSV values already parse to numeric floats (no currency strings), no missing values.
+raw = pd.read_csv("gtcars.csv")
 
-# Coerce the requested numeric measures deliberately (they arrive as floats,
-# but coercion guards against any stray non-numeric tokens).
-df["hp"] = pd.to_numeric(df["hp"], errors="coerce")
-df["msrp"] = pd.to_numeric(df["msrp"], errors="coerce")
-
-# Trim whitespace on the string keys used for grouping / the stub.
-df["mfr"] = df["mfr"].astype(str).str.strip()
-df["model"] = df["model"].astype(str).str.strip()
-
-# Keep only what the request needs, ordered: manufacturer group, then hp desc.
 df = (
-    df[["mfr", "model", "hp", "msrp"]]
-    .sort_values(["mfr", "hp"], ascending=[True, False])
+    raw.assign(car=raw["mfr"].str.strip() + " " + raw["model"].str.strip())
+    .loc[:, ["car", "hp", "msrp"]]
+    .sort_values("hp", ascending=False)  # order by the hero measure so the gradient reads top-down
     .reset_index(drop=True)
 )
 
-# ---------------------------------------------------------------------------
-# Step 3 — Big Color: two neutral magnitudes → color BOTH.
-# Tie-breaker (palettes.md §3): primary neutral keeps Blues, secondary → Greens.
-# Prompt names horsepower first ⇒ hp = primary (Blues); price = secondary (Greens).
-# Data-driven domains, one per measure.
-# ---------------------------------------------------------------------------
+# --- Step 3: Big Color — two neutral magnitude measures ---------------------
+# Neutral tie-breaker ladder (Blues -> Greens): primary hp = Blues, secondary price = Greens.
 hp_lo = float(np.nanmin(df[["hp"]].to_numpy()))
 hp_hi = float(np.nanmax(df[["hp"]].to_numpy()))
-price_lo = float(np.nanmin(df[["msrp"]].to_numpy()))
-price_hi = float(np.nanmax(df[["msrp"]].to_numpy()))
+msrp_lo = float(np.nanmin(df[["msrp"]].to_numpy()))
+msrp_hi = float(np.nanmax(df[["msrp"]].to_numpy()))
 
-# ---------------------------------------------------------------------------
-# Steps 2 + 4 + 5 + 6 — organize, band, polish, titles (one chained build)
-# ---------------------------------------------------------------------------
+# --- Steps 2, 4, 5, 6: build the table --------------------------------------
 gt = (
-    GT(df, rowname_col="model", groupname_col="mfr")
-    # Step 6 — title + subtitle (both required) + source note
+    GT(df, rowname_col="car")
     .tab_header(
-        title="GT Cars — Horsepower & Price",
-        subtitle="Peak power output and manufacturer's suggested retail price, by marque",
+        title="Grand Tourers by the Numbers",
+        subtitle="Horsepower and list price for 47 GT cars, ranked by peak output",
     )
     .tab_stubhead(label="Model")
-    .tab_source_note(source_note=md("Source: the **gtcars** dataset (`gtcars.csv`)."))
-    .tab_source_note(
-        source_note="Rows shaded by magnitude: horsepower in blue, price in green."
-    )
-    # Step 5(e) — format per semantic type
+    .cols_label(hp="Horsepower", msrp="Price")
+    # Step 5(e): format each measure to its semantic type
     .fmt_number(columns="hp", decimals=0, use_seps=True)
     .fmt_currency(columns="msrp", decimals=0, use_seps=True)
-    .sub_missing(columns=["hp", "msrp"], missing_text="—")
-    .cols_label(hp="Horsepower", msrp="Price (MSRP)")
-    .cols_align(align="right", columns=["hp", "msrp"])
-    # Step 3 — gradient fills, primary hue = Blues, secondary = Greens
+    # Step 3: gradient fills (each measure its own domain + semantic hue)
     .data_color(
         columns="hp",
         palette="Blues",
@@ -69,48 +46,40 @@ gt = (
     .data_color(
         columns="msrp",
         palette="Greens",
-        domain=[price_lo, price_hi],
+        domain=[msrp_lo, msrp_hi],
         truncate=False,
         na_color="#808080",
     )
-    # Step 4 — LIGHT band (washed pale-blue of the primary Big-Color hue)
+    # Step 5(d): stub tint harmonized to the dominant Blues hue (washed-DA)
+    .tab_style(
+        style=style.fill(color="#EAF0F6"),
+        locations=loc.stub(),
+    )
+    # Step 6: source note (>=5 rows)
+    .tab_source_note(
+        source_note=md("Source: the *gtcars* dataset. Price is manufacturer's suggested retail price (MSRP).")
+    )
+    # Step 4: LIGHT heading band (washed-DA Blues tint) + Step 5(a) borders + Frame
     .tab_options(
+        # light heading band
         column_labels_background_color="#EAF0F6",
         column_labels_font_weight="bold",
         column_labels_border_bottom_color="#CCCCCC",
         column_labels_border_bottom_width="2px",
-        # Step 5(a) — hairlines between rows
+        # body hairlines
         table_body_hlines_style="solid",
         table_body_hlines_color="#E8E8E8",
         table_body_hlines_width="1px",
-        # Step 5 sub-note — row-group emphasis (fill + bold, structural rule)
-        row_group_background_color="#F0F0F0",
-        row_group_font_weight="bold",
-        row_group_border_top_color="#BDBDBD",
-        row_group_border_bottom_color="#BDBDBD",
-        row_group_padding="6px",
-        # Frame — square light enclosing border on all four sides
-        table_border_top_style="solid",
-        table_border_top_color="#CCCCCC",
-        table_border_top_width="1px",
-        table_border_bottom_style="solid",
-        table_border_bottom_color="#CCCCCC",
-        table_border_bottom_width="1px",
-        table_border_left_style="solid",
-        table_border_left_color="#CCCCCC",
-        table_border_left_width="1px",
-        table_border_right_style="solid",
-        table_border_right_color="#CCCCCC",
-        table_border_right_width="1px",
+        # four-side Frame
+        table_border_top_style="solid", table_border_top_color="#CCCCCC", table_border_top_width="1px",
+        table_border_bottom_style="solid", table_border_bottom_color="#CCCCCC", table_border_bottom_width="1px",
+        table_border_left_style="solid", table_border_left_color="#CCCCCC", table_border_left_width="1px",
+        table_border_right_style="solid", table_border_right_color="#CCCCCC", table_border_right_width="1px",
     )
-    # Step 5(d) — stub tint (grey default; band carries the washed tint)
-    .tab_style(style=style.fill(color="#F0F0F0"), locations=loc.stub())
 )
 
-# ---------------------------------------------------------------------------
-# Step 7 — Render the mandatory PNG, plus the embeddable HTML artifact
-# ---------------------------------------------------------------------------
-gt.gtsave("table.png", expand=15, vwidth=900, vheight=1400, zoom=2.0)
+# --- Step 7: render (mandatory PNG) + self-contained HTML --------------------
+gt.gtsave("table.png", expand=15)
 
 with open("table.html", "w") as f:
     f.write(gt.as_raw_html())

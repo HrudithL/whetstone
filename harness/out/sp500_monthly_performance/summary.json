@@ -26,9 +26,9 @@
         }
       ]
     },
-    "prices-usd": {
+    "pctchange-heatmap-amber": {
       "polarity": "learning",
-      "scope": "currency formatting",
+      "scope": "color encoding",
       "cold_honored": false,
       "runs_to_stick": 2,
       "value_over_time": [

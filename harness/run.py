@@ -62,7 +62,8 @@ def elaborated_intent(scenario: Scenario) -> str:
     return (
         f"Styling a great-tables display table for this task: {scenario.prompt.strip()} "
         "Consider column alignment, number formatting, currency formatting, percentage formatting, "
-        "color palette and encoding, column grouping and spanners, row ordering, and table density."
+        "color palette and encoding, column-label and header styling, row-group label styling, "
+        "column grouping and spanners, row ordering, and table density."
     )
 
 

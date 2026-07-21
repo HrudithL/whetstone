@@ -2,8 +2,8 @@
   "learnings": [
     {
       "id": "L2",
-      "rule": "Format the opening and closing price columns as US dollars.",
-      "scope": "currency formatting",
+      "rule": "Heat-map the percent-change column with a warm amber-to-red ramp \u2014 use the ColorBrewer `YlOrRd` palette via data_color(columns=..., palette=\"YlOrRd\"). Not a green or red-green scale.",
+      "scope": "color encoding",
       "recurrence": 2,
       "weight": 0.6667
     },
