@@ -1,5 +1,5 @@
 You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
 
 Learnings (preferences):
-  - [L2] (currency formatting, weight 0.67) Format the opening and closing price columns as US dollars.
+  - [L2] (color encoding, weight 0.67) Heat-map the percent-change column with a warm amber-to-red ramp — use the ColorBrewer `YlOrRd` palette via data_color(columns=..., palette="YlOrRd"). Not a green or red-green scale.
   - [L1] (number formatting, weight 0.67) Show negative numbers in accounting style — wrapped in parentheses, not with a minus sign.

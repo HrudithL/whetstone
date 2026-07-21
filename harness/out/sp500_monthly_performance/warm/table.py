@@ -1,131 +1,134 @@
-"""S&P 500 monthly performance summary, 2010–2015 (great_tables)."""
+"""S&P 500 monthly performance summary, 2010–2015.
 
+Built with great_tables per the skill flowchart.
+Big Color: the monthly % change column is heat-mapped with the warm
+ColorBrewer YlOrRd ramp (learned preference). One colored measure -> LIGHT
+heading band. Negatives render accounting-style (parentheses).
+"""
 import numpy as np
 import pandas as pd
 from great_tables import GT, md, style, loc
 
-# ---------------------------------------------------------------------------
-# Step 1 — UNDERSTAND & CLEAN THE DATA -> one correctly-typed DataFrame
-# ---------------------------------------------------------------------------
-# Daily OHLCV bars. Grain we want: one row per calendar month, 2010–2015.
-raw = pd.read_csv("sp500.csv", parse_dates=["date"])
-raw = raw[(raw["date"].dt.year >= 2010) & (raw["date"].dt.year <= 2015)]
-raw = raw.sort_values("date")  # file is newest-first; make it chronological
+# ---- Step 1: understand + clean the data ---------------------------------
+raw = pd.read_csv("sp500.csv", parse_dates=["date"]).sort_values("date")
 
-# Canonical metric (F-canonical-metric): a "single-day gain/loss" is the daily
-# intraday return = (close - open) / open, evaluated per trading day. Monthly
-# "% change" = (month-end close - month-start open) / month-start open. Both
-# stated in the source note so the numbers are reproducible.
-raw["daily_ret"] = (raw["close"] - raw["open"]) / raw["open"]
+# Canonical definition of a "single-day gain/loss": the close-to-close daily
+# return, computed across the full series so the first trading day of each
+# month has a valid prior-close reference. Stated in a source note.
+raw["daily_return"] = raw["close"].pct_change()
 
-g = raw.groupby([raw["date"].dt.year, raw["date"].dt.month])
-tbl = pd.DataFrame({
-    "year": [str(y) for (y, m) in g.groups],
-    "month": [pd.Timestamp(2000, m, 1).strftime("%b") for (y, m) in g.groups],
-    "open": g["open"].first().to_numpy(),
-    "close": g["close"].last().to_numpy(),
-    "avg_volume": g["volume"].mean().to_numpy(),
-    "max_gain": g["daily_ret"].max().to_numpy(),
-    "max_loss": g["daily_ret"].min().to_numpy(),
-})
-tbl["pct_change"] = (tbl["close"] - tbl["open"]) / tbl["open"]
-tbl = tbl[["year", "month", "open", "close", "pct_change",
-           "avg_volume", "max_gain", "max_loss"]]
+raw["year"] = raw["date"].dt.year
+raw["month"] = raw["date"].dt.month
 
-# ---------------------------------------------------------------------------
-# Step 3 — BIG COLOR: one colored measure = the hero, signed monthly % change.
-# Diverging fill (RdYlGn, positive=good), symmetric data-driven domain.
-# ---------------------------------------------------------------------------
-M = float(np.nanmax(np.abs(tbl["pct_change"].to_numpy())))
+window = raw[(raw["year"] >= 2010) & (raw["year"] <= 2015)].copy()
 
-# ---------------------------------------------------------------------------
-# Steps 2 & 4–6 — build the table
-# ---------------------------------------------------------------------------
+MONTHS = {1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
+          7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"}
+
+rows = []
+for (yr, mo), grp in window.groupby(["year", "month"], sort=True):
+    grp = grp.sort_values("date")
+    open_px = grp["open"].iloc[0]
+    close_px = grp["close"].iloc[-1]
+    rows.append({
+        "year": str(yr),
+        "month": MONTHS[mo],
+        "open_px": open_px,
+        "close_px": close_px,
+        "pct_change": close_px / open_px - 1.0,
+        "avg_volume": grp["volume"].mean(),
+        "best_day": grp["daily_return"].max(),
+        "worst_day": grp["daily_return"].min(),
+    })
+
+monthly = pd.DataFrame(rows)
+
+# ---- Step 3: Big Color domain (data-driven, one shared domain) ------------
+COLOR_COLS = ["pct_change"]
+lo = float(np.nanmin(monthly[COLOR_COLS].to_numpy()))
+hi = float(np.nanmax(monthly[COLOR_COLS].to_numpy()))
+
+# Warm washed tint echoing the YlOrRd (Oxblood family) big color.
+WARM_TINT = "#F5EBEB"
+GREY_BAND = "#F0F0F0"
+
+# ---- Steps 2, 4, 5, 6: build the table -----------------------------------
 gt = (
-    GT(tbl, rowname_col="month", groupname_col="year")
+    GT(monthly, rowname_col="month", groupname_col="year")
     .tab_header(
-        title="S&P 500 Monthly Performance",
-        subtitle="Month-by-month summary of the index, 2010–2015",
+        title="S&P 500 — Monthly Performance Summary",
+        subtitle=md("Opening & closing levels, monthly change, and daily trading "
+                    "extremes · **2010–2015**"),
     )
     .tab_stubhead(label="Month")
-    # spanners (column groups)
-    .tab_spanner(label="Price", columns=["open", "close"])
-    .tab_spanner(label="Best / Worst Single Day", columns=["max_gain", "max_loss"])
+    .tab_spanner(label="Index Level", columns=["open_px", "close_px"])
+    .tab_spanner(label="Largest Single-Day Move", columns=["best_day", "worst_day"])
     .cols_label(
-        open="Open",
-        close="Close",
+        open_px="Open",
+        close_px="Close",
         pct_change="% Change",
-        avg_volume="Avg. Daily Volume",
-        max_gain="Best Day",
-        max_loss="Worst Day",
+        avg_volume="Avg Daily Volume",
+        best_day="Gain",
+        worst_day="Loss",
     )
-    # Step 5(e) — formatting per column.
-    # Currency for the price columns (US dollars); accounting-style negatives
-    # (parentheses) for every signed number.
-    .fmt_currency(columns=["open", "close"], currency="USD",
-                  decimals=2, accounting=True)
-    .fmt_percent(columns=["pct_change", "max_gain", "max_loss"],
-                 decimals=2, accounting=True)
-    .fmt_number(columns="avg_volume", compact=True, decimals=2)
-    # Step 3 — diverging fill on the hero
+    # Step 5(e): format per semantic type -----------------------------------
+    .fmt_number(columns=["open_px", "close_px"], decimals=2)
+    .fmt_percent(columns="pct_change", decimals=1, accounting=True)
+    .fmt_number(columns="avg_volume", decimals=2, scale_by=1e-9, pattern="{x}B")
+    .fmt_percent(columns="best_day", decimals=2)
+    .fmt_percent(columns="worst_day", decimals=2, accounting=True)
+    # Step 3: Big Color — YlOrRd heat map on the monthly % change -----------
     .data_color(
-        columns="pct_change",
-        palette="RdYlGn",
-        domain=[-M, M],
+        columns=COLOR_COLS,
+        palette="YlOrRd",
+        domain=[lo, hi],
         truncate=False,
+        na_color="#808080",
     )
-    # Step 5(a) — cell hairlines + column-label bottom rule
+    # Step 4: LIGHT heading band (Big Color present) ------------------------
     .tab_options(
+        column_labels_background_color=WARM_TINT,
+        column_labels_font_weight="bold",
+        column_labels_border_bottom_color="#CCCCCC",
+        column_labels_border_bottom_width="2px",
+        # Step 5(a): hairlines + row-group emphasis
         table_body_hlines_style="solid",
         table_body_hlines_color="#E8E8E8",
         table_body_hlines_width="1px",
-        column_labels_border_bottom_color="#CCCCCC",
-        column_labels_border_bottom_width="2px",
-        # Step 4 — LIGHT band (Big Color present); diverging has no DA hue -> grey
-        column_labels_background_color="#F0F0F0",
-        column_labels_font_weight="bold",
-        # Step 5 sub-note — row-group emphasis (fill + bold)
-        row_group_background_color="#F0F0F0",
+        row_group_background_color=GREY_BAND,
         row_group_font_weight="bold",
         row_group_border_top_color="#BDBDBD",
         row_group_border_bottom_color="#BDBDBD",
         row_group_padding="6px",
-        # Step 5(c) — striping
+        # Step 5(c): striping (72 rows, body not fully filled)
         row_striping_background_color="#F6F6F6",
-    )
-    .opt_row_striping()
-    # Step 5(d) — stub tint
-    .tab_style(style=style.fill(color="#F0F0F0"), locations=loc.stub())
-    # Step 5(b) — vertical dividers at each column-group boundary
-    .tab_style(
-        style=style.borders(sides="right", color="#D0D0D0", weight="1px"),
-        locations=[loc.body(columns=c) for c in ["close", "pct_change", "avg_volume"]],
-    )
-    .tab_style(
-        style=style.borders(sides="right", color="#D0D0D0", weight="1px"),
-        locations=[loc.column_labels(columns=c) for c in ["close", "pct_change", "avg_volume"]],
-    )
-    # Step 6 — titles/annotations
-    .tab_source_note(source_note=md(
-        "**Single-day gain/loss** = daily intraday return "
-        "(close − open) ÷ open. **% Change** = (month-end close − "
-        "month-start open) ÷ month-start open. Negatives shown in "
-        "accounting style; volume in shares."
-    ))
-    .tab_source_note(source_note="Source: S&P 500 daily OHLCV, 2010–2015.")
-    # Frame — boxed enclosing border on all four sides
-    .tab_options(
+        # Frame
         table_border_top_style="solid", table_border_top_color="#CCCCCC", table_border_top_width="1px",
         table_border_bottom_style="solid", table_border_bottom_color="#CCCCCC", table_border_bottom_width="1px",
         table_border_left_style="solid", table_border_left_color="#CCCCCC", table_border_left_width="1px",
         table_border_right_style="solid", table_border_right_color="#CCCCCC", table_border_right_width="1px",
     )
+    .opt_row_striping()
+    # Step 5(d): stub tint (grey default keeps warm budget on the band)
+    .tab_style(style=style.fill(color=GREY_BAND), locations=loc.stub())
+    # Step 5(b): column-group vertical dividers at group seams
+    .tab_style(style=style.borders(sides="right", color="#D0D0D0", weight="1px"),
+               locations=loc.body(columns=["close_px", "avg_volume"]))
+    .tab_style(style=style.borders(sides="right", color="#D0D0D0", weight="1px"),
+               locations=loc.column_labels(columns=["close_px", "avg_volume"]))
+    .cols_align(align="center", columns="pct_change")
+    # Step 6: source notes -------------------------------------------------
+    .tab_source_note(source_note=md(
+        "**Single-day gain/loss** = the most extreme close-to-close daily return "
+        "within the month. **% Change** = month-end close vs. month-open. "
+        "Negatives shown in parentheses."))
+    .tab_source_note(source_note="Source: S&P 500 daily prices (sp500.csv), 2010–2015.")
 )
 
-# ---------------------------------------------------------------------------
-# Step 7 — RENDER
-# ---------------------------------------------------------------------------
+# ---- Step 7: render + verify ---------------------------------------------
 gt.gtsave("table.png", expand=15)
 with open("table.html", "w") as f:
     f.write(gt.as_raw_html())
-print("wrote table.png and table.html")
+
+print("Wrote table.png and table.html")
+print(monthly.head())

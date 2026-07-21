@@ -1,94 +1,94 @@
-"""Build a Great Tables table of the gtcars: horsepower and price, grouped by
-manufacturer. Follows the great-tables skill flowchart."""
+"""Clean GT-cars table: model, horsepower, and price.
+
+Built with great_tables following the skill's 7-step flowchart:
+  1. Data      : one row per car; model = identifier (stub), hp + msrp = measures.
+  2. Columns   : show model (stub), hp, msrp; sorted by price so the heat-map flows.
+  3. Big Color : two ordered magnitudes qualify -> both colored (<=2 ceiling).
+                 hp   -> Blues  (primary neutral magnitude).
+                 msrp -> YlOrBr (warm heat-map, per user preference).
+  4. Band      : Big Color present -> LIGHT grey band.
+  5. Small clr : hairlines, warm washed stub tint (grey-budget), fmt per type, frame.
+  6. Titles    : title + subtitle + source note.
+  7. Render    : .gtsave("table.png") + .as_raw_html() -> table.html
+"""
 
 import numpy as np
 import pandas as pd
 from great_tables import GT, md, style, loc
 
-# ---------------------------------------------------------------- Step 1: data
+# --- Step 1: one clean, correctly-typed DataFrame -------------------------------
 df = pd.read_csv("gtcars.csv")
+# hp and msrp already parse as floats; select and sort by price (desc) so the
+# warm price heat-map reads top-to-bottom.
+df = (
+    df[["model", "hp", "msrp"]]
+    .sort_values("msrp", ascending=False)
+    .reset_index(drop=True)
+)
 
-# hp and msrp import as clean floats; keep only what the request needs.
-df = df[["mfr", "model", "hp", "msrp"]].copy()
-df["hp"] = pd.to_numeric(df["hp"], errors="coerce")
-df["msrp"] = pd.to_numeric(df["msrp"], errors="coerce")
-
-# ------------------------------------------------------ Step 2: organize columns
-# Manufacturer is the low-cardinality organizing categorical -> group.
-# Model is the per-row identifier -> stub.
-# Sort by manufacturer, then price (desc) so each group reads high->low.
-df = df.sort_values(["mfr", "msrp"], ascending=[True, False]).reset_index(drop=True)
-
-# ------------------------------------------------------------- Step 3: Big Color
-# Two neutral magnitudes (both qualify, <= 2). Tie-breaker (palettes.md sec 3):
-#   hp   -> primary (prompt-named first) -> Blues
-#   msrp -> secondary neutral            -> Greens
-hp_lo = float(np.nanmin(df[["hp"]].to_numpy()))
-hp_hi = float(np.nanmax(df[["hp"]].to_numpy()))
-msrp_lo = float(np.nanmin(df[["msrp"]].to_numpy()))
-msrp_hi = float(np.nanmax(df[["msrp"]].to_numpy()))
+# --- Step 3: data-driven domains for each colored measure -----------------------
+hp_lo, hp_hi = float(np.nanmin(df["hp"])), float(np.nanmax(df["hp"]))
+msrp_lo, msrp_hi = float(np.nanmin(df["msrp"])), float(np.nanmax(df["msrp"]))
 
 gt = (
-    GT(df, rowname_col="model", groupname_col="mfr")
-    # ----------------------------------------------- Step 2: labels & stubhead
-    .cols_label(hp="Horsepower", msrp="Price (MSRP)")
-    .tab_stubhead(label="Model")
-    # --------------------------------------------------- Step 3: gradient fills
+    GT(df, rowname_col="model")
+    # ---- Step 6: titles + source ----
+    .tab_header(
+        title=md("**The GT Cars Collection**"),
+        subtitle="Horsepower and manufacturer's suggested retail price, by model",
+    )
+    .tab_source_note(
+        source_note=md("Source: the *gtcars* dataset. Prices are U.S. MSRP.")
+    )
+    # ---- Step 5(e): formatting per column ----
+    .fmt_number(columns="hp", decimals=0, use_seps=True)
+    .fmt_currency(columns="msrp", decimals=0, use_seps=True)
+    .sub_missing(missing_text="—")
+    .cols_label(hp="Horsepower", msrp="Price")
+    .cols_align(align="right", columns=["hp", "msrp"])
+    # ---- Step 3: Big Color (two neutral magnitudes) ----
     .data_color(
-        columns=["hp"],
+        columns="hp",
         palette="Blues",
         domain=[hp_lo, hp_hi],
         truncate=False,
         na_color="#808080",
     )
     .data_color(
-        columns=["msrp"],
-        palette="Greens",
+        columns="msrp",
+        palette="YlOrBr",
         domain=[msrp_lo, msrp_hi],
         truncate=False,
         na_color="#808080",
     )
-    # ------------------------------------------------------- Step 5: formatting
-    .fmt_number(columns="hp", decimals=0, use_seps=True)
-    .fmt_currency(columns="msrp", decimals=0, use_seps=True)  # US$, no decimals (L1)
-    .sub_missing(missing_text="—")
-    # ---------------------------------------------- Step 6: titles & source note
-    .tab_header(
-        title=md("**The GT Cars**"),
-        subtitle="Horsepower and manufacturer's suggested retail price, by marque",
+    # ---- Step 5(d): stub tint (warm washed Ochre, echoing the YlOrBr heat-map) ----
+    .tab_style(
+        style=style.fill(color="#F5EFDC"),
+        locations=loc.stub(),
     )
-    .tab_source_note(source_note=md("Source: the **gtcars** dataset (47 grand-touring cars)."))
-    # ------------------------------------ Step 4: LIGHT band (Big Color present)
+    # ---- Step 4: LIGHT heading band + Step 5(a) borders ----
     .tab_options(
+        # light band (Big Color present)
         column_labels_background_color="#F0F0F0",
         column_labels_font_weight="bold",
         column_labels_border_bottom_color="#CCCCCC",
         column_labels_border_bottom_width="2px",
-        # Step 5(a): hairlines between rows
+        # hairlines between rows
         table_body_hlines_style="solid",
         table_body_hlines_color="#E8E8E8",
         table_body_hlines_width="1px",
-        # Step 5 sub-note: row-group emphasis (fill + bold)
-        row_group_background_color="#F0F0F0",
-        row_group_font_weight="bold",
-        row_group_border_top_color="#BDBDBD",
-        row_group_border_bottom_color="#BDBDBD",
-        row_group_padding="6px",
-        # Frame: boxed enclosing border on all four sides
+        # Frame: boxed light border on all four sides
         table_border_top_style="solid", table_border_top_color="#CCCCCC", table_border_top_width="1px",
         table_border_bottom_style="solid", table_border_bottom_color="#CCCCCC", table_border_bottom_width="1px",
         table_border_left_style="solid", table_border_left_color="#CCCCCC", table_border_left_width="1px",
         table_border_right_style="solid", table_border_right_color="#CCCCCC", table_border_right_width="1px",
     )
-    # Step 5(d): stub tint (grey default; two Big-Color hues -> stay neutral grey)
-    .tab_style(style=style.fill(color="#F0F0F0"), locations=loc.stub())
-    .cols_align(align="center", columns=["hp", "msrp"])
 )
 
-# --------------------------------------------------------- Step 7: render & save
-html = gt.as_raw_html()
-with open("table.html", "w") as f:
-    f.write(html)
-
+# --- Step 7: render the mandatory PNG + the embeddable HTML ----------------------
 gt.gtsave("table.png", expand=15)
+
+with open("table.html", "w") as fh:
+    fh.write(gt.as_raw_html())
+
 print("Wrote table.png and table.html")

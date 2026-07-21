@@ -6,6 +6,13 @@
       "scope": "number formatting",
       "recurrence": 2,
       "weight": 0.6667
+    },
+    {
+      "id": "L2",
+      "rule": "Style the column-label row with a dark green background (#0B6E4F) and white text \u2014 apply it to loc.column_labels() with style.fill(color=\"#0B6E4F\") and style.text(color=\"white\").",
+      "scope": "header styling",
+      "recurrence": 2,
+      "weight": 0.6667
     }
   ],
   "issues": []

@@ -1,8 +1,8 @@
 name: gtcars_top10_by_country
 difficulty: medium
 prompt: >
-  Build a table showing the top 10 most expensive gt cars, grouped by country of origin, including
-  their drivetrain and transmission details.
+  Build a table of the 10 most expensive GT cars, grouped by their country of origin, and include
+  each car's drivetrain and transmission.
 data: data/gtcars.csv
 preferences:
   - id: powertrain-spanner
@@ -15,3 +15,17 @@ preferences:
     check:
       kind: code_contains
       pattern: tab_spanner
+  - id: country-group-teal
+    polarity: learning
+    scope: row group styling
+    # Stylistic + against the default: the skill leaves row-group labels as plain grey structural
+    # rows. Painting the country group labels a saturated teal is this user's taste, not a rule.
+    body: >
+      Give the country row-group label rows a teal background (#0F766E) with white text — apply it to
+      loc.row_groups() with style.fill(color="#0F766E") and style.text(color="white").
+    feedback: >
+      Make the country group-label rows teal (#0F766E) with white text.
+    check:
+      # Case-insensitive: models occasionally lowercase a hex they were handed.
+      kind: regex
+      pattern: "(?i)#0f766e"

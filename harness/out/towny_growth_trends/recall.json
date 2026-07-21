@@ -11,7 +11,7 @@
   "issues": [
     {
       "id": "I1",
-      "rule": "Do not use green to signal growth (not colorblind-safe); use a single neutral accent color for emphasis instead.",
+      "rule": "Never fill growth with green here (house rule). Heat-map the density columns with a magenta ramp instead \u2014 use the ColorBrewer `PuRd` palette via data_color(columns=[...], palette=\"PuRd\").",
       "scope": "color encoding"
     }
   ]

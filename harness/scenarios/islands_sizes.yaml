@@ -1,7 +1,7 @@
 name: islands_sizes
 difficulty: easy
 prompt: >
-  Make a table of the islands and their sizes.
+  Make a table of the world's landmasses and their areas.
 data: data/islands.csv
 preferences:
   - id: sort-size-desc
@@ -14,3 +14,16 @@ preferences:
     check:
       kind: code_contains
       pattern: ascending=False
+  - id: size-heatmap-purple
+    polarity: learning
+    scope: color encoding
+    # Stylistic + unique: the skill would reach for its default navy/forest hue, so a purple ramp on
+    # the size column is a taste the cold run won't pick on its own.
+    body: >
+      Heat-map the size column with a purple ramp — use the ColorBrewer `Purples` palette via
+      data_color(columns="size", palette="Purples").
+    feedback: >
+      Use the Purples palette for the size heatmap.
+    check:
+      kind: code_contains
+      pattern: Purples

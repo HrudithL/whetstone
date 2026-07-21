@@ -1,9 +1,9 @@
 name: sp500_monthly_performance
 difficulty: hard
 prompt: >
-  Make a table of the S&P 500 data showing monthly performance summary for 2010 through 2015, with
-  each month's opening price, closing price, percent change, average daily volume, and the highest
-  single-day gain and loss within that month.
+  Make a table of the S&P 500 data showing a monthly performance summary for 2010 through 2015 — each
+  month's opening price, closing price, percent change, average daily volume, and the largest
+  single-day gain and loss that month.
 data: data/sp500.csv
 preferences:
   - id: negatives-accounting
@@ -16,13 +16,16 @@ preferences:
     check:
       kind: regex
       pattern: accounting\s*=\s*True
-  - id: prices-usd
+  - id: pctchange-heatmap-amber
     polarity: learning
-    scope: currency formatting
+    scope: color encoding
+    # Stylistic + against the grain: for gains/losses the skill leans on a green (or red-green)
+    # scale; this user wants a warm amber-to-red ramp instead. A taste, not a correctness claim.
     body: >
-      Format the opening and closing price columns as US dollars.
+      Heat-map the percent-change column with a warm amber-to-red ramp — use the ColorBrewer
+      `YlOrRd` palette via data_color(columns=..., palette="YlOrRd"). Not a green or red-green scale.
     feedback: >
-      Show the open/close prices as USD currency.
+      Use the YlOrRd (amber-to-red) palette for the percent-change heatmap, not green.
     check:
       kind: code_contains
-      pattern: fmt_currency
+      pattern: YlOrRd

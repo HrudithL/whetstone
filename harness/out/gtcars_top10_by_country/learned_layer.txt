@@ -2,3 +2,4 @@ You have a LEARNED LAYER of this user's preferences for this skill, captured fro
 
 Learnings (preferences):
   - [L1] (column grouping, weight 0.67) Group the drivetrain and transmission columns under a single "Powertrain" spanner.
+  - [L2] (row group styling, weight 0.67) Give the country row-group label rows a teal background (#0F766E) with white text — apply it to loc.row_groups() with style.fill(color="#0F766E") and style.text(color="white").

@@ -1,6 +1,13 @@
 {
   "learnings": [
     {
+      "id": "L2",
+      "rule": "Heat-map the price (msrp) column with a warm yellow-orange-brown ramp \u2014 use the ColorBrewer `YlOrBr` palette via data_color(columns=\"msrp\", palette=\"YlOrBr\"). Never a green or blue scale.",
+      "scope": "color encoding",
+      "recurrence": 2,
+      "weight": 0.6667
+    },
+    {
       "id": "L1",
       "rule": "Format the price (msrp) column as US dollars with no decimal places.",
       "scope": "currency formatting",

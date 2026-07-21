@@ -1,3 +1,3 @@
-{"run": 1, "phase": "cold", "honored": {"pct-force-sign": true, "no-green-growth": false}, "weights": {"pct-force-sign": null, "no-green-growth": null}, "recurrence": {"pct-force-sign": null, "no-green-growth": null}}
-{"run": 2, "phase": "warm", "honored": {"pct-force-sign": true, "no-green-growth": true}, "weights": {"pct-force-sign": 0.5, "no-green-growth": null}, "recurrence": {"pct-force-sign": 1, "no-green-growth": null}}
-{"run": 3, "phase": "warm", "honored": {"pct-force-sign": true, "no-green-growth": true}, "weights": {"pct-force-sign": 0.6667, "no-green-growth": null}, "recurrence": {"pct-force-sign": 2, "no-green-growth": null}}
+{"run": 1, "phase": "cold", "honored": {"pct-force-sign": true, "density-magenta": false}, "weights": {"pct-force-sign": null, "density-magenta": null}, "recurrence": {"pct-force-sign": null, "density-magenta": null}}
+{"run": 2, "phase": "warm", "honored": {"pct-force-sign": true, "density-magenta": true}, "weights": {"pct-force-sign": 0.5, "density-magenta": null}, "recurrence": {"pct-force-sign": 1, "density-magenta": null}}
+{"run": 3, "phase": "warm", "honored": {"pct-force-sign": true, "density-magenta": true}, "weights": {"pct-force-sign": 0.6667, "density-magenta": null}, "recurrence": {"pct-force-sign": 2, "density-magenta": null}}

@@ -2,3 +2,4 @@ You have a LEARNED LAYER of this user's preferences for this skill, captured fro
 
 Learnings (preferences):
   - [L1] (number formatting, weight 0.67) Round the temperature, wind, and ozone values to one decimal place.
+  - [L2] (header styling, weight 0.67) Style the column-label row with a dark green background (#0B6E4F) and white text — apply it to loc.column_labels() with style.fill(color="#0B6E4F") and style.text(color="white").
