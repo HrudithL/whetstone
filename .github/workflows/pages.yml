@@ -1,0 +1,62 @@
+name: Pages
+
+# Render the Quarto site (docs/) and deploy it to GitHub Pages. The site only reads the committed
+# harness/out/ artifacts — it never runs the harness or drives a model — so this needs no API key and
+# never runs the showcase generation. Deploys on merge to main (only whetstone-<milestone> roots reach
+# main) or on demand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "harness/out/**"
+      - "harness/scenarios/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel an in-flight deploy; let queued runs finish in order.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install site render deps (jupyter engine + charts)
+        run: |
+          python -m pip install --upgrade pip
+          # The [showcase] extra carries the site's render deps (jupyter, ipykernel, matplotlib,
+          # pyyaml, great-tables). No [embeddings] extra: the site does not run sentence-transformers.
+          pip install -e ".[showcase]"
+          python -m ipykernel install --user --name python3
+
+      - name: Render site
+        env:
+          QUARTO_PYTHON: python
+        run: quarto render docs
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

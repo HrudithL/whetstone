@@ -1,0 +1,80 @@
+{
+  "scenario": "airquality_monthly_summary",
+  "difficulty": "medium",
+  "generator": "agent",
+  "params": {
+    "max_runs": 5,
+    "stick_streak": 2
+  },
+  "runs": 3,
+  "preferences": {
+    "one-decimal": {
+      "polarity": "learning",
+      "scope": "number formatting",
+      "cold_honored": true,
+      "runs_to_stick": 2,
+      "value_over_time": [
+        {
+          "run": 2,
+          "weight": 0.5,
+          "recurrence": 1
+        },
+        {
+          "run": 3,
+          "weight": 0.6667,
+          "recurrence": 2
+        }
+      ]
+    },
+    "no-redgreen-scale": {
+      "polarity": "issue",
+      "scope": "color encoding",
+      "cold_honored": true,
+      "runs_to_stick": 2,
+      "value_over_time": [
+        {
+          "run": 2,
+          "weight": null,
+          "recurrence": null
+        },
+        {
+          "run": 3,
+          "weight": null,
+          "recurrence": null
+        }
+      ]
+    }
+  },
+  "usage_kpis": {
+    "skill": "airquality_monthly_summary",
+    "runs": 3,
+    "avg_learnings_applied_per_run": 0.6667,
+    "captures_by_status": {
+      "committed": 2,
+      "reinforced": 2,
+      "noop": 0,
+      "conflict": 0
+    },
+    "repeat_correction_proxy": {
+      "reinforcement_rate": 0.6667,
+      "reinforcements": 2,
+      "learnings_created": 1
+    },
+    "learnings_survived_pct": {
+      "value": 1.0,
+      "note": null
+    },
+    "capture_rate": {
+      "value": null,
+      "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+    },
+    "regressions_prevented": {
+      "value": null,
+      "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+    },
+    "retrieval_precision": {
+      "value": null,
+      "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+    }
+  }
+}

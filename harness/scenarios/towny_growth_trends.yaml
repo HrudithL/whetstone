@@ -1,0 +1,30 @@
+name: towny_growth_trends
+difficulty: hard
+prompt: >
+  Create a table showing population growth trends for the top 15 fastest-growing Ontario towns,
+  comparing their density changes across all census years from 1996 to 2021, with the percentage
+  changes between each period.
+data: data/towny.csv
+preferences:
+  - id: pct-force-sign
+    polarity: learning
+    scope: percentage formatting
+    body: >
+      Show the percentage-change columns as percentages with an explicit + sign on positive values.
+    feedback: >
+      The percent-change columns should show a + on gains.
+    check:
+      kind: regex
+      pattern: force_sign\s*=\s*True
+  - id: no-green-growth
+    polarity: issue
+    scope: color encoding
+    body: >
+      Do not use green to signal growth (not colorblind-safe); use a single neutral accent color for
+      emphasis instead.
+    feedback: >
+      Stop using green to mark growth — it isn't colorblind-safe.
+    check:
+      # Catch green by name OR by common green hex codes (a name-only check is evadable by hex).
+      kind: regex_absent
+      pattern: "(?i)green|#1b7837|#2f4a38|#4d9221|#1a9850"

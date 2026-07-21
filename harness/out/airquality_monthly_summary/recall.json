@@ -1,0 +1,12 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Round the temperature, wind, and ozone values to one decimal place.",
+      "scope": "number formatting",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": []
+}

@@ -24,6 +24,22 @@ dev = [
 embeddings = [
     "sentence-transformers",
 ]
+# Showcase harness only (M3). Never needed to run the MCP server; used by the internal, command-only
+# harness under `harness/` to generate the site's before/after artifacts and metrics. The harness
+# also requires the `embeddings` extra (it runs on the sentence-transformers backend) and the Claude
+# Code CLI on PATH (claude-agent-sdk drives it). Install with:
+#   pip install -e ".[showcase,embeddings]"
+showcase = [
+    "great-tables",
+    "pandas",
+    "claude-agent-sdk",
+    "matplotlib",
+    "pyyaml",
+    # Quarto site render (jupyter engine): the docs/ pages execute Python to read out/ and render
+    # great-tables natively + matplotlib charts.
+    "jupyter",
+    "ipykernel",
+]
 
 [project.scripts]
 whetstone = "whetstone.server:main"
@@ -35,6 +51,10 @@ packages = ["src/whetstone"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# Vendored third-party content (the great-tables Claude skill copied from the sibling gtskill repo)
+# is not ours to lint/format. `harness/out` is model-generated showcase output, committed verbatim so
+# the site can embed it and cold->warm diffs stay reviewable — an artifact, not source to lint.
+extend-exclude = ["harness/skill", "harness/out"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]

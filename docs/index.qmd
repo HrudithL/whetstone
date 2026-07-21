@@ -1,0 +1,54 @@
+---
+title: "Whetstone"
+subtitle: "Any skill that learns from use — and the proof it does."
+---
+
+**Whetstone** is a local [MCP](https://modelcontextprotocol.io) server that attaches to an existing
+skill and lets it improve from ordinary use. When you correct the skill, Whetstone *captures* the
+correction as a weighted **learning** (soft taste) or a mandatory **issue** (hard rule), and *recalls*
+the relevant ones at the start of every later run — no separate review step, all committed to git.
+
+## The one claim
+
+> A correction the skill received once is **tracked** and keeps being **honored** on later runs.
+
+This site proves that claim two ways, on a real skill ([Great Tables](https://posit-dev.github.io/great-tables/),
+which turns data into publication-ready tables):
+
+- **[See it](triptych.qmd)** — a *before* table (empty store), the *learned layer* the skill recalled
+  in its own words, and the *after* table that applied it.
+- **[Measure it](metrics.qmd)** — two honest metrics read straight from Whetstone's telemetry:
+  **runs-to-stick** (how quickly a correction stopped needing to be repeated) and
+  **value-over-time** (how a learning's weight held up across later runs).
+
+There is no LLM judge grading "prettiness": the point is to show a correction is *tracked and
+re-applied*, and to measure that directly. Every number links back to how it was produced on the
+**[Methodology](methodology.qmd)** page.
+
+```{python}
+# | echo: false
+import sys
+
+sys.path.insert(0, ".")
+from _showcase import load_metrics, not_generated_note  # noqa: E402
+from IPython.display import Markdown  # noqa: E402
+
+m = load_metrics()
+if m is None:
+    out = not_generated_note("The headline numbers")
+else:
+    a = m["aggregate"]
+    out = Markdown(
+        f"### At a glance\n\n"
+        f"- **{a['preferences_stuck']} of {a['preferences_total']}** corrected preferences stuck "
+        f"(consistently re-applied after correction).\n"
+        f"- Median **runs-to-stick: {a['median_runs_to_stick']}**.\n"
+        f"- Backend: `{m['backend']}` across **{a['scenarios']}** great-tables scenarios.\n"
+    )
+out
+```
+
+## Scope
+
+v1 covers the **visual** skill class (Great Tables). The **code** and **context** classes — the same
+substrate applied to a code-improvement skill and a context-organizing skill — are coming next.

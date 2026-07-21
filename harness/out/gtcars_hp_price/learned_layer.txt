@@ -1,0 +1,4 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L1] (currency formatting, weight 0.67) Format the price (msrp) column as US dollars with no decimal places.

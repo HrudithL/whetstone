@@ -1,0 +1,16 @@
+/* Metrics dashboard: show the light or dark chart variant to match the active theme.
+   Cover the selectors Quarto/Bootstrap use across versions (body class + data-bs-theme). */
+.viz-chart { margin: 1rem 0 2rem; }
+.viz-chart svg { max-width: 100%; height: auto; }
+
+.chart-dark { display: none; }
+.chart-light { display: block; }
+
+body.quarto-dark .chart-dark,
+[data-bs-theme="dark"] .chart-dark {
+  display: block;
+}
+body.quarto-dark .chart-light,
+[data-bs-theme="dark"] .chart-light {
+  display: none;
+}

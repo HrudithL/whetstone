@@ -1,0 +1,455 @@
+{
+  "backend": "sentence-transformers",
+  "generated_at": "2026-07-20T23:12:44.072971+00:00",
+  "scenarios": {
+    "airquality_monthly_summary": {
+      "scenario": "airquality_monthly_summary",
+      "difficulty": "medium",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "one-decimal": {
+          "polarity": "learning",
+          "scope": "number formatting",
+          "cold_honored": true,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "no-redgreen-scale": {
+          "polarity": "issue",
+          "scope": "color encoding",
+          "cold_honored": true,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "airquality_monthly_summary",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.6667,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "gtcars_hp_price": {
+      "scenario": "gtcars_hp_price",
+      "difficulty": "easy",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "price-usd": {
+          "polarity": "learning",
+          "scope": "currency formatting",
+          "cold_honored": true,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "gtcars_hp_price",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.6667,
+        "captures_by_status": {
+          "committed": 1,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "gtcars_top10_by_country": {
+      "scenario": "gtcars_top10_by_country",
+      "difficulty": "medium",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "powertrain-spanner": {
+          "polarity": "learning",
+          "scope": "column grouping",
+          "cold_honored": true,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "gtcars_top10_by_country",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.6667,
+        "captures_by_status": {
+          "committed": 1,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "islands_sizes": {
+      "scenario": "islands_sizes",
+      "difficulty": "easy",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "sort-size-desc": {
+          "polarity": "learning",
+          "scope": "row ordering",
+          "cold_honored": true,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "islands_sizes",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.6667,
+        "captures_by_status": {
+          "committed": 1,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "sp500_monthly_performance": {
+      "scenario": "sp500_monthly_performance",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "negatives-accounting": {
+          "polarity": "learning",
+          "scope": "number formatting",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "prices-usd": {
+          "polarity": "learning",
+          "scope": "currency formatting",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "sp500_monthly_performance",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 1.3333,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 4,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 4,
+          "learnings_created": 2
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "towny_growth_trends": {
+      "scenario": "towny_growth_trends",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "pct-force-sign": {
+          "polarity": "learning",
+          "scope": "percentage formatting",
+          "cold_honored": true,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "no-green-growth": {
+          "polarity": "issue",
+          "scope": "color encoding",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "towny_growth_trends",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.6667,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    }
+  },
+  "aggregate": {
+    "scenarios": 6,
+    "preferences_total": 9,
+    "preferences_wrong_in_cold": 3,
+    "preferences_stuck": 9,
+    "stuck_rate": 1.0,
+    "corrected_and_stuck": 3,
+    "median_runs_to_stick": 2
+  },
+  "showcase_only_kpis": {
+    "capture_rate": {
+      "value": null,
+      "note": "Not computed: the showcase seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator here. See runs_to_stick and value_over_time for the metrics this harness does measure."
+    },
+    "regressions_prevented": {
+      "value": null,
+      "note": "Not computed: the showcase seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator here. See runs_to_stick and value_over_time for the metrics this harness does measure."
+    },
+    "retrieval_precision": {
+      "value": null,
+      "note": "Not computed: the showcase seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator here. See runs_to_stick and value_over_time for the metrics this harness does measure."
+    }
+  }
+}

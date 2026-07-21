@@ -1,0 +1,3 @@
+{"run": 1, "phase": "cold", "honored": {"one-decimal": true, "no-redgreen-scale": true}, "weights": {"one-decimal": null, "no-redgreen-scale": null}, "recurrence": {"one-decimal": null, "no-redgreen-scale": null}}
+{"run": 2, "phase": "warm", "honored": {"one-decimal": true, "no-redgreen-scale": true}, "weights": {"one-decimal": 0.5, "no-redgreen-scale": null}, "recurrence": {"one-decimal": 1, "no-redgreen-scale": null}}
+{"run": 3, "phase": "warm", "honored": {"one-decimal": true, "no-redgreen-scale": true}, "weights": {"one-decimal": 0.6667, "no-redgreen-scale": null}, "recurrence": {"one-decimal": 2, "no-redgreen-scale": null}}

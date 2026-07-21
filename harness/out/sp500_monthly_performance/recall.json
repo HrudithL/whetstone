@@ -1,0 +1,19 @@
+{
+  "learnings": [
+    {
+      "id": "L2",
+      "rule": "Format the opening and closing price columns as US dollars.",
+      "scope": "currency formatting",
+      "recurrence": 2,
+      "weight": 0.6667
+    },
+    {
+      "id": "L1",
+      "rule": "Show negative numbers in accounting style \u2014 wrapped in parentheses, not with a minus sign.",
+      "scope": "number formatting",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": []
+}

@@ -1,0 +1,18 @@
+name: gtcars_hp_price
+difficulty: easy
+prompt: >
+  Show me a table of the gt cars with their horsepower and price.
+data: data/gtcars.csv
+preferences:
+  - id: price-usd
+    polarity: learning
+    scope: currency formatting
+    # Arbitrary house style: the point is only that this preference, once corrected, is tracked and
+    # re-applied on later runs of the same task — not that USD-with-no-cents is objectively right.
+    body: >
+      Format the price (msrp) column as US dollars with no decimal places.
+    feedback: >
+      Show the price as USD currency with no cents.
+    check:
+      kind: code_contains
+      pattern: fmt_currency

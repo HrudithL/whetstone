@@ -1,0 +1,12 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Group the drivetrain and transmission columns under a single \"Powertrain\" spanner.",
+      "scope": "column grouping",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": []
+}

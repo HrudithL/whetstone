@@ -1,0 +1,12 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Order the rows by size from largest to smallest.",
+      "scope": "row ordering",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": []
+}

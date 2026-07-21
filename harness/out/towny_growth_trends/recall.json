@@ -1,0 +1,18 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Show the percentage-change columns as percentages with an explicit + sign on positive values.",
+      "scope": "percentage formatting",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": [
+    {
+      "id": "I1",
+      "rule": "Do not use green to signal growth (not colorblind-safe); use a single neutral accent color for emphasis instead.",
+      "scope": "color encoding"
+    }
+  ]
+}
