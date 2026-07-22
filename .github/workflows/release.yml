@@ -29,6 +29,19 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Verify release tag matches package version
+        # Guard against publishing the wrong artifact: e.g. tagging v0.2.0 before bumping
+        # project.version would otherwise upload whatever is in pyproject.toml. Fail early, before
+        # the build, if the tag (minus the leading v) does not equal the packaged version.
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          ver="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          echo "release tag=$tag  package version=$ver"
+          if [ "$tag" != "v$ver" ]; then
+            echo "::error::release tag '$tag' does not match package version 'v$ver' — bump pyproject.toml [project].version or fix the tag"
+            exit 1
+          fi
+
       - name: Install build tooling
         run: pip install build twine
 

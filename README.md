@@ -13,26 +13,31 @@ Requires Python 3.11+. The base install is light and dependency-free at retrieva
 small, deterministic `hashing` embedding backend (no torch, no network).
 
 ```sh
-pipx install whetstone-mcp
-# or: uvx whetstone-mcp
+pipx install whetstone-mcp     # installs the `whetstone` command on your PATH
 # or: pip install whetstone-mcp
+# or, run without installing: uvx whetstone-mcp
 ```
 
-Register it with an MCP host (e.g. Claude Code):
+An install (pipx/pip) puts two equivalent console scripts on your PATH — `whetstone` (primary, used
+throughout this README) and `whetstone-mcp` (same entry point, so `pipx run whetstone-mcp` /
+`uvx whetstone-mcp` resolve without the short name).
+
+Register it with an MCP host (e.g. Claude Code) — point the host at whichever you used:
 
 ```sh
+# if you installed it (pipx/pip): the command is already on PATH
+claude mcp add whetstone -- whetstone
+# no install — let uv fetch & run it on demand:
 claude mcp add whetstone -- uvx whetstone-mcp
 ```
 
-This installs two equivalent console scripts — `whetstone` (primary, used throughout this README)
-and `whetstone-mcp` (so `uvx whetstone-mcp` / `pipx run whetstone-mcp` resolve without needing the
-short name).
-
-For higher-quality embeddings, install the optional extra and set
-`embedding_backend = "sentence-transformers"` in config:
+For higher-quality embeddings, pull in the optional extra and set
+`embedding_backend = "sentence-transformers"` in config. Match the command to how it's installed:
 
 ```sh
-pipx install "whetstone-mcp[embeddings]"   # pulls in sentence-transformers
+pipx install "whetstone-mcp[embeddings]"                 # fresh install, with the extra
+pipx inject whetstone-mcp sentence-transformers          # add to an existing pipx install
+pip install "whetstone-mcp[embeddings]"                  # pip
 ```
 
 ### From source (contributors)
