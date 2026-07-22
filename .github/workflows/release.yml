@@ -1,0 +1,41 @@
+name: Release
+
+# Build and publish whetstone-mcp to PyPI when a GitHub Release is published (tagged v*). Uses
+# Trusted Publishing (OIDC) via pypa/gh-action-pypi-publish — no long-lived API token is stored in
+# the repo. One-time setup (manual, on pypi.org): create the project and configure a Trusted
+# Publisher for this repo + workflow filename + the `pypi` environment below.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    # Releases are tagged v* (e.g. v0.1.0); skip any other tag that could trigger a `release` event.
+    if: startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/whetstone-mcp/
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tooling
+        run: pip install build twine
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Verify distributions
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
