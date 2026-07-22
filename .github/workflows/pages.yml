@@ -1,9 +1,10 @@
 name: Pages
 
-# Render the Quarto site (docs/) and deploy it to GitHub Pages. The site only reads the committed
-# harness/out/ artifacts — it never runs the harness or drives a model — so this needs no API key and
-# never runs the showcase generation. Deploys on merge to main (only whetstone-<milestone> roots reach
-# main) or on demand.
+# Render the Quarto showcase (docs/) at the site root AND the great-docs API/MCP reference at /docs,
+# then deploy the combined tree to GitHub Pages as a single artifact. Neither build runs the harness
+# or drives a model — the showcase only reads committed harness/out/, and great-docs introspects the
+# installed whetstone package — so this needs no API key. Deploys on merge to main (only
+# whetstone-<milestone> roots reach main) or on demand.
 on:
   push:
     branches: [main]
@@ -11,6 +12,8 @@ on:
       - "docs/**"
       - "harness/out/**"
       - "harness/scenarios/**"
+      - "great-docs.yml"
+      - "src/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -39,24 +42,42 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install site render deps (jupyter engine + charts)
+      - name: Install site render deps (jupyter engine + charts + great-docs)
         run: |
           python -m pip install --upgrade pip
-          # The [showcase] extra carries the site's render deps (jupyter, ipykernel, matplotlib,
-          # pyyaml, great-tables). No [embeddings] extra: the site does not run sentence-transformers.
-          pip install -e ".[showcase]"
+          # [showcase] carries the root site's render deps (jupyter, ipykernel, matplotlib, pyyaml,
+          # great-tables); [docs] carries great-docs for the /docs reference. No [embeddings] extra:
+          # neither site runs sentence-transformers.
+          pip install -e ".[showcase,docs]"
           python -m ipykernel install --user --name python3
 
-      - name: Render site
+      - name: Render root showcase site (docs/ -> docs/_site)
         env:
           QUARTO_PYTHON: python
         run: quarto render docs
+
+      - name: Build great-docs reference (great-docs/_site)
+        env:
+          QUARTO_PYTHON: python
+        # Introspects the installed whetstone package: auto-generates the MCP tool reference from the
+        # FastMCP @mcp.tool() functions. site_url in great-docs.yml points at the /docs subpath.
+        run: great-docs build
+
+      - name: Assemble combined tree (root showcase + great-docs at /docs)
+        run: |
+          rm -rf _deploy && mkdir -p _deploy
+          cp -R docs/_site/. _deploy/
+          mkdir -p _deploy/docs
+          cp -R great-docs/_site/. _deploy/docs/
+          test -f _deploy/index.html
+          test -f _deploy/docs/index.html
+          test -f _deploy/docs/reference/mcp/recall.html
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/_site
+          path: _deploy
 
       - id: deploy
         uses: actions/deploy-pages@v4

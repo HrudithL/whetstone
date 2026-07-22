@@ -37,5 +37,9 @@ docs/_site/
 docs/.quarto/
 .quarto/
 
+# great-docs build directory (ephemeral). The great-docs.yml config IS committed; the generated
+# great-docs/ tree (Quarto sources + _site) is rebuilt by `great-docs build` and never committed.
+great-docs/
+
 # OS / editor
 .DS_Store
