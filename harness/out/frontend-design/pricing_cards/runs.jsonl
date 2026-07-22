@@ -1,0 +1,3 @@
+{"run": 1, "phase": "cold", "honored": {"courier-body-font": false, "sharp-corners": false}, "weights": {"courier-body-font": null, "sharp-corners": null}, "recurrence": {"courier-body-font": null, "sharp-corners": null}}
+{"run": 2, "phase": "warm", "honored": {"courier-body-font": true, "sharp-corners": true}, "weights": {"courier-body-font": 0.5, "sharp-corners": null}, "recurrence": {"courier-body-font": 1, "sharp-corners": null}}
+{"run": 3, "phase": "warm", "honored": {"courier-body-font": true, "sharp-corners": true}, "weights": {"courier-body-font": 0.6667, "sharp-corners": null}, "recurrence": {"courier-body-font": 2, "sharp-corners": null}}

@@ -4,15 +4,44 @@ build-backend = "hatchling.build"
 
 [project]
 name = "whetstone-mcp"
-version = "0.0.0"
+version = "0.1.0"
 description = "A local MCP server that lets any skill learn from use."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Whetstone" }]
+authors = [
+    { name = "Hrudith Lakshminarasimman", email = "hrudith.lakshminarasimman@posit.co" },
+]
+maintainers = [
+    { name = "Hrudith Lakshminarasimman", email = "hrudith.lakshminarasimman@posit.co" },
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "skills",
+    "learning",
+    "memory",
+    "retrieval",
+    "agent",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Environment :: Console",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "mcp",
 ]
+
+[project.urls]
+Homepage = "https://github.com/HrudithL/whetstone"
+Repository = "https://github.com/HrudithL/whetstone"
+Documentation = "https://github.com/HrudithL/whetstone"
 
 [project.optional-dependencies]
 dev = [
@@ -35,6 +64,9 @@ showcase = [
     "claude-agent-sdk",
     "matplotlib",
     "pyyaml",
+    # The pptx showcase skill's generated deck.py builds a deck with python-pptx; the --agent runner
+    # runs that script in this venv, so the dep must be importable here.
+    "python-pptx",
     # Quarto site render (jupyter engine): the docs/ pages execute Python to read out/ and render
     # great-tables natively + matplotlib charts.
     "jupyter",
@@ -43,9 +75,27 @@ showcase = [
 
 [project.scripts]
 whetstone = "whetstone.server:main"
+# Alias so `uvx whetstone-mcp` / `pipx run whetstone-mcp` resolve without knowing the short name.
+# `whetstone` remains the primary command referenced in docs.
+whetstone-mcp = "whetstone.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/whetstone"]
+
+# Lean sdist: only what's needed to build + install the package, plus the files PyPI renders/needs
+# for licensing. Explicitly excludes harness/ (incl. harness/data/*.csv, ~920KB, and harness/out/),
+# docs/, site/, tests/, and the design *.md files — none of that is needed to run the MCP server.
+# Note: hatchling's sdist builder unconditionally force-includes the project's .gitignore as VCS
+# metadata (SdistBuilder.get_default_build_data(), no config knob to disable) — it will still show
+# up in the tarball listing alongside these; its contents are plain ignore globs, nothing sensitive.
+[tool.hatch.build.targets.sdist]
+# Patterns are anchored to the project root with a leading "/" — otherwise hatchling matches
+# README.md/LICENSE at any depth (gitignore-style), which pulls in harness/*/README.md too.
+include = [
+    "/src/whetstone",
+    "/README.md",
+    "/LICENSE",
+]
 
 [tool.ruff]
 line-length = 100

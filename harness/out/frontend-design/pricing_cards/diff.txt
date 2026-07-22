@@ -1,0 +1,512 @@
+--- cold/index.html
++++ warm/index.html
+@@ -5,324 +5,263 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Marrow Pricing</title>
+   <style>
+-    * {
++    * { border-radius: 0 !important; }
++
++    html, body {
+       margin: 0;
+       padding: 0;
+-      box-sizing: border-box;
+-    }
+-
+-    html, body {
+-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+-      background: #fafafa;
+-      color: #1a1a1a;
++      font-family: 'Courier New', monospace;
++      background-color: #f9f9f9;
++      color: #333333;
+     }
+ 
+     body {
+-      padding: 60px 20px;
+-      min-height: 100vh;
+-      display: flex;
+-      align-items: center;
+-      justify-content: center;
++      padding: 80px 40px;
+     }
+ 
+     .pricing-section {
+       max-width: 1200px;
+-      width: 100%;
++      margin: 0 auto;
+     }
+ 
+     .pricing-header {
+       text-align: center;
+-      margin-bottom: 60px;
+-    }
+-
+-    .pricing-header h1 {
+-      font-size: 42px;
+-      font-weight: 700;
+-      letter-spacing: -0.5px;
+-      margin-bottom: 12px;
+-      color: #1a1a1a;
+-    }
+-
+-    .pricing-header p {
+-      font-size: 18px;
+-      color: #666;
+-      font-weight: 400;
+-      line-height: 1.5;
+-    }
+-
+-    .pricing-cards {
++      margin-bottom: 80px;
++    }
++
++    .pricing-title {
++      font-size: 48px;
++      font-weight: bold;
++      letter-spacing: -1px;
++      margin: 0 0 16px 0;
++      line-height: 1.2;
++    }
++
++    .pricing-subtitle {
++      font-size: 16px;
++      color: #666666;
++      margin: 0;
++      font-weight: normal;
++      letter-spacing: 0.3px;
++    }
++
++    .pricing-grid {
+       display: grid;
+-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+-      gap: 24px;
+-      justify-items: center;
+-    }
+-
+-    @media (min-width: 768px) {
+-      .pricing-cards {
+-        grid-template-columns: repeat(3, 1fr);
+-        gap: 28px;
+-      }
++      grid-template-columns: repeat(3, 1fr);
++      gap: 32px;
++      margin-top: 60px;
+     }
+ 
+     .pricing-card {
+-      background: white;
++      background-color: #ffffff;
+       border: 1px solid #e0e0e0;
+-      border-radius: 8px;
+       padding: 40px 32px;
+-      width: 100%;
+-      max-width: 360px;
+       display: flex;
+       flex-direction: column;
+       position: relative;
+-      transition: all 0.2s ease;
+-    }
+-
+-    .pricing-card:hover {
+-      border-color: #ccc;
+-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+     }
+ 
+     .pricing-card.recommended {
+-      border-color: #00a878;
+-      background: linear-gradient(135deg, #fafafa 0%, white 100%);
+-      box-shadow: 0 12px 32px rgba(0, 168, 120, 0.12);
+-      transform: translateY(-8px);
+-    }
+-
+-    .pricing-card.recommended:hover {
+-      box-shadow: 0 16px 40px rgba(0, 168, 120, 0.16);
++      background-color: #fafbff;
++      border: 2px solid #00d9ff;
++      box-shadow: 0 8px 24px rgba(0, 217, 255, 0.1);
+     }
+ 
+     .recommended-badge {
+       position: absolute;
+       top: -12px;
+-      left: 50%;
+-      transform: translateX(-50%);
+-      background: #00a878;
+-      color: white;
++      left: 20px;
++      background-color: #00d9ff;
++      color: #ffffff;
+       padding: 4px 12px;
+-      border-radius: 12px;
+-      font-size: 12px;
+-      font-weight: 600;
+-      letter-spacing: 0.5px;
++      font-size: 11px;
++      font-weight: bold;
++      letter-spacing: 1px;
+       text-transform: uppercase;
+     }
+ 
+     .tier-name {
+       font-size: 20px;
+-      font-weight: 700;
++      font-weight: bold;
++      margin: 0 0 24px 0;
++      margin-top: 12px;
++    }
++
++    .pricing-card.recommended .tier-name {
++      color: #00d9ff;
++    }
++
++    .price {
++      font-size: 32px;
++      font-weight: bold;
+       margin-bottom: 8px;
++      line-height: 1.2;
++    }
++
++    .price-unit {
++      font-size: 14px;
++      color: #999999;
++      font-weight: normal;
++      display: block;
++    }
++
++    .price-duration {
++      font-size: 12px;
++      color: #999999;
++      margin-bottom: 32px;
++    }
++
++    .features-list {
++      list-style: none;
++      margin: 0 0 40px 0;
++      padding: 0;
++      flex-grow: 1;
++    }
++
++    .features-list li {
++      font-size: 14px;
++      padding: 12px 0;
++      border-bottom: 1px solid #f0f0f0;
++      color: #555555;
++    }
++
++    .features-list li:last-child {
++      border-bottom: none;
++    }
++
++    .cta-button {
++      background-color: #333333;
++      color: #ffffff;
++      border: none;
++      padding: 14px 24px;
++      font-family: 'Courier New', monospace;
++      font-size: 14px;
++      font-weight: bold;
++      letter-spacing: 0.5px;
++      cursor: pointer;
++      text-transform: uppercase;
++      transition: all 0.2s ease;
++    }
++
++    .cta-button:hover {
++      background-color: #1a1a1a;
++      transform: translateY(-2px);
++    }
++
++    .cta-button:active {
++      transform: translateY(0);
++    }
++
++    .cta-button:focus {
++      outline: 2px solid #00d9ff;
++      outline-offset: 2px;
++    }
++
++    .pricing-card.recommended .cta-button {
++      background-color: #00d9ff;
+       color: #1a1a1a;
+     }
+ 
+-    .pricing-info {
+-      margin-bottom: 32px;
+-    }
+-
+-    .price {
+-      font-size: 48px;
+-      font-weight: 700;
+-      color: #00a878;
+-      line-height: 1.1;
+-    }
+-
+-    .price-label {
+-      font-size: 14px;
+-      color: #666;
+-      font-weight: 400;
+-      margin-top: 4px;
+-    }
+-
+-    .features {
+-      flex: 1;
+-      margin-bottom: 32px;
+-    }
+-
+-    .features ul {
+-      list-style: none;
+-    }
+-
+-    .features li {
+-      font-size: 14px;
+-      color: #555;
+-      padding: 10px 0;
+-      border-bottom: 1px solid #f0f0f0;
+-      line-height: 1.6;
+-      position: relative;
+-      padding-left: 24px;
+-    }
+-
+-    .features li:last-child {
+-      border-bottom: none;
+-    }
+-
+-    .features li:before {
+-      content: "✓";
+-      position: absolute;
+-      left: 0;
+-      color: #00a878;
+-      font-weight: 600;
+-    }
+-
+-    .cta-button {
+-      display: block;
+-      width: 100%;
+-      padding: 12px 24px;
+-      border: none;
+-      border-radius: 6px;
+-      font-size: 14px;
+-      font-weight: 600;
+-      cursor: pointer;
+-      transition: all 0.2s ease;
+-      text-align: center;
+-      text-decoration: none;
+-      font-family: inherit;
+-      letter-spacing: 0.3px;
+-    }
+-
+-    .pricing-card:not(.recommended) .cta-button {
+-      background: #f5f5f5;
+-      color: #1a1a1a;
+-      border: 1px solid #e0e0e0;
+-    }
+-
+-    .pricing-card:not(.recommended) .cta-button:hover {
+-      background: #ebebeb;
+-      border-color: #d0d0d0;
+-    }
+-
+-    .pricing-card:not(.recommended) .cta-button:active {
+-      background: #e0e0e0;
+-    }
+-
+-    .pricing-card.recommended .cta-button {
+-      background: #00a878;
+-      color: white;
+-    }
+-
+     .pricing-card.recommended .cta-button:hover {
+-      background: #008a6a;
+-    }
+-
+-    .pricing-card.recommended .cta-button:active {
+-      background: #006f54;
+-    }
+-
+-    /* Focus states for accessibility */
+-    .cta-button:focus {
+-      outline: 2px solid #00a878;
+-      outline-offset: 2px;
+-    }
+-
+-    /* Reduced motion support */
++      background-color: #00b8cc;
++    }
++
++    @media (max-width: 1024px) {
++      .pricing-grid {
++        grid-template-columns: repeat(2, 1fr);
++        gap: 24px;
++      }
++    }
++
++    @media (max-width: 768px) {
++      body {
++        padding: 60px 24px;
++      }
++
++      .pricing-title {
++        font-size: 36px;
++      }
++
++      .pricing-grid {
++        grid-template-columns: 1fr;
++        gap: 24px;
++      }
++
++      .pricing-header {
++        margin-bottom: 60px;
++      }
++    }
++
+     @media (prefers-reduced-motion: reduce) {
+-      .pricing-card,
+       .cta-button {
+         transition: none;
+       }
+-      .pricing-card.recommended {
++
++      .cta-button:hover {
+         transform: none;
+-      }
+-    }
+-
+-    /* Mobile responsiveness */
+-    @media (max-width: 767px) {
+-      body {
+-        padding: 40px 16px;
+-      }
+-
+-      .pricing-header {
+-        margin-bottom: 40px;
+-      }
+-
+-      .pricing-header h1 {
+-        font-size: 32px;
+-      }
+-
+-      .pricing-header p {
+-        font-size: 16px;
+-      }
+-
+-      .pricing-card {
+-        padding: 32px 24px;
+-      }
+-
+-      .pricing-card.recommended {
+-        transform: none;
+-      }
+-
+-      .recommended-badge {
+-        top: -8px;
+-      }
+-
+-      .price {
+-        font-size: 36px;
+       }
+     }
+   </style>
+ </head>
+ <body>
+-  <div class="pricing-section">
++  <section class="pricing-section">
+     <div class="pricing-header">
+-      <h1>Pricing</h1>
+-      <p>Start free. Upgrade when your team does.</p>
++      <h1 class="pricing-title">Pricing</h1>
++      <p class="pricing-subtitle">Start free. Upgrade when your team does.</p>
+     </div>
+ 
+-    <div class="pricing-cards">
++    <div class="pricing-grid">
+       <!-- Solo Tier -->
+       <div class="pricing-card">
+-        <div class="tier-name">Solo</div>
+-        <div class="pricing-info">
+-          <div class="price">$0</div>
+-          <div class="price-label">forever</div>
++        <h2 class="tier-name">Solo</h2>
++        <div class="price">
++          $0
++          <span class="price-unit">forever</span>
+         </div>
+-        <div class="features">
+-          <ul>
+-            <li>1 developer</li>
+-            <li>Local test maps</li>
+-            <li>Community support</li>
+-          </ul>
+-        </div>
++        <div class="price-duration"></div>
++        <ul class="features-list">
++          <li>1 developer</li>
++          <li>Local test maps</li>
++          <li>Community support</li>
++        </ul>
+         <button class="cta-button">Start free</button>
+       </div>
+ 
+       <!-- Team Tier (Recommended) -->
+       <div class="pricing-card recommended">
+         <div class="recommended-badge">Recommended</div>
+-        <div class="tier-name">Team</div>
+-        <div class="pricing-info">
+-          <div class="price">$12</div>
+-          <div class="price-label">per user / month</div>
++        <h2 class="tier-name">Team</h2>
++        <div class="price">
++          $12
++          <span class="price-unit">/ user / month</span>
+         </div>
+-        <div class="features">
+-          <ul>
+-            <li>Everything in Solo</li>
+-            <li>Shared team maps</li>
+-            <li>CI integration</li>
+-            <li>Email support</li>
+-          </ul>
+-        </div>
++        <div class="price-duration"></div>
++        <ul class="features-list">
++          <li>Everything in Solo</li>
++          <li>Shared team maps</li>
++          <li>CI integration</li>
++          <li>Email support</li>
++        </ul>
+         <button class="cta-button">Start 14-day trial</button>
+       </div>
+ 
+       <!-- Enterprise Tier -->
+       <div class="pricing-card">
+-        <div class="tier-name">Enterprise</div>
+-        <div class="pricing-info">
+-          <div class="price">Custom</div>
+-          <div class="price-label">talk to us</div>
++        <h2 class="tier-name">Enterprise</h2>
++        <div class="price">
++          Custom
++          <span class="price-unit">pricing</span>
+         </div>
+-        <div class="features">
+-          <ul>
+-            <li>Everything in Team</li>
+-            <li>SSO / SAML</li>
+-            <li>Self-hosted option</li>
+-            <li>Dedicated support</li>
+-          </ul>
+-        </div>
++        <div class="price-duration"></div>
++        <ul class="features-list">
++          <li>Everything in Team</li>
++          <li>SSO / SAML</li>
++          <li>Self-hosted option</li>
++          <li>Dedicated support</li>
++        </ul>
+         <button class="cta-button">Contact sales</button>
+       </div>
+     </div>
+-  </div>
++  </section>
+ </body>
+ </html>

@@ -1,8 +1,8 @@
 """Aggregate the per-scenario summaries into the site's ``out/metrics.json``.
 
-``python -m harness.metrics`` reads every ``out/<scenario>/summary.json`` the runner committed and
-folds them into one ``out/metrics.json`` the dashboard reads. It is a pure aggregator of committed
-data — it invents nothing. The two headline metrics come straight from the summaries:
+``python -m harness.metrics`` reads every ``out/<skill>/<scenario>/summary.json`` the runner
+committed and folds them into one ``out/metrics.json`` the dashboard reads. It is a pure aggregator
+of committed data — it invents nothing. The two headline metrics come straight from the summaries:
 
 * **runs-to-stick** — warm runs until a corrected preference is applied without re-correction.
 * **value-over-time** — each learning's weight/recurrence trajectory across the warm runs.
@@ -33,10 +33,17 @@ _SHOWCASE_ONLY_NOTE = (
 
 
 def _load_summaries(out_root: Path) -> list[dict]:
-    """Every ``out/<scenario>/summary.json``, sorted by scenario name."""
+    """Every ``out/<skill>/<scenario>/summary.json``, sorted by (skill, scenario) path.
+
+    The path is authoritative for the skill grouping — ``out/<skill>/<scenario>/`` is where the
+    artifact physically lives — so the ``skill`` field is set from ``path.parent.parent.name``,
+    back-filling any summary that predates the field.
+    """
     summaries = []
-    for path in sorted(out_root.glob("*/summary.json")):
-        summaries.append(json.loads(path.read_text(encoding="utf-8")))
+    for path in sorted(out_root.glob("*/*/summary.json")):
+        s = json.loads(path.read_text(encoding="utf-8"))
+        s["skill"] = path.parent.parent.name
+        summaries.append(s)
     return summaries
 
 
@@ -67,13 +74,26 @@ def _aggregate(summaries: list[dict]) -> dict:
     }
 
 
+def _aggregate_by_skill(summaries: list[dict]) -> dict:
+    """The same roll-up as :func:`_aggregate`, computed **per skill** (M4b groups by skill)."""
+    by_skill: dict[str, list[dict]] = {}
+    for s in summaries:
+        by_skill.setdefault(s["skill"], []).append(s)
+    return {skill: _aggregate(subset) for skill, subset in sorted(by_skill.items())}
+
+
 def build_metrics(out_root: Path = OUT_ROOT) -> dict:
-    """Build the full ``metrics.json`` document from the committed per-scenario summaries."""
+    """Build the full ``metrics.json`` document from the committed per-scenario summaries.
+
+    ``scenarios`` stays keyed by scenario name (globally unique), so existing readers are unchanged;
+    ``skills`` is the additive per-skill roll-up.
+    """
     summaries = _load_summaries(out_root)
     return {
         "backend": config.EMBEDDING_BACKEND,
         "generated_at": datetime.now(UTC).isoformat(),
         "scenarios": {s["scenario"]: s for s in summaries},
+        "skills": _aggregate_by_skill(summaries),
         "aggregate": _aggregate(summaries),
         "showcase_only_kpis": {
             "capture_rate": {"value": None, "note": _SHOWCASE_ONLY_NOTE},
@@ -87,8 +107,8 @@ def main() -> int:
     summaries = _load_summaries(OUT_ROOT)
     if not summaries:
         print(
-            f"error: no out/<scenario>/summary.json under {OUT_ROOT} — run `python -m harness.run "
-            "--agent` first",
+            f"error: no out/<skill>/<scenario>/summary.json under {OUT_ROOT} — run "
+            "`python -m harness.run --agent` first",
             file=sys.stderr,
         )
         return 1

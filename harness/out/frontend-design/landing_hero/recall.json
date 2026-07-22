@@ -1,0 +1,19 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Use the burnt-orange hex `#FF6B00` as the accent color for the primary CTA button background and for links.",
+      "scope": "color palette",
+      "recurrence": 2,
+      "weight": 0.6667
+    },
+    {
+      "id": "L2",
+      "rule": "Give the main headline wide letter-spacing of exactly 0.2em (`letter-spacing: 0.2em`).",
+      "scope": "typography",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": []
+}

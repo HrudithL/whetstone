@@ -1,4 +1,5 @@
 name: islands_sizes
+skill: great-tables
 difficulty: easy
 prompt: >
   Make a table of the world's landmasses and their areas.

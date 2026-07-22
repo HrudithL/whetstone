@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marrow Pricing</title>
+  <style>
+    * { border-radius: 0 !important; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Courier New', monospace;
+      background-color: #f9f9f9;
+      color: #333333;
+    }
+
+    body {
+      padding: 80px 40px;
+    }
+
+    .pricing-section {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 80px;
+    }
+
+    .pricing-title {
+      font-size: 48px;
+      font-weight: bold;
+      letter-spacing: -1px;
+      margin: 0 0 16px 0;
+      line-height: 1.2;
+    }
+
+    .pricing-subtitle {
+      font-size: 16px;
+      color: #666666;
+      margin: 0;
+      font-weight: normal;
+      letter-spacing: 0.3px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 60px;
+    }
+
+    .pricing-card {
+      background-color: #ffffff;
+      border: 1px solid #e0e0e0;
+      padding: 40px 32px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .pricing-card.recommended {
+      background-color: #fafbff;
+      border: 2px solid #00d9ff;
+      box-shadow: 0 8px 24px rgba(0, 217, 255, 0.1);
+    }
+
+    .recommended-badge {
+      position: absolute;
+      top: -12px;
+      left: 20px;
+      background-color: #00d9ff;
+      color: #ffffff;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .tier-name {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 0 0 24px 0;
+      margin-top: 12px;
+    }
+
+    .pricing-card.recommended .tier-name {
+      color: #00d9ff;
+    }
+
+    .price {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .price-unit {
+      font-size: 14px;
+      color: #999999;
+      font-weight: normal;
+      display: block;
+    }
+
+    .price-duration {
+      font-size: 12px;
+      color: #999999;
+      margin-bottom: 32px;
+    }
+
+    .features-list {
+      list-style: none;
+      margin: 0 0 40px 0;
+      padding: 0;
+      flex-grow: 1;
+    }
+
+    .features-list li {
+      font-size: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+      color: #555555;
+    }
+
+    .features-list li:last-child {
+      border-bottom: none;
+    }
+
+    .cta-button {
+      background-color: #333333;
+      color: #ffffff;
+      border: none;
+      padding: 14px 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+
+    .cta-button:hover {
+      background-color: #1a1a1a;
+      transform: translateY(-2px);
+    }
+
+    .cta-button:active {
+      transform: translateY(0);
+    }
+
+    .cta-button:focus {
+      outline: 2px solid #00d9ff;
+      outline-offset: 2px;
+    }
+
+    .pricing-card.recommended .cta-button {
+      background-color: #00d9ff;
+      color: #1a1a1a;
+    }
+
+    .pricing-card.recommended .cta-button:hover {
+      background-color: #00b8cc;
+    }
+
+    @media (max-width: 1024px) {
+      .pricing-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 60px 24px;
+      }
+
+      .pricing-title {
+        font-size: 36px;
+      }
+
+      .pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .pricing-header {
+        margin-bottom: 60px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cta-button {
+        transition: none;
+      }
+
+      .cta-button:hover {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="pricing-section">
+    <div class="pricing-header">
+      <h1 class="pricing-title">Pricing</h1>
+      <p class="pricing-subtitle">Start free. Upgrade when your team does.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- Solo Tier -->
+      <div class="pricing-card">
+        <h2 class="tier-name">Solo</h2>
+        <div class="price">
+          $0
+          <span class="price-unit">forever</span>
+        </div>
+        <div class="price-duration"></div>
+        <ul class="features-list">
+          <li>1 developer</li>
+          <li>Local test maps</li>
+          <li>Community support</li>
+        </ul>
+        <button class="cta-button">Start free</button>
+      </div>
+
+      <!-- Team Tier (Recommended) -->
+      <div class="pricing-card recommended">
+        <div class="recommended-badge">Recommended</div>
+        <h2 class="tier-name">Team</h2>
+        <div class="price">
+          $12
+          <span class="price-unit">/ user / month</span>
+        </div>
+        <div class="price-duration"></div>
+        <ul class="features-list">
+          <li>Everything in Solo</li>
+          <li>Shared team maps</li>
+          <li>CI integration</li>
+          <li>Email support</li>
+        </ul>
+        <button class="cta-button">Start 14-day trial</button>
+      </div>
+
+      <!-- Enterprise Tier -->
+      <div class="pricing-card">
+        <h2 class="tier-name">Enterprise</h2>
+        <div class="price">
+          Custom
+          <span class="price-unit">pricing</span>
+        </div>
+        <div class="price-duration"></div>
+        <ul class="features-list">
+          <li>Everything in Team</li>
+          <li>SSO / SAML</li>
+          <li>Self-hosted option</li>
+          <li>Dedicated support</li>
+        </ul>
+        <button class="cta-button">Contact sales</button>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

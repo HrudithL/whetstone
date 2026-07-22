@@ -29,21 +29,41 @@ def load_metrics() -> dict | None:
     return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
 
 
+def _scenario_dir(scenario: str) -> Path | None:
+    """Resolve ``out/<skill>/<scenario>`` (M4b groups artifacts by skill, then scenario).
+
+    Scenario slugs are globally unique across skills, so a bare scenario name still identifies one
+    directory — the skill layer is transparent to callers, keeping every helper signature below
+    unchanged. ``None`` if the scenario has not been generated yet.
+    """
+    return next((p for p in sorted(out_root().glob(f"*/{scenario}")) if p.is_dir()), None)
+
+
 def load_summary(scenario: str) -> dict | None:
-    """One scenario's ``out/<scenario>/summary.json``, or ``None`` if not generated yet."""
-    p = out_root() / scenario / "summary.json"
-    return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
+    """One scenario's ``out/<skill>/<scenario>/summary.json``, or ``None`` if not generated yet."""
+    d = _scenario_dir(scenario)
+    p = d / "summary.json" if d else None
+    return json.loads(p.read_text(encoding="utf-8")) if p and p.is_file() else None
 
 
-def scenario_names() -> list[str]:
-    """Scenario slugs that have a committed ``summary.json``, sorted."""
+def scenario_names(skill: str | None = None) -> list[str]:
+    """Scenario slugs that have a committed ``summary.json``, sorted.
+
+    Pass ``skill`` to restrict to one skill's scenarios (``out/<skill>/*/``). The current Quarto
+    site scopes itself to ``great-tables`` — its copy describes tables — while the frontend-design /
+    pptx artifacts stay committed for the (deferred) multi-skill docs.
+    """
     root = out_root()
-    return sorted(p.parent.name for p in root.glob("*/summary.json"))
+    pattern = f"{skill}/*/summary.json" if skill else "*/*/summary.json"
+    return sorted(p.parent.name for p in root.glob(pattern))
 
 
 def read_text(scenario: str, *parts: str) -> str | None:
     """Read a committed artifact file (e.g. ``read_text(name, 'warm', 'table.py')``) or ``None``."""
-    p = out_root().joinpath(scenario, *parts)
+    d = _scenario_dir(scenario)
+    if d is None:
+        return None
+    p = d.joinpath(*parts)
     return p.read_text(encoding="utf-8") if p.is_file() else None
 
 
@@ -54,20 +74,58 @@ def _scroll(inner: str) -> str:
     return f'<div style="overflow-x:auto;max-width:100%">{inner}</div>'
 
 
-def _panel_body(scenario: str, phase: str) -> str:
-    """HTML for one table panel: native ``table.html`` if present, else a base64 PNG, else the code.
+def _embed_html(native: str, is_primary: bool = False) -> str:
+    """Embed a committed HTML artifact in a panel.
 
-    PNGs are embedded as self-contained data URIs (the committed images live outside ``docs/_site``,
-    so a relative path would not resolve in the deployed site).
+    A full standalone document (a web skill's ``index.html``, with its own ``<html>`` and global CSS
+    like ``*``/``body``) is sandboxed in an ``<iframe srcdoc>`` so its styles can't leak into — or
+    reset — the surrounding docs page, and the cold/warm panels can't bleed into each other. A
+    fragment (great-tables' ``table.html``, just a ``<table>``) is inlined and scrolled.
+
+    ``is_primary`` marks the skill's own primary output (always a full document) — it is always
+    sandboxed, regardless of the doctype sniff, so a long comment/preamble before ``<html>`` can't
+    trick a full page into being inlined unsandboxed.
     """
-    native = read_text(scenario, phase, "table.html")
-    if native and native.strip():
-        return _scroll(native)
-    png = out_root() / scenario / phase / "table.png"
-    if png.is_file():
+    head = native.lstrip()[:256].lower()
+    if is_primary or head.startswith("<!doctype") or "<html" in head:
+        doc = _html.escape(native, quote=True)  # srcdoc attr value; the browser un-escapes to parse
+        # `sandbox` (empty = most restrictive): the artifact is live-model-generated, so isolate
+        # it — any <script>/inline handler is inert and gets a unique opaque origin, so it can't
+        # reach the docs page's `parent.document`. The static HTML/CSS design still renders.
+        return (
+            f'<iframe srcdoc="{doc}" sandbox title="rendered output" loading="lazy" '
+            'style="width:100%;height:520px;border:1px solid var(--bs-border-color,#ddd);'
+            'border-radius:4px;background:#fff"></iframe>'
+        )
+    return _scroll(native)
+
+
+def _panel_body(scenario: str, phase: str) -> str:
+    """HTML for one before/after panel, per the scenario's skill.
+
+    Renders, in order of preference: a self-contained HTML artifact natively (great-tables'
+    ``table.html`` or a web skill's own ``index.html`` primary output); else a rendered PNG
+    (``table.png``, embedded as a self-contained data URI since the committed images live outside
+    ``docs/_site``); else the skill's **primary output** source (``table.py`` / ``deck.py`` / ...)
+    as code. The primary artifact name comes from the committed ``summary.json`` (`output`), so a
+    non-table skill no longer falls through to a missing ``table.py`` and shows "not generated".
+    """
+    primary = (load_summary(scenario) or {}).get("output", "table.py")
+    # 1) native, self-contained HTML: a web skill's primary output, or great-tables' side table.html
+    #    (a full document is sandboxed in an iframe; a table fragment is inlined — see _embed_html).
+    html_names = ([primary] if primary.lower().endswith((".html", ".htm")) else []) + ["table.html"]
+    for name in html_names:
+        native = read_text(scenario, phase, name)
+        if native and native.strip():
+            return _embed_html(native, is_primary=(name == primary))
+    # 2) a rendered raster (great-tables)
+    d = _scenario_dir(scenario)
+    png = d / phase / "table.png" if d else None
+    if png and png.is_file():
         b64 = base64.b64encode(png.read_bytes()).decode("ascii")
-        return f'<img alt="{phase} table" style="max-width:100%" src="data:image/png;base64,{b64}">'
-    code = read_text(scenario, phase, "table.py")
+        return f'<img alt="{phase}" style="max-width:100%" src="data:image/png;base64,{b64}">'
+    # 3) the skill's primary output as code (e.g. deck.py for pptx, or table.py if HTML is missing)
+    code = read_text(scenario, phase, primary)
     if code:
         return _scroll(f"<pre><code>{_html.escape(code)}</code></pre>")
     return "<em>not generated</em>"
@@ -87,8 +145,9 @@ def learned_layer_html(scenario: str) -> str:
             "<pre style='max-height:32rem;overflow:auto;white-space:pre-wrap;"
             f"overflow-wrap:anywhere'><code>{_html.escape(injected)}</code></pre>"
         )
-    p = out_root() / scenario / "recall.json"
-    if not p.is_file():
+    d = _scenario_dir(scenario)
+    p = d / "recall.json" if d else None
+    if not (p and p.is_file()):
         return "<em>not generated</em>"
     raw = json.loads(p.read_text(encoding="utf-8"))
     if not raw.get("learnings") and not raw.get("issues"):
@@ -122,11 +181,13 @@ def triptych_html(scenario: str) -> str:
     )
 
 
-def scenarios_meta() -> list[dict]:
+def scenarios_meta(skill: str | None = None) -> list[dict]:
     """Parse the committed scenario YAMLs (``harness/scenarios/*.yaml``) for the methodology table.
 
     Reads the source of truth directly (only depends on the committed YAML), so the page shows
-    exactly what was taught and how each "honored" check is decided — no dependency on a run.
+    exactly what was taught and how each "honored" check is decided — no dependency on a run. Pass
+    ``skill`` to restrict to one skill (the current site shows ``great-tables`` only; see
+    :func:`scenario_names`).
     """
     import yaml  # committed [showcase] dep
 
@@ -134,6 +195,8 @@ def scenarios_meta() -> list[dict]:
     metas = []
     for path in sorted(root.glob("*.yaml")):
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if skill and raw.get("skill") != skill:
+            continue
         metas.append(raw)
     return metas
 

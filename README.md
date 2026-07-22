@@ -9,16 +9,43 @@ ordinary use without a benchmark, dataset, or eval harness. See
 
 ## Install
 
-Requires Python 3.11+.
+Requires Python 3.11+. The base install is light and dependency-free at retrieval time: it uses a
+small, deterministic `hashing` embedding backend (no torch, no network).
+
+```sh
+pipx install whetstone-mcp     # installs the `whetstone` command on your PATH
+# or: pip install whetstone-mcp
+# or, run without installing: uvx whetstone-mcp
+```
+
+An install (pipx/pip) puts two equivalent console scripts on your PATH — `whetstone` (primary, used
+throughout this README) and `whetstone-mcp` (same entry point, so `pipx run whetstone-mcp` /
+`uvx whetstone-mcp` resolve without the short name).
+
+Register it with an MCP host (e.g. Claude Code) — point the host at whichever you used:
+
+```sh
+# if you installed it (pipx/pip): the command is already on PATH
+claude mcp add whetstone -- whetstone
+# no install — let uv fetch & run it on demand:
+claude mcp add whetstone -- uvx whetstone-mcp
+```
+
+For higher-quality embeddings, pull in the optional extra and set
+`embedding_backend = "sentence-transformers"` in config. Match the command to how it's installed:
+
+```sh
+pipx install "whetstone-mcp[embeddings]"                 # fresh install, with the extra
+pipx inject whetstone-mcp sentence-transformers          # add to an existing pipx install
+pip install "whetstone-mcp[embeddings]"                  # pip
+```
+
+### From source (contributors)
 
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 ```
-
-The base install is light and dependency-free at retrieval time: it uses a small, deterministic
-`hashing` embedding backend (no torch, no network). For higher-quality embeddings, install the
-optional extra and set `embedding_backend = "sentence-transformers"` in config:
 
 ```sh
 .venv/bin/pip install -e '.[embeddings]'   # pulls in sentence-transformers
@@ -29,7 +56,8 @@ optional extra and set `embedding_backend = "sentence-transformers"` in config:
 Start the stdio MCP server:
 
 ```sh
-.venv/bin/whetstone
+whetstone            # PyPI install
+.venv/bin/whetstone   # from-source dev install
 ```
 
 Register it with an MCP host (e.g. Claude Code) under the server id `whetstone`, pointing the
@@ -54,7 +82,8 @@ Store compaction (retiring stale learnings, merging near-duplicate scopes) is de
 an MCP tool — it is out-of-band maintenance, run from the command line:
 
 ```sh
-.venv/bin/whetstone compact <skill>
+whetstone compact <skill>            # PyPI install
+.venv/bin/whetstone compact <skill>  # from-source dev install
 ```
 
 ## Storage & config
