@@ -92,10 +92,11 @@ _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 # scripting, and JS `//` line comments (which the block/HTML comment strippers miss) must not let
 # `// use #FF6B00` satisfy a presence check — or a scripted value defeat an absence check.
 _SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script\s*>", re.DOTALL | re.IGNORECASE)
-# JS-style `// ...` lines: invalid in HTML and CSS (a browser ignores such a line), so a token in
-# `// use #FF6B00` inside a <style> must not be scored as applied. Only whole comment-style lines
-# (first non-space is `//`) are dropped, so an inline `https://` / `url(//...)` is untouched.
-_SLASH_LINE_COMMENT_RE = re.compile(r"(?m)^[ \t]*//.*$")
+# JS-style `//...` comments: invalid in HTML and CSS (a browser ignores the rest of the line), so a
+# token in `<style>// use #FF6B00` or a trailing `border:0 // note` must not be scored as applied.
+# Strip `//` to end-of-line UNLESS it is preceded by `:` — that keeps URL schemes (`https://`) and
+# protocol-relative `//` in `://` intact while catching a `//` after `<style>`, whitespace, or `;`.
+_SLASH_COMMENT_RE = re.compile(r"(?m)(?<!:)//.*$")
 
 
 def _html_for_check(code: str) -> str:
@@ -103,7 +104,7 @@ def _html_for_check(code: str) -> str:
     code = _SCRIPT_RE.sub(" ", code)
     code = _HTML_COMMENT_RE.sub(" ", code)
     code = _BLOCK_COMMENT_RE.sub(" ", code)
-    return _SLASH_LINE_COMMENT_RE.sub(" ", code)
+    return _SLASH_COMMENT_RE.sub(" ", code)
 
 
 def code_for_check(code: str, language: str = "python") -> str:
@@ -351,18 +352,38 @@ def _artifact_ok(path: Path) -> bool:
 _EXTERNAL_REF_RE = re.compile(
     r"""(?xi)
       (?: \b src \s*=\s* ["']? (?! data: | \# ) [^\s"'>] )
-    | (?: \b srcset \s*=\s* ["']? (?! data: | \# ) [^\s"'>] )
     | (?: < link \b [^>]*? \b href \s*=\s* ["']? (?! data: | \# ) [^\s"'>] )
     | (?: \b url \( \s* ["']? (?! data: | \# ) [^\s"')] )
     | (?: @import \s+ (?: url \( \s* )? ["']? (?! data: | \# ) [^\s"');] )
     """
 )
+# `srcset` is a COMMA-separated list of "<url> [descriptor]" candidates, so a single leading `data:`
+# candidate must not vouch for a later external one. Candidate splitting on `,` is unsafe because a
+# `data:` URI itself contains a comma — instead drop the inline `data:` URLs (each is one
+# whitespace-free token) first, then anything left that is not a width/density descriptor (`1x`,
+# `2x`, `640w`) is a real url (relative or remote) → external.
+_SRCSET_RE = re.compile(r"""\bsrcset\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""", re.IGNORECASE)
+_SRCSET_DESCRIPTOR_RE = re.compile(r"^\d+(?:\.\d+)?[wx]$")
+
+
+def _srcset_external_candidates(html: str) -> bool:
+    """True if any ``srcset`` candidate url is a separate file (not an inline ``data:`` / ``#``)."""
+    for m in _SRCSET_RE.finditer(html):
+        value = m.group(1) or m.group(2) or m.group(3) or ""
+        remaining = re.sub(r"(?i)data:\S+", " ", value)  # drop inline data: URLs (they hold a comma)
+        for token in re.split(r"[,\s]+", remaining):
+            if token and not token.startswith("#") and not _SRCSET_DESCRIPTOR_RE.match(token):
+                return True  # a non-descriptor, non-data:/# token is a url
+    return False
 
 
 def _html_external_refs(html: str) -> list[str]:
     """Snippets of any fetch-on-load reference to a separate file (remote or relative) in ``html``;
     empty if the artifact is fully self-contained (only inline ``data:`` / ``#`` refs)."""
-    return [m.group(0)[:60] for m in _EXTERNAL_REF_RE.finditer(html)]
+    refs = [m.group(0)[:60] for m in _EXTERNAL_REF_RE.finditer(html)]
+    if _srcset_external_candidates(html):
+        refs.append("srcset=<external candidate>")
+    return refs
 
 
 @dataclass
