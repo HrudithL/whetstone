@@ -69,20 +69,30 @@ def _scroll(inner: str) -> str:
 
 
 def _panel_body(scenario: str, phase: str) -> str:
-    """HTML for one table panel: native ``table.html`` if present, else a base64 PNG, else the code.
+    """HTML for one before/after panel, per the scenario's skill.
 
-    PNGs are embedded as self-contained data URIs (the committed images live outside ``docs/_site``,
-    so a relative path would not resolve in the deployed site).
+    Renders, in order of preference: a self-contained HTML artifact natively (great-tables'
+    ``table.html`` or a web skill's own ``index.html`` primary output); else a rendered PNG
+    (``table.png``, embedded as a self-contained data URI since the committed images live outside
+    ``docs/_site``); else the skill's **primary output** source (``table.py`` / ``deck.py`` / ...)
+    as code. The primary artifact name comes from the committed ``summary.json`` (`output`), so a
+    non-table skill no longer falls through to a missing ``table.py`` and shows "not generated".
     """
-    native = read_text(scenario, phase, "table.html")
-    if native and native.strip():
-        return _scroll(native)
+    primary = (load_summary(scenario) or {}).get("output", "table.py")
+    # 1) native, self-contained HTML: a web skill's primary output, or great-tables' side table.html
+    html_names = ([primary] if primary.lower().endswith((".html", ".htm")) else []) + ["table.html"]
+    for name in html_names:
+        native = read_text(scenario, phase, name)
+        if native and native.strip():
+            return _scroll(native)
+    # 2) a rendered raster (great-tables)
     d = _scenario_dir(scenario)
     png = d / phase / "table.png" if d else None
     if png and png.is_file():
         b64 = base64.b64encode(png.read_bytes()).decode("ascii")
-        return f'<img alt="{phase} table" style="max-width:100%" src="data:image/png;base64,{b64}">'
-    code = read_text(scenario, phase, "table.py")
+        return f'<img alt="{phase}" style="max-width:100%" src="data:image/png;base64,{b64}">'
+    # 3) the skill's primary output as code (e.g. deck.py for pptx, or table.py if HTML is missing)
+    code = read_text(scenario, phase, primary)
     if code:
         return _scroll(f"<pre><code>{_html.escape(code)}</code></pre>")
     return "<em>not generated</em>"

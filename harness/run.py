@@ -359,6 +359,7 @@ def _scenario_summary(
     return {
         "scenario": scenario.name,
         "skill": scenario.skill,
+        "output": get_spec(scenario.skill).output,  # primary artifact filename (site reads it)
         "difficulty": scenario.difficulty,
         "generator": generator.name,
         "params": {"max_runs": max_runs, "stick_streak": stick_streak},

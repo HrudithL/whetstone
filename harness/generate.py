@@ -214,11 +214,14 @@ async def _deny_networked_bash(tool_name, tool_input, _ctx):  # noqa: ANN001 - S
 def _regex_sample(pattern: str) -> str:
     """Best-effort literal that satisfies ``pattern`` (stub-only; verified against real scenarios).
 
-    Handles the small regex vocabulary the scenarios use (``\\s*``/``\\s+`` and escaped literals);
-    the stub asserts the result actually matches, so an unsupported pattern fails loudly rather than
+    Handles the small regex vocabulary the scenarios use: a leading inline-flag group (``(?i)``),
+    ``\\s*``/``\\s+``, a single character *range* class (``[1-9]`` -> ``1``), and escaped literals.
+    The stub asserts the result actually matches, so an unsupported pattern fails loudly rather than
     silently producing a non-honoring line.
     """
-    s = pattern.replace(r"\s*", "").replace(r"\s+", " ")
+    s = re.sub(r"^\(\?[a-zA-Z]+\)", "", pattern)  # drop a leading (?i)/(?is)/... flag group
+    s = s.replace(r"\s*", "").replace(r"\s+", " ")
+    s = re.sub(r"\[([^\]^-])-[^\]]\]", r"\1", s)  # single range class -> its first char
     s = re.sub(r"\\(.)", r"\1", s)  # unescape \X -> X
     return s
 

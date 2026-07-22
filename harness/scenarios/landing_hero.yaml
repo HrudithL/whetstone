@@ -17,8 +17,9 @@ preferences:
     feedback: >
       Make the accent #FF6B00 (burnt orange), not the blue you used — for the CTA button and links.
     check:
-      kind: code_contains
-      pattern: '#FF6B00'
+      # Case-insensitive: CSS hex is case-insensitive, so `#ff6b00` must count as honoring too.
+      kind: regex
+      pattern: '(?i)#ff6b00'
   - id: hero-wide-tracking
     polarity: learning
     scope: typography

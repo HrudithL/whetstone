@@ -29,5 +29,9 @@ preferences:
     feedback: >
       Don't round the corners — every card and button must be square (border-radius: 0).
     check:
-      kind: regex
-      pattern: 'border-radius:\s*0\s*;'
+      # "Never round ANY corner" is an absence property: honored iff NO non-zero radius appears.
+      # A presence check for `border-radius: 0` would pass on a reset even beside rounded cards.
+      # `[1-9]` catches the common rounded forms (8px, 12px, 16px, 1rem, ...); `border-radius: 0`
+      # / `0px` start with 0 and are correctly NOT matched.
+      kind: regex_absent
+      pattern: 'border-radius:\s*[1-9]'
