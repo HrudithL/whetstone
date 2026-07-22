@@ -1,10 +1,12 @@
 """Scenario schema for the showcase harness (M3).
 
-A *scenario* pairs one great-tables task (borrowed from the sibling ``gtskill`` corpus) with one or
-more **subjective preferences** we want the learned layer to pick up and keep honoring. The
-preferences are deliberately arbitrary and need no justification (e.g. "negatives in parentheses,
-not a minus"); the showcase's whole job is to prove that such a preference, once corrected, is
-*tracked* and *re-applied on later runs* — not to argue it is the right choice.
+A *scenario* pairs one task for a given **skill** (``skill:`` — great-tables, frontend-design, pptx,
+...) with one or more **subjective preferences** we want the learned layer to pick up and keep
+honoring. The preferences are deliberately arbitrary and need no justification (e.g. "negatives in
+parentheses, not a minus"); the showcase's whole job is to prove that such a preference, once
+corrected, is *tracked* and *re-applied on later runs* — not to argue it is the right choice. The
+``skill`` selects a :class:`~harness.skills.SkillSpec` (output artifact, check language, generation
+prompt) and the vendored skill dir the ``--agent`` runner mounts.
 
 This module is the contract between the scenario files (``harness/scenarios/*.yaml``), the runner
 (slice 3), and the site (which only reads ``harness/out/``). It defines the dataclasses and a loader
@@ -15,7 +17,8 @@ Scenario YAML shape
 -------------------
 .. code-block:: yaml
 
-    name: sp500_monthly_performance   # unique slug; also the out/ subdir and the store skill id
+    name: sp500_monthly_performance   # unique slug; also the out/ subdir and part of the store id
+    skill: great-tables               # vendored skill (harness/skill/<skill>/); has a SkillSpec
     difficulty: hard                  # easy | medium | hard  (mirrors the gtskill corpus)
     prompt: >                         # the natural-language task, verbatim from gtskill
       Make a table of the S&P 500 data showing monthly performance ...
@@ -75,10 +78,11 @@ POLARITIES = ("learning", "issue")
 CHECK_KINDS = ("code_contains", "code_absent", "regex", "regex_absent")
 _REGEX_KINDS = ("regex", "regex_absent")
 
-# ``name`` and preference ``id`` become a filesystem path component (``out/<name>/``) and the store
-# skill id, so they must be plain slugs — no separators, no ``.``/``..``, no embedded whitespace or
-# newlines that would let one scenario write outside its directory or collide with another. Matched
-# with ``fullmatch`` (below), so a trailing newline like ``"foo\n"`` is rejected, not accepted.
+# ``name``, ``skill`` and preference ``id`` become filesystem path components
+# (``out/<skill>/<name>/``) and parts of the store id, so they must be plain slugs — no separators,
+# no ``.``/``..``, no embedded whitespace or newlines that would let one scenario write outside its
+# directory or collide with another. Matched with ``fullmatch`` (below), so a trailing newline like
+# ``"foo\n"`` is rejected.
 _SLUG_RE = re.compile(r"[a-z0-9]+(?:[_-][a-z0-9]+)*")
 
 
@@ -112,9 +116,10 @@ class Preference:
 
 @dataclass(frozen=True)
 class Scenario:
-    """A great-tables task plus the preferences the showcase drives through the learned layer."""
+    """A task for one skill plus the preferences the showcase drives through the learned layer."""
 
     name: str
+    skill: str
     difficulty: str
     prompt: str
     data: str
@@ -213,6 +218,7 @@ def parse_scenario(raw: object, source: str) -> Scenario:
     """Validate a parsed mapping into a :class:`Scenario`. Raises :class:`ScenarioError`."""
     name = _require_slug(raw, "name", source)
     where = f"{source} (scenario {name!r})"
+    skill = _require_slug(raw, "skill", where)
     difficulty = _require(raw, "difficulty", where, str)
     if difficulty not in DIFFICULTIES:
         raise ScenarioError(
@@ -234,6 +240,7 @@ def parse_scenario(raw: object, source: str) -> Scenario:
 
     return Scenario(
         name=name,
+        skill=skill,
         difficulty=difficulty,
         prompt=_require(raw, "prompt", where, str),
         data=_require_relpath(raw, "data", where),
@@ -256,9 +263,9 @@ def load_scenario(path: Path) -> Scenario:
 def load_scenarios(directory: Path) -> list[Scenario]:
     """Load every ``*.yaml`` scenario in ``directory``, sorted by name. Empty dir returns ``[]``.
 
-    Scenario ``name`` is the ``out/`` subdirectory and store skill id, so it must be unique across
-    files — two scenarios sharing a name would overwrite each other's artifacts. Raises
-    :class:`ScenarioError` on a collision.
+    Scenario ``name`` is the ``out/<skill>/`` subdirectory and part of the store id, and must be
+    unique across ALL files (independent of skill) — two scenarios sharing a name would collide in
+    the flat metric/summary keying downstream. Raises :class:`ScenarioError` on a collision.
     """
     scenarios: list[Scenario] = []
     by_name: dict[str, Path] = {}

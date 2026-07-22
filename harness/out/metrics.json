@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-21T03:57:13.320464+00:00",
+  "generated_at": "2026-07-22T07:16:22.675666+00:00",
   "scenarios": {
     "airquality_monthly_summary": {
       "scenario": "airquality_monthly_summary",
@@ -80,7 +80,8 @@
           "value": null,
           "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
         }
-      }
+      },
+      "skill": "great-tables"
     },
     "gtcars_hp_price": {
       "scenario": "gtcars_hp_price",
@@ -160,7 +161,8 @@
           "value": null,
           "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
         }
-      }
+      },
+      "skill": "great-tables"
     },
     "gtcars_top10_by_country": {
       "scenario": "gtcars_top10_by_country",
@@ -240,7 +242,8 @@
           "value": null,
           "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
         }
-      }
+      },
+      "skill": "great-tables"
     },
     "islands_sizes": {
       "scenario": "islands_sizes",
@@ -320,7 +323,8 @@
           "value": null,
           "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
         }
-      }
+      },
+      "skill": "great-tables"
     },
     "sp500_monthly_performance": {
       "scenario": "sp500_monthly_performance",
@@ -400,7 +404,8 @@
           "value": null,
           "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
         }
-      }
+      },
+      "skill": "great-tables"
     },
     "towny_growth_trends": {
       "scenario": "towny_growth_trends",
@@ -480,7 +485,19 @@
           "value": null,
           "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
         }
-      }
+      },
+      "skill": "great-tables"
+    }
+  },
+  "skills": {
+    "great-tables": {
+      "scenarios": 6,
+      "preferences_total": 12,
+      "preferences_wrong_in_cold": 8,
+      "preferences_stuck": 12,
+      "stuck_rate": 1.0,
+      "corrected_and_stuck": 8,
+      "median_runs_to_stick": 2.0
     }
   },
   "aggregate": {

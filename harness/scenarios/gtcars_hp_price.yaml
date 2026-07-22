@@ -1,4 +1,5 @@
 name: gtcars_hp_price
+skill: great-tables
 difficulty: easy
 prompt: >
   Give me a clean table of the GT cars listing each car's model, horsepower, and price.

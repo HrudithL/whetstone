@@ -1,4 +1,5 @@
 name: gtcars_top10_by_country
+skill: great-tables
 difficulty: medium
 prompt: >
   Build a table of the 10 most expensive GT cars, grouped by their country of origin, and include

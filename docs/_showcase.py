@@ -29,21 +29,35 @@ def load_metrics() -> dict | None:
     return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
 
 
+def _scenario_dir(scenario: str) -> Path | None:
+    """Resolve ``out/<skill>/<scenario>`` (M4b groups artifacts by skill, then scenario).
+
+    Scenario slugs are globally unique across skills, so a bare scenario name still identifies one
+    directory — the skill layer is transparent to callers, keeping every helper signature below
+    unchanged. ``None`` if the scenario has not been generated yet.
+    """
+    return next((p for p in sorted(out_root().glob(f"*/{scenario}")) if p.is_dir()), None)
+
+
 def load_summary(scenario: str) -> dict | None:
-    """One scenario's ``out/<scenario>/summary.json``, or ``None`` if not generated yet."""
-    p = out_root() / scenario / "summary.json"
-    return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
+    """One scenario's ``out/<skill>/<scenario>/summary.json``, or ``None`` if not generated yet."""
+    d = _scenario_dir(scenario)
+    p = d / "summary.json" if d else None
+    return json.loads(p.read_text(encoding="utf-8")) if p and p.is_file() else None
 
 
 def scenario_names() -> list[str]:
     """Scenario slugs that have a committed ``summary.json``, sorted."""
     root = out_root()
-    return sorted(p.parent.name for p in root.glob("*/summary.json"))
+    return sorted(p.parent.name for p in root.glob("*/*/summary.json"))
 
 
 def read_text(scenario: str, *parts: str) -> str | None:
     """Read a committed artifact file (e.g. ``read_text(name, 'warm', 'table.py')``) or ``None``."""
-    p = out_root().joinpath(scenario, *parts)
+    d = _scenario_dir(scenario)
+    if d is None:
+        return None
+    p = d.joinpath(*parts)
     return p.read_text(encoding="utf-8") if p.is_file() else None
 
 
@@ -63,8 +77,9 @@ def _panel_body(scenario: str, phase: str) -> str:
     native = read_text(scenario, phase, "table.html")
     if native and native.strip():
         return _scroll(native)
-    png = out_root() / scenario / phase / "table.png"
-    if png.is_file():
+    d = _scenario_dir(scenario)
+    png = d / phase / "table.png" if d else None
+    if png and png.is_file():
         b64 = base64.b64encode(png.read_bytes()).decode("ascii")
         return f'<img alt="{phase} table" style="max-width:100%" src="data:image/png;base64,{b64}">'
     code = read_text(scenario, phase, "table.py")
@@ -87,8 +102,9 @@ def learned_layer_html(scenario: str) -> str:
             "<pre style='max-height:32rem;overflow:auto;white-space:pre-wrap;"
             f"overflow-wrap:anywhere'><code>{_html.escape(injected)}</code></pre>"
         )
-    p = out_root() / scenario / "recall.json"
-    if not p.is_file():
+    d = _scenario_dir(scenario)
+    p = d / "recall.json" if d else None
+    if not (p and p.is_file()):
         return "<em>not generated</em>"
     raw = json.loads(p.read_text(encoding="utf-8"))
     if not raw.get("learnings") and not raw.get("issues"):

@@ -1,4 +1,5 @@
 name: sp500_monthly_performance
+skill: great-tables
 difficulty: hard
 prompt: >
   Make a table of the S&P 500 data showing a monthly performance summary for 2010 through 2015 — each

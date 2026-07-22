@@ -24,20 +24,23 @@ table is subjectively prettier than another.
 
 ## How it works
 
-Each scenario pairs a great-tables task (from the sibling `gtskill` corpus) with one or more
-arbitrary subjective preferences (see [`schema.py`](schema.py)). Per scenario the runner (slice 3):
+Each scenario pairs a task for one **skill** (`skill:` — great-tables, frontend-design, pptx, ...)
+with one or more arbitrary subjective preferences (see [`schema.py`](schema.py) and
+[`skills.py`](skills.py)). Per scenario the runner:
 
-1. **COLD** — generates a table with an **empty** Whetstone store (the preference is typically not
-   honored).
+1. **COLD** — generates the skill's output with an **empty** Whetstone store (the preference is
+   typically not honored).
 2. **Seed** — replays the scenario's scripted feedback through Whetstone's `capture`/`revise` tools,
    turning the preference into a tracked learning/issue (committed to the store, logged to
    `events.jsonl`).
 3. **WARM** — regenerates with the `recall()` payload injected, and iterates to measure
    runs-to-stick; reads the weight trajectory for value-over-time.
 
-Table generation adapts `gtskill`'s Claude-Agent-SDK path (CSV + prompt + great-tables skill →
-`table.py`/`table.png`), so a run drives a live model and needs `ANTHROPIC_API_KEY` — which is
-exactly why it is command-only and its outputs are committed.
+Generation drives a live model via the Claude Agent SDK with the scenario's skill mounted (adapted
+from `gtskill`'s SDK path); each skill's primary artifact, generation prompt, and check language come
+from its `SkillSpec` in [`skills.py`](skills.py) (great-tables → `table.py`/`table.png`,
+frontend-design → `index.html`, pptx → `deck.py`/`deck.pptx`). A run needs `ANTHROPIC_API_KEY` —
+which is exactly why it is command-only and its outputs are committed.
 
 ## Environment (pinned)
 
@@ -62,7 +65,8 @@ python -m harness.run --agent --scenario sp500_monthly_performance   # one scena
 ```
 
 A mode (`--agent` or `--stub`) is **required** — a bare `python -m harness.run` refuses to run, since
-each run clears `out/<scenario>/` first and an accidental stub run would overwrite the real artifacts.
+each run clears `out/<skill>/<scenario>/` first and an accidental stub run would overwrite the real
+artifacts. (`--stub` routes its output + store to throwaway temp dirs, so it never touches `out/`.)
 
 **Prerequisites for a real run** (beyond the pip extras):
 
@@ -78,7 +82,12 @@ each run clears `out/<scenario>/` first and an accidental stub run would overwri
 harness/
   config.py         pinned showcase environment (ST backend, isolated store, autonomous)
   schema.py         scenario dataclasses + validating loader; the harness<->site contract
-  scenarios/        one *.yaml per scenario (authored in slice 2)
-  out/              generated, committed artifacts the site reads (populated in slices 3-4)
-  run.py            cold/warm runner (slice 3)
+  skills.py         per-skill SkillSpec registry (primary artifact, check language, prompt)
+  skill/<name>/     one vendored Claude skill per dir, mounted by the --agent runner
+  scenarios/        one *.yaml per scenario (each names its `skill:`)
+  data/             input files scenarios reference (CSVs, design briefs)
+  generate.py       stub + live Agent-SDK generators (both skill-driven)
+  out/<skill>/<scenario>/   generated, committed artifacts the site reads
+  run.py            cold/seed/warm runner
+  metrics.py        aggregates out/**/summary.json -> out/metrics.json (per-skill + overall)
 ```
