@@ -370,7 +370,8 @@ def _srcset_external_candidates(html: str) -> bool:
     """True if any ``srcset`` candidate url is a separate file (not an inline ``data:`` / ``#``)."""
     for m in _SRCSET_RE.finditer(html):
         value = m.group(1) or m.group(2) or m.group(3) or ""
-        remaining = re.sub(r"(?i)data:\S+", " ", value)  # drop inline data: URLs (they hold a comma)
+        # drop inline data: URLs first (each holds a comma that breaks candidate splitting)
+        remaining = re.sub(r"(?i)data:\S+", " ", value)
         for token in re.split(r"[,\s]+", remaining):
             if token and not token.startswith("#") and not _SRCSET_DESCRIPTOR_RE.match(token):
                 return True  # a non-descriptor, non-data:/# token is a url
