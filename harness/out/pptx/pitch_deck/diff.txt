@@ -1,339 +1,253 @@
 --- cold/table.py
 +++ warm/table.py
-@@ -1,3 +1,9 @@
-+#!/usr/bin/env python3
-+"""
-+Marrow pitch deck generator using python-pptx.
-+Creates a 5-slide presentation with consistent design and formatting.
-+"""
-+
- from pptx import Presentation
- from pptx.util import Inches, Pt
+@@ -3,116 +3,173 @@
  from pptx.enum.text import PP_ALIGN
-@@ -8,184 +14,164 @@
+ from pptx.dml.color import RGBColor
+ 
+-# Create presentation
++# Create presentation with 1:1 square format (10" x 10")
+ prs = Presentation()
  prs.slide_width = Inches(10)
- prs.slide_height = Inches(7.5)
+-prs.slide_height = Inches(7.5)
++prs.slide_height = Inches(10)
  
 -# Define color palette
 -BG_COLOR = RGBColor(255, 255, 255)  # White
--TEXT_COLOR = RGBColor(40, 40, 40)  # Dark gray
--ACCENT_COLOR = RGBColor(0, 120, 150)  # Teal
--SUBTITLE_COLOR = RGBColor(100, 100, 100)  # Medium gray
+-TEXT_COLOR = RGBColor(30, 30, 30)   # Dark gray/black
+-ACCENT_COLOR = RGBColor(0, 150, 136)  # Teal accent
 +# Define colors
-+DARK_BLUE = RGBColor(25, 55, 95)
-+LIGHT_GRAY = RGBColor(240, 240, 245)
-+WHITE = RGBColor(255, 255, 255)
++DARK_BG = RGBColor(20, 20, 30)
 +ACCENT_BLUE = RGBColor(66, 135, 245)
++TEXT_WHITE = RGBColor(255, 255, 255)
++TEXT_LIGHT_GRAY = RGBColor(220, 220, 220)
+ 
+-def set_slide_background(slide, color):
+-    """Set slide background color"""
++def add_slide_with_bg():
++    """Create a blank slide with dark background."""
++    blank_layout = prs.slide_layouts[6]  # Blank layout
++    slide = prs.slides.add_slide(blank_layout)
 +
-+def apply_consolas_to_run(run, font_size=14, bold=False, color=DARK_BLUE):
-+    """Apply Consolas font and formatting to a text run."""
-+    run.font.name = "Consolas"
-+    run.font.size = Pt(font_size)
-+    run.font.bold = bold
-+    run.font.color.rgb = color
-+
-+
-+def create_slide_with_title_and_content(prs, title_text, content_text=None, subtitle=None):
-+    """Helper function to create a standard slide layout."""
-+    blank_slide_layout = prs.slide_layouts[6]  # Blank layout
-+    slide = prs.slides.add_slide(blank_slide_layout)
-+
-+    # Add background
-+    background = slide.background
-+    fill = background.fill
-+    fill.solid()
-+    fill.fore_color.rgb = WHITE
-+
-+    # Add title
-+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(9), Inches(1))
-+    title_frame = title_box.text_frame
-+    title_frame.word_wrap = True
-+    title_p = title_frame.paragraphs[0]
-+    title_p.text = title_text
-+    title_p.alignment = PP_ALIGN.RIGHT
-+    apply_consolas_to_run(title_p.runs[0], font_size=44, bold=True, color=DARK_BLUE)
-+
-+    # Add subtitle if provided
-+    if subtitle:
-+        subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.6), Inches(9), Inches(1))
-+        subtitle_frame = subtitle_box.text_frame
-+        subtitle_frame.word_wrap = True
-+        subtitle_p = subtitle_frame.paragraphs[0]
-+        subtitle_p.text = subtitle
-+        subtitle_p.alignment = PP_ALIGN.RIGHT
-+        apply_consolas_to_run(subtitle_p.runs[0], font_size=24, color=ACCENT_BLUE)
-+
-+        content_y = 3.0
-+    else:
-+        content_y = 2.0
-+
-+    # Add content if provided
-+    if content_text:
-+        content_box = slide.shapes.add_textbox(Inches(0.8), Inches(content_y), Inches(8.4), Inches(4.5))
-+        content_frame = content_box.text_frame
-+        content_frame.word_wrap = True
-+
-+        # Handle content as list of bullet points or paragraphs
-+        if isinstance(content_text, list):
-+            for i, text in enumerate(content_text):
-+                if i == 0:
-+                    p = content_frame.paragraphs[0]
-+                else:
-+                    p = content_frame.add_paragraph()
-+                p.text = text
-+                p.level = 0
-+                for run in p.runs:
-+                    apply_consolas_to_run(run, font_size=18, color=DARK_BLUE)
-+        else:
-+            p = content_frame.paragraphs[0]
-+            p.text = content_text
-+            for run in p.runs:
-+                apply_consolas_to_run(run, font_size=18, color=DARK_BLUE)
-+
++    # Add dark background
+     background = slide.background
+     fill = background.fill
+     fill.solid()
+-    fill.fore_color.rgb = color
++    fill.fore_color.rgb = DARK_BG
+ 
+-def add_title_slide(prs, title, subtitle):
+-    """Create a title slide"""
+-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+-    set_slide_background(slide, BG_COLOR)
 +    return slide
 +
++def set_text_font(text_frame, font_name="Consolas", size=Pt(24), color=TEXT_WHITE):
++    """Set font properties for all runs in a text frame."""
++    for paragraph in text_frame.paragraphs:
++        for run in paragraph.runs:
++            run.font.name = font_name
++            run.font.size = size
++            run.font.color.rgb = color
++
++def add_title_subtitle_slide(title_text, subtitle_text):
++    """Add a slide with title and subtitle."""
++    slide = add_slide_with_bg()
  
- # Slide 1: Title Slide
--slide1 = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
--background = slide1.background
--fill = background.fill
--fill.solid()
--fill.fore_color.rgb = BG_COLOR
--
--# Add title
--title_box = slide1.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(9), Inches(1.5))
--title_frame = title_box.text_frame
--title_frame.text = "Marrow"
--title_para = title_frame.paragraphs[0]
--title_para.alignment = PP_ALIGN.CENTER
--title_para.font.name = "Calibri"
--title_para.font.size = Pt(88)
--title_para.font.color.rgb = ACCENT_COLOR
--title_para.font.bold = True
--
--# Add subtitle
--subtitle_box = slide1.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(9), Inches(1.5))
--subtitle_frame = subtitle_box.text_frame
--subtitle_frame.word_wrap = True
--subtitle_frame.text = "Know what your tests actually cover."
--subtitle_para = subtitle_frame.paragraphs[0]
--subtitle_para.alignment = PP_ALIGN.CENTER
--subtitle_para.font.name = "Calibri"
--subtitle_para.font.size = Pt(32)
--subtitle_para.font.color.rgb = SUBTITLE_COLOR
-+slide1 = create_slide_with_title_and_content(
-+    prs,
-+    title_text="Marrow",
-+    subtitle="Know what your tests actually cover."
-+)
+     # Add title
+-    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(9), Inches(1.5))
++    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.5), Inches(9), Inches(1.5))
+     title_frame = title_box.text_frame
+     title_frame.word_wrap = True
+-    title_p = title_frame.paragraphs[0]
+-    title_p.text = title
+-    title_p.font.size = Pt(72)
+-    title_p.font.bold = True
+-    title_p.font.color.rgb = ACCENT_COLOR
+-    title_p.alignment = PP_ALIGN.CENTER
+-    title_p.font.name = "Calibri"
++    p = title_frame.paragraphs[0]
++    p.text = title_text
++    p.alignment = PP_ALIGN.CENTER
++    p.font.name = "Consolas"
++    p.font.size = Pt(54)
++    p.font.bold = True
++    p.font.color.rgb = ACCENT_BLUE
+ 
+     # Add subtitle
+-    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(9), Inches(1))
++    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.2), Inches(9), Inches(2))
+     subtitle_frame = subtitle_box.text_frame
+     subtitle_frame.word_wrap = True
+-    subtitle_p = subtitle_frame.paragraphs[0]
+-    subtitle_p.text = subtitle
+-    subtitle_p.font.size = Pt(32)
+-    subtitle_p.font.color.rgb = TEXT_COLOR
+-    subtitle_p.alignment = PP_ALIGN.CENTER
+-    subtitle_p.font.name = "Calibri"
++    p = subtitle_frame.paragraphs[0]
++    p.text = subtitle_text
++    p.alignment = PP_ALIGN.CENTER
++    p.font.name = "Consolas"
++    p.font.size = Pt(28)
++    p.font.color.rgb = TEXT_LIGHT_GRAY
+ 
+-def add_content_slide(prs, title, content_lines):
+-    """Create a content slide with title and bullet points"""
+-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+-    set_slide_background(slide, BG_COLOR)
++    return slide
++
++def add_content_slide(title_text, body_text):
++    """Add a slide with title and body text."""
++    slide = add_slide_with_bg()
+ 
+     # Add title
+-    title_box = slide.shapes.add_textbox(Inches(0.75), Inches(0.5), Inches(8.5), Inches(1))
++    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.8), Inches(9), Inches(1))
+     title_frame = title_box.text_frame
+     title_frame.word_wrap = True
+-    title_p = title_frame.paragraphs[0]
+-    title_p.text = title
+-    title_p.font.size = Pt(54)
+-    title_p.font.bold = True
+-    title_p.font.color.rgb = ACCENT_COLOR
+-    title_p.font.name = "Calibri"
++    p = title_frame.paragraphs[0]
++    p.text = title_text
++    p.font.name = "Consolas"
++    p.font.size = Pt(40)
++    p.font.bold = True
++    p.font.color.rgb = ACCENT_BLUE
+ 
+-    # Add content
+-    content_box = slide.shapes.add_textbox(Inches(1.5), Inches(1.8), Inches(8), Inches(5))
+-    text_frame = content_box.text_frame
+-    text_frame.word_wrap = True
++    # Add accent line
++    line = slide.shapes.add_shape(1, Inches(0.5), Inches(2), Inches(2), Inches(0))
++    line.line.color.rgb = ACCENT_BLUE
++    line.line.width = Pt(2)
+ 
+-    for i, line in enumerate(content_lines):
+-        if i == 0:
+-            p = text_frame.paragraphs[0]
++    # Add body text
++    body_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.5), Inches(8.4), Inches(6.5))
++    body_frame = body_box.text_frame
++    body_frame.word_wrap = True
++
++    for line_text in body_text:
++        if body_frame.text:
++            p = body_frame.add_paragraph()
+         else:
+-            p = text_frame.add_paragraph()
++            p = body_frame.paragraphs[0]
+ 
+-        p.text = line
+-        p.font.size = Pt(28)
+-        p.font.color.rgb = TEXT_COLOR
+-        p.font.name = "Calibri"
+-        p.space_before = Pt(12)
+-        p.space_after = Pt(12)
+-        p.level = 0
++        p.text = line_text
++        p.font.name = "Consolas"
++        p.font.size = Pt(20)
++        p.font.color.rgb = TEXT_LIGHT_GRAY
++        p.space_before = Pt(6)
++        p.space_after = Pt(6)
++
++    return slide
+ 
+ # Slide 1: Title
+-add_title_slide(prs, "Marrow", "Know what your tests actually cover.")
++add_title_subtitle_slide("Marrow", "Know what your tests actually cover.")
  
  # Slide 2: The Problem
--slide2 = prs.slides.add_slide(prs.slide_layouts[6])
--background = slide2.background
--fill = background.fill
--fill.solid()
--fill.fore_color.rgb = BG_COLOR
--
--# Title
--title_box2 = slide2.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(9), Inches(1))
--title_frame2 = title_box2.text_frame
--title_frame2.text = "Big test suites hide their gaps."
--title_para2 = title_frame2.paragraphs[0]
--title_para2.font.name = "Calibri"
--title_para2.font.size = Pt(54)
--title_para2.font.color.rgb = TEXT_COLOR
--title_para2.font.bold = True
--
--# Body
--body_box2 = slide2.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(4.5))
--body_frame2 = body_box2.text_frame
--body_frame2.word_wrap = True
--body_text2 = """Large test suites are slow and hard to navigate.
--
--Nobody knows which tests cover which code.
--
--Dead tests linger. Real gaps go unnoticed."""
--body_frame2.text = body_text2
--for para in body_frame2.paragraphs:
--    para.font.name = "Calibri"
--    para.font.size = Pt(28)
--    para.font.color.rgb = TEXT_COLOR
--    para.space_before = Pt(12)
--    para.space_after = Pt(12)
-+slide2 = create_slide_with_title_and_content(
-+    prs,
-+    title_text="The Problem",
-+    content_text=[
-+        "• Big test suites hide their gaps",
-+        "",
-+        "• Large suites are slow and nobody knows",
-+        "  which tests cover which code",
-+        "",
-+        "• Dead tests linger and real gaps",
-+        "  go unnoticed"
-+    ]
-+)
+-add_content_slide(prs, "Big test suites hide their gaps.", [
+-    "Large suites are slow and opaque",
+-    "Nobody knows which tests cover which code",
+-    "Dead tests linger, real gaps go unnoticed"
+-])
++problem_text = [
++    "Big test suites hide their gaps.",
++    "",
++    "Large suites are slow and nobody knows which tests cover which code, so dead tests linger and real gaps go unnoticed."
++]
++add_content_slide("The Problem", problem_text)
  
  # Slide 3: The Idea
--slide3 = prs.slides.add_slide(prs.slide_layouts[6])
--background = slide3.background
--fill = background.fill
--fill.solid()
--fill.fore_color.rgb = BG_COLOR
--
--# Title
--title_box3 = slide3.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(9), Inches(1))
--title_frame3 = title_box3.text_frame
--title_frame3.text = "Watch one run. Draw the real map."
--title_para3 = title_frame3.paragraphs[0]
--title_para3.font.name = "Calibri"
--title_para3.font.size = Pt(54)
--title_para3.font.color.rgb = TEXT_COLOR
--title_para3.font.bold = True
--
--# Body
--body_box3 = slide3.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(4.5))
--body_frame3 = body_box3.text_frame
--body_frame3.word_wrap = True
--body_text3 = """Marrow instruments a single test run.
--
--Produces a test → code coverage map.
--
--No annotations. No config."""
--body_frame3.text = body_text3
--for para in body_frame3.paragraphs:
--    para.font.name = "Calibri"
--    para.font.size = Pt(28)
--    para.font.color.rgb = TEXT_COLOR
--    para.space_before = Pt(12)
--    para.space_after = Pt(12)
-+slide3 = create_slide_with_title_and_content(
-+    prs,
-+    title_text="The Idea",
-+    content_text=[
-+        "Watch one run. Draw the real map.",
-+        "",
-+        "• Marrow instruments a single test run",
-+        "",
-+        "• Produces a test→code coverage map",
-+        "",
-+        "• No annotations, no config needed"
-+    ]
-+)
+-add_content_slide(prs, "Watch one run. Draw the real map.", [
+-    "Instruments a single test run",
+-    "Produces a test→code coverage map",
+-    "No annotations, no config"
+-])
++idea_text = [
++    "Watch one run. Draw the real map.",
++    "",
++    "Marrow instruments a single test run and produces a test→code coverage map — no annotations, no config."
++]
++add_content_slide("The Idea", idea_text)
  
- # Slide 4: How It Works
--slide4 = prs.slides.add_slide(prs.slide_layouts[6])
--background = slide4.background
--fill = background.fill
--fill.solid()
--fill.fore_color.rgb = BG_COLOR
--
--# Title
--title_box4 = slide4.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(9), Inches(0.8))
--title_frame4 = title_box4.text_frame
--title_frame4.text = "How it works"
--title_para4 = title_frame4.paragraphs[0]
--title_para4.font.name = "Calibri"
--title_para4.font.size = Pt(54)
--title_para4.font.color.rgb = TEXT_COLOR
--title_para4.font.bold = True
--
--# Body with three steps
--body_box4 = slide4.shapes.add_textbox(Inches(1), Inches(1.6), Inches(8), Inches(5))
--body_frame4 = body_box4.text_frame
--body_frame4.word_wrap = True
--body_text4 = """1. Run: marrow watch -- <your test cmd>
--
--2. Marrow records which lines each test exercised
--
--3. Emits an interactive map, lists dead tests
--   and untested lines"""
--body_frame4.text = body_text4
--for para in body_frame4.paragraphs:
--    para.font.name = "Calibri"
--    para.font.size = Pt(24)
--    para.font.color.rgb = TEXT_COLOR
--    para.space_before = Pt(10)
--    para.space_after = Pt(10)
-+slide4 = create_slide_with_title_and_content(
-+    prs,
-+    title_text="How It Works",
-+    content_text=[
-+        "1. Run: marrow watch -- <your test cmd>",
-+        "",
-+        "2. Marrow records which lines each test",
-+        "   exercised",
-+        "",
-+        "3. Emits interactive map + dead tests +",
-+        "   untested lines"
-+    ]
-+)
+-# Slide 4: How it Works
+-add_content_slide(prs, "How it works", [
+-    "Run: marrow watch -- <your test cmd>",
+-    "Records which lines each test exercised",
+-    "Emits interactive map + dead tests + untested lines"
+-])
++# Slide 4: How It Works
++howto_text = [
++    "1. Run: marrow watch -- <your test cmd>",
++    "",
++    "2. Marrow records which lines each test exercised",
++    "",
++    "3. Emits interactive map + list of dead tests and untested lines"
++]
++add_content_slide("How It Works", howto_text)
  
  # Slide 5: Call to Action
--slide5 = prs.slides.add_slide(prs.slide_layouts[6])
-+blank_slide_layout = prs.slide_layouts[6]
-+slide5 = prs.slides.add_slide(blank_slide_layout)
- background = slide5.background
- fill = background.fill
- fill.solid()
--fill.fore_color.rgb = BG_COLOR
-+fill.fore_color.rgb = DARK_BLUE
+-add_content_slide(prs, "Install Marrow", [
+-    "pipx install marrow",
+-    "Works with pytest, Jest, go test"
+-])
++slide = add_slide_with_bg()
++
++# Add main heading
++cta_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(9), Inches(1.5))
++cta_frame = cta_box.text_frame
++cta_frame.word_wrap = True
++p = cta_frame.paragraphs[0]
++p.text = "Install Marrow"
++p.alignment = PP_ALIGN.CENTER
++p.font.name = "Consolas"
++p.font.size = Pt(48)
++p.font.bold = True
++p.font.color.rgb = ACCENT_BLUE
++
++# Add install command
++cmd_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(9), Inches(1))
++cmd_frame = cmd_box.text_frame
++cmd_frame.word_wrap = True
++p = cmd_frame.paragraphs[0]
++p.text = "pipx install marrow"
++p.alignment = PP_ALIGN.CENTER
++p.font.name = "Consolas"
++p.font.size = Pt(32)
++p.font.color.rgb = ACCENT_BLUE
++
++# Add supported frameworks
++support_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.8), Inches(9), Inches(2))
++support_frame = support_box.text_frame
++support_frame.word_wrap = True
++p = support_frame.paragraphs[0]
++p.text = "Works with pytest, Jest, go test."
++p.alignment = PP_ALIGN.CENTER
++p.font.name = "Consolas"
++p.font.size = Pt(24)
++p.font.color.rgb = TEXT_LIGHT_GRAY
  
--# Title
--title_box5 = slide5.shapes.add_textbox(Inches(0.5), Inches(1), Inches(9), Inches(1.2))
--title_frame5 = title_box5.text_frame
--title_frame5.text = "Install Marrow"
--title_para5 = title_frame5.paragraphs[0]
--title_para5.alignment = PP_ALIGN.CENTER
--title_para5.font.name = "Calibri"
--title_para5.font.size = Pt(54)
--title_para5.font.color.rgb = TEXT_COLOR
--title_para5.font.bold = True
-+# Title on CTA slide
-+cta_title = slide5.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(9), Inches(1))
-+cta_title_frame = cta_title.text_frame
-+cta_title_p = cta_title_frame.paragraphs[0]
-+cta_title_p.text = "Install Marrow"
-+cta_title_p.alignment = PP_ALIGN.CENTER
-+apply_consolas_to_run(cta_title_p.runs[0], font_size=48, bold=True, color=WHITE)
- 
- # Command
--cmd_box = slide5.shapes.add_textbox(Inches(1), Inches(2.8), Inches(8), Inches(1.2))
--cmd_frame = cmd_box.text_frame
--cmd_frame.text = "pipx install marrow"
--cmd_para = cmd_frame.paragraphs[0]
--cmd_para.alignment = PP_ALIGN.CENTER
--cmd_para.font.name = "Courier New"
--cmd_para.font.size = Pt(36)
--cmd_para.font.color.rgb = ACCENT_COLOR
--cmd_para.font.bold = True
-+cta_cmd = slide5.shapes.add_textbox(Inches(0.5), Inches(3.0), Inches(9), Inches(1))
-+cta_cmd_frame = cta_cmd.text_frame
-+cta_cmd_p = cta_cmd_frame.paragraphs[0]
-+cta_cmd_p.text = "pipx install marrow"
-+cta_cmd_p.alignment = PP_ALIGN.CENTER
-+apply_consolas_to_run(cta_cmd_p.runs[0], font_size=32, color=ACCENT_BLUE)
- 
--# Supported frameworks
--support_box = slide5.shapes.add_textbox(Inches(1), Inches(4.5), Inches(8), Inches(2))
--support_frame = support_box.text_frame
--support_frame.word_wrap = True
--support_frame.text = "Works with pytest, Jest, go test."
--support_para = support_frame.paragraphs[0]
--support_para.alignment = PP_ALIGN.CENTER
--support_para.font.name = "Calibri"
--support_para.font.size = Pt(28)
--support_para.font.color.rgb = SUBTITLE_COLOR
-+# Compatibility
-+cta_compat = slide5.shapes.add_textbox(Inches(0.5), Inches(4.5), Inches(9), Inches(1.5))
-+cta_compat_frame = cta_compat.text_frame
-+cta_compat_p = cta_compat_frame.paragraphs[0]
-+cta_compat_p.text = "Works with pytest, Jest, go test."
-+cta_compat_p.alignment = PP_ALIGN.CENTER
-+apply_consolas_to_run(cta_compat_p.runs[0], font_size=24, color=WHITE)
- 
- # Save presentation
+ # Save the presentation
 -prs.save("deck.pptx")
--print("✓ Deck created: deck.pptx")
+-print("Deck saved to deck.pptx")
 +prs.save('deck.pptx')
-+print("✓ deck.pptx created successfully!")
++print("✓ deck.pptx created successfully")

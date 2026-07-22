@@ -2,7 +2,7 @@
   "learnings": [
     {
       "id": "L1",
-      "rule": "Use the burnt-orange hex `#FF6B00` as the single accent color \u2014 the primary CTA button background and any links. Do not introduce other accent hues.",
+      "rule": "Use the burnt-orange hex `#FF6B00` as the accent color for the primary CTA button background and for links.",
       "scope": "color palette",
       "recurrence": 2,
       "weight": 0.6667

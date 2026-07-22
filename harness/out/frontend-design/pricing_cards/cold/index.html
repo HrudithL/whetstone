@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marrow — Pricing</title>
+  <title>Marrow Pricing</title>
   <style>
     * {
       margin: 0;
@@ -11,246 +11,272 @@
       box-sizing: border-box;
     }
 
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: #fafafa;
+      color: #1a1a1a;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-      background: #ffffff;
-      color: #1a1a1a;
-      line-height: 1.6;
+      padding: 60px 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .pricing-container {
+    .pricing-section {
       max-width: 1200px;
-      margin: 0 auto;
-      padding: 80px 24px;
+      width: 100%;
     }
 
-    .section-header {
+    .pricing-header {
       text-align: center;
-      margin-bottom: 64px;
+      margin-bottom: 60px;
     }
 
-    .section-header h1 {
-      font-size: 48px;
+    .pricing-header h1 {
+      font-size: 42px;
       font-weight: 700;
-      letter-spacing: -1px;
-      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
       color: #1a1a1a;
     }
 
-    .section-header p {
+    .pricing-header p {
       font-size: 18px;
-      color: #6b7280;
-      max-width: 500px;
-      margin: 0 auto;
+      color: #666;
+      font-weight: 400;
+      line-height: 1.5;
     }
 
-    .cards-grid {
+    .pricing-cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 24px;
-      align-items: stretch;
+      justify-items: center;
     }
 
-    .pricing-card {
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 32px;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      transition: all 0.3s ease;
-    }
-
-    .pricing-card:hover {
-      border-color: #d1d5db;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .pricing-card {
-        transition: none;
+    @media (min-width: 768px) {
+      .pricing-cards {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
       }
     }
 
-    /* Team card elevation */
-    .pricing-card.featured {
-      transform: translateY(-12px);
-      box-shadow: 0 20px 40px rgba(6, 182, 212, 0.15);
-      border: 2px solid #06b6d4;
-      background: linear-gradient(135deg, #ffffff 0%, #f0f9fc 100%);
+    .pricing-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 40px 32px;
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.2s ease;
     }
 
-    .pricing-card.featured:hover {
-      box-shadow: 0 24px 48px rgba(6, 182, 212, 0.2);
-      border-color: #0891b2;
+    .pricing-card:hover {
+      border-color: #ccc;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
 
-    .tier-badge {
+    .pricing-card.recommended {
+      border-color: #00a878;
+      background: linear-gradient(135deg, #fafafa 0%, white 100%);
+      box-shadow: 0 12px 32px rgba(0, 168, 120, 0.12);
+      transform: translateY(-8px);
+    }
+
+    .pricing-card.recommended:hover {
+      box-shadow: 0 16px 40px rgba(0, 168, 120, 0.16);
+    }
+
+    .recommended-badge {
       position: absolute;
       top: -12px;
-      left: 32px;
-      background: #06b6d4;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #00a878;
       color: white;
       padding: 4px 12px;
-      border-radius: 20px;
+      border-radius: 12px;
       font-size: 12px;
       font-weight: 600;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      z-index: 10;
     }
 
     .tier-name {
       font-size: 20px;
       font-weight: 700;
-      margin-top: 16px;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
       color: #1a1a1a;
     }
 
-    .pricing-display {
-      margin-bottom: 28px;
+    .pricing-info {
+      margin-bottom: 32px;
     }
 
     .price {
-      font-size: 36px;
+      font-size: 48px;
       font-weight: 700;
-      color: #06b6d4;
-      margin-bottom: 4px;
+      color: #00a878;
+      line-height: 1.1;
     }
 
-    .price-unit {
+    .price-label {
       font-size: 14px;
-      color: #6b7280;
-      font-weight: 500;
+      color: #666;
+      font-weight: 400;
+      margin-top: 4px;
     }
 
-    .features-list {
+    .features {
       flex: 1;
-      margin-bottom: 28px;
+      margin-bottom: 32px;
     }
 
-    .features-list ul {
+    .features ul {
       list-style: none;
     }
 
-    .features-list li {
+    .features li {
       font-size: 14px;
+      color: #555;
       padding: 10px 0;
-      color: #374151;
-      display: flex;
-      align-items: flex-start;
+      border-bottom: 1px solid #f0f0f0;
+      line-height: 1.6;
+      position: relative;
+      padding-left: 24px;
     }
 
-    .features-list li::before {
-      content: '✓';
-      color: #06b6d4;
-      font-weight: 700;
-      margin-right: 10px;
-      flex-shrink: 0;
+    .features li:last-child {
+      border-bottom: none;
+    }
+
+    .features li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #00a878;
+      font-weight: 600;
     }
 
     .cta-button {
+      display: block;
+      width: 100%;
       padding: 12px 24px;
-      border: 2px solid #06b6d4;
-      background: white;
-      color: #06b6d4;
+      border: none;
       border-radius: 6px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
+      transition: all 0.2s ease;
       text-align: center;
       text-decoration: none;
-      display: inline-block;
-      transition: all 0.3s ease;
-      width: 100%;
+      font-family: inherit;
       letter-spacing: 0.3px;
     }
 
-    .cta-button:hover {
-      background: #06b6d4;
-      color: white;
-      border-color: #06b6d4;
+    .pricing-card:not(.recommended) .cta-button {
+      background: #f5f5f5;
+      color: #1a1a1a;
+      border: 1px solid #e0e0e0;
     }
 
+    .pricing-card:not(.recommended) .cta-button:hover {
+      background: #ebebeb;
+      border-color: #d0d0d0;
+    }
+
+    .pricing-card:not(.recommended) .cta-button:active {
+      background: #e0e0e0;
+    }
+
+    .pricing-card.recommended .cta-button {
+      background: #00a878;
+      color: white;
+    }
+
+    .pricing-card.recommended .cta-button:hover {
+      background: #008a6a;
+    }
+
+    .pricing-card.recommended .cta-button:active {
+      background: #006f54;
+    }
+
+    /* Focus states for accessibility */
     .cta-button:focus {
-      outline: 2px solid #0891b2;
+      outline: 2px solid #00a878;
       outline-offset: 2px;
     }
 
+    /* Reduced motion support */
     @media (prefers-reduced-motion: reduce) {
+      .pricing-card,
       .cta-button {
         transition: none;
       }
+      .pricing-card.recommended {
+        transform: none;
+      }
     }
 
-    .pricing-card.featured .cta-button {
-      background: #06b6d4;
-      color: white;
-      border-color: #06b6d4;
-    }
-
-    .pricing-card.featured .cta-button:hover {
-      background: #0891b2;
-      border-color: #0891b2;
-    }
-
-    /* Responsive grid */
-    @media (max-width: 768px) {
-      .pricing-container {
-        padding: 60px 20px;
+    /* Mobile responsiveness */
+    @media (max-width: 767px) {
+      body {
+        padding: 40px 16px;
       }
 
-      .section-header h1 {
-        font-size: 36px;
+      .pricing-header {
+        margin-bottom: 40px;
       }
 
-      .section-header p {
+      .pricing-header h1 {
+        font-size: 32px;
+      }
+
+      .pricing-header p {
         font-size: 16px;
       }
 
       .pricing-card {
-        padding: 24px;
+        padding: 32px 24px;
       }
 
-      .pricing-card.featured {
-        transform: translateY(-8px);
+      .pricing-card.recommended {
+        transform: none;
       }
 
-      .cards-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-    }
-
-    /* Ensure proper stacking for featured card on mobile */
-    @media (max-width: 640px) {
-      .cards-grid {
-        grid-template-columns: 1fr;
+      .recommended-badge {
+        top: -8px;
       }
 
-      .pricing-card.featured {
-        transform: translateY(0);
+      .price {
+        font-size: 36px;
       }
     }
   </style>
 </head>
 <body>
-  <section class="pricing-container">
-    <div class="section-header">
+  <div class="pricing-section">
+    <div class="pricing-header">
       <h1>Pricing</h1>
       <p>Start free. Upgrade when your team does.</p>
     </div>
 
-    <div class="cards-grid">
+    <div class="pricing-cards">
       <!-- Solo Tier -->
       <div class="pricing-card">
         <div class="tier-name">Solo</div>
-        <div class="pricing-display">
+        <div class="pricing-info">
           <div class="price">$0</div>
-          <div class="price-unit">forever</div>
+          <div class="price-label">forever</div>
         </div>
-        <div class="features-list">
+        <div class="features">
           <ul>
             <li>1 developer</li>
             <li>Local test maps</li>
@@ -261,14 +287,14 @@
       </div>
 
       <!-- Team Tier (Recommended) -->
-      <div class="pricing-card featured">
-        <div class="tier-badge">Recommended</div>
+      <div class="pricing-card recommended">
+        <div class="recommended-badge">Recommended</div>
         <div class="tier-name">Team</div>
-        <div class="pricing-display">
+        <div class="pricing-info">
           <div class="price">$12</div>
-          <div class="price-unit">per user / month</div>
+          <div class="price-label">per user / month</div>
         </div>
-        <div class="features-list">
+        <div class="features">
           <ul>
             <li>Everything in Solo</li>
             <li>Shared team maps</li>
@@ -282,11 +308,11 @@
       <!-- Enterprise Tier -->
       <div class="pricing-card">
         <div class="tier-name">Enterprise</div>
-        <div class="pricing-display">
+        <div class="pricing-info">
           <div class="price">Custom</div>
-          <div class="price-unit">pricing for your needs</div>
+          <div class="price-label">talk to us</div>
         </div>
-        <div class="features-list">
+        <div class="features">
           <ul>
             <li>Everything in Team</li>
             <li>SSO / SAML</li>
@@ -297,6 +323,6 @@
         <button class="cta-button">Contact sales</button>
       </div>
     </div>
-  </section>
+  </div>
 </body>
 </html>

@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-22T08:01:41.632189+00:00",
+  "generated_at": "2026-07-22T08:33:48.358721+00:00",
   "scenarios": {
     "landing_hero": {
       "scenario": "landing_hero",
@@ -682,9 +682,9 @@
             }
           ]
         },
-        "right-align-titles": {
+        "square-format": {
           "polarity": "issue",
-          "scope": "title alignment",
+          "scope": "aspect ratio",
           "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [

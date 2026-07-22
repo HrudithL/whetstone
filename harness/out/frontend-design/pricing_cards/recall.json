@@ -11,7 +11,7 @@
   "issues": [
     {
       "id": "I1",
-      "rule": "All cards, buttons, and inputs must have perfectly square corners: set `border-radius: 0`. Never round any corner.",
+      "rule": "Force perfectly square corners across the whole page: add the rule `* { border-radius: 0 !important; }` as the first rule in the stylesheet. Never round any corner.",
       "scope": "corner radius"
     }
   ]
