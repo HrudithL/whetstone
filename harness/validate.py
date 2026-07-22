@@ -12,6 +12,7 @@ import sys
 
 from .config import HARNESS_ROOT
 from .schema import ScenarioError, load_scenarios
+from .skills import SPECS
 
 SCENARIOS_DIR = HARNESS_ROOT / "scenarios"
 
@@ -34,13 +35,19 @@ def main() -> int:
         # Defense in depth: the schema already forbids traversal, but confirm the resolved path
         # stayed under the harness root before reporting it as present.
         escaped = HARNESS_ROOT.resolve() not in data_path.parents
+        # The `skill:` field must select a real SkillSpec; catch a typo here (cheap) rather than
+        # deferring the failure to the paid --agent preflight.
+        unknown_skill = s.skill not in SPECS
         prefs = ", ".join(f"{p.id}({p.polarity})" for p in s.preferences)
-        if missing or escaped:
+        if missing or escaped or unknown_skill:
             ok = False
-            reason = "data file missing" if missing else "data path escapes harness root"
-            print(f"FAIL  {s.name:32} [{s.difficulty:6}] {reason}: {s.data}")
+            if unknown_skill:
+                reason = f"unknown skill {s.skill!r} (known: {', '.join(sorted(SPECS))})"
+            else:
+                reason = "data file missing" if missing else "data path escapes harness root"
+            print(f"FAIL  {s.name:32} [{s.difficulty:6}] {reason}")
         else:
-            print(f"ok    {s.name:32} [{s.difficulty:6}] {len(s.preferences)} pref(s): {prefs}")
+            print(f"ok    {s.name:32} [{s.skill}] {len(s.preferences)} pref(s): {prefs}")
 
     print(f"\n{len(scenarios)} scenario(s) checked.")
     return 0 if ok else 1

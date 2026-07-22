@@ -46,10 +46,16 @@ def load_summary(scenario: str) -> dict | None:
     return json.loads(p.read_text(encoding="utf-8")) if p and p.is_file() else None
 
 
-def scenario_names() -> list[str]:
-    """Scenario slugs that have a committed ``summary.json``, sorted."""
+def scenario_names(skill: str | None = None) -> list[str]:
+    """Scenario slugs that have a committed ``summary.json``, sorted.
+
+    Pass ``skill`` to restrict to one skill's scenarios (``out/<skill>/*/``). The current Quarto
+    site scopes itself to ``great-tables`` — its copy describes tables — while the frontend-design /
+    pptx artifacts stay committed for the (deferred) multi-skill docs.
+    """
     root = out_root()
-    return sorted(p.parent.name for p in root.glob("*/*/summary.json"))
+    pattern = f"{skill}/*/summary.json" if skill else "*/*/summary.json"
+    return sorted(p.parent.name for p in root.glob(pattern))
 
 
 def read_text(scenario: str, *parts: str) -> str | None:
@@ -79,8 +85,11 @@ def _embed_html(native: str) -> str:
     head = native.lstrip()[:256].lower()
     if head.startswith("<!doctype") or "<html" in head:
         doc = _html.escape(native, quote=True)  # srcdoc attr value; the browser un-escapes to parse
+        # `sandbox` (empty = most restrictive): the artifact is live-model-generated, so isolate
+        # it — any <script>/inline handler is inert and gets a unique opaque origin, so it can't
+        # reach the docs page's `parent.document`. The static HTML/CSS design still renders.
         return (
-            f'<iframe srcdoc="{doc}" title="rendered output" loading="lazy" '
+            f'<iframe srcdoc="{doc}" sandbox title="rendered output" loading="lazy" '
             'style="width:100%;height:520px;border:1px solid var(--bs-border-color,#ddd);'
             'border-radius:4px;background:#fff"></iframe>'
         )
@@ -168,11 +177,13 @@ def triptych_html(scenario: str) -> str:
     )
 
 
-def scenarios_meta() -> list[dict]:
+def scenarios_meta(skill: str | None = None) -> list[dict]:
     """Parse the committed scenario YAMLs (``harness/scenarios/*.yaml``) for the methodology table.
 
     Reads the source of truth directly (only depends on the committed YAML), so the page shows
-    exactly what was taught and how each "honored" check is decided — no dependency on a run.
+    exactly what was taught and how each "honored" check is decided — no dependency on a run. Pass
+    ``skill`` to restrict to one skill (the current site shows ``great-tables`` only; see
+    :func:`scenario_names`).
     """
     import yaml  # committed [showcase] dep
 
@@ -180,6 +191,8 @@ def scenarios_meta() -> list[dict]:
     metas = []
     for path in sorted(root.glob("*.yaml")):
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if skill and raw.get("skill") != skill:
+            continue
         metas.append(raw)
     return metas
 

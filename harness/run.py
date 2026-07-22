@@ -320,7 +320,7 @@ def _run_scenario_into(
         if _all_stuck(runs, prefs, stick_streak):
             break
 
-    _write_outputs(out_dir, scenario, prefs, runs, cold_code, warm_code, final_recall)
+    _write_outputs(out_dir, scenario, prefs, runs, cold_code, warm_code, final_recall, spec.output)
     # The exact learned-layer text injected into the final warm run's prompt — this, not the raw
     # recall.json, is "what the model was told", so the triptych's middle panel renders it verbatim.
     (out_dir / "learned_layer.txt").write_text(final_learned, encoding="utf-8")
@@ -402,7 +402,7 @@ def _runs_to_stick(runs: list[dict], pref_id: str, stick_streak: int) -> int | N
 
 def _write_outputs(
     out_dir: Path, scenario: Scenario, prefs, runs: list[dict], cold_code: str,
-    warm_code: str, final_recall: dict,
+    warm_code: str, final_recall: dict, output: str,
 ) -> None:
     (out_dir / "recall.json").write_text(
         json.dumps(
@@ -412,9 +412,11 @@ def _write_outputs(
         ),
         encoding="utf-8",
     )
+    # Label the diff with the skill's actual primary artifact (table.py / index.html / deck.py),
+    # not a hard-coded table.py, so the before/after audit points at files that really exist.
     diff = difflib.unified_diff(
         cold_code.splitlines(keepends=True), warm_code.splitlines(keepends=True),
-        fromfile="cold/table.py", tofile="warm/table.py",
+        fromfile=f"cold/{output}", tofile=f"warm/{output}",
     )
     (out_dir / "diff.txt").write_text("".join(diff), encoding="utf-8")
     with (out_dir / "runs.jsonl").open("w", encoding="utf-8") as fh:

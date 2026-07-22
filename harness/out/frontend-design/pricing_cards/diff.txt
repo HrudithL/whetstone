@@ -1,5 +1,5 @@
---- cold/table.py
-+++ warm/table.py
+--- cold/index.html
++++ warm/index.html
 @@ -5,324 +5,263 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Marrow Pricing</title>

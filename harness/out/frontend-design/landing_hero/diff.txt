@@ -1,5 +1,5 @@
---- cold/table.py
-+++ warm/table.py
+--- cold/index.html
++++ warm/index.html
 @@ -12,209 +12,198 @@
      }
  

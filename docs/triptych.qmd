@@ -26,7 +26,9 @@ sys.path.insert(0, ".")
 from _showcase import learned_layer_html, not_generated_note, scenario_names, triptych_html  # noqa: E402
 from IPython.display import HTML, Markdown, display  # noqa: E402
 
-names = scenario_names()
+# Scoped to great-tables: this page's copy describes tables. The frontend-design / pptx artifacts
+# are committed but surfaced by the (deferred) multi-skill docs, not this Quarto page.
+names = scenario_names("great-tables")
 if not names:
     display(not_generated_note("The before / learned-layer / after panels"))
 else:
