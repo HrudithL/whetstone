@@ -33,12 +33,15 @@ jobs:
         # Guard against publishing the wrong artifact: e.g. tagging v0.2.0 before bumping
         # project.version would otherwise upload whatever is in pyproject.toml. Fail early, before
         # the build, if the tag (minus the leading v) does not equal the packaged version.
+        # The tag is read from `env` (NOT interpolated into the script): a `${{ }}` expansion of a
+        # release-controlled value directly into Bash would allow shell injection into the build job.
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          tag="${{ github.event.release.tag_name }}"
           ver="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
-          echo "release tag=$tag  package version=$ver"
-          if [ "$tag" != "v$ver" ]; then
-            echo "::error::release tag '$tag' does not match package version 'v$ver' — bump pyproject.toml [project].version or fix the tag"
+          echo "release tag=$RELEASE_TAG  package version=$ver"
+          if [ "$RELEASE_TAG" != "v$ver" ]; then
+            echo "::error::release tag '$RELEASE_TAG' does not match package version 'v$ver' — bump pyproject.toml [project].version or fix the tag"
             exit 1
           fi
 

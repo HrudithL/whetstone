@@ -340,25 +340,29 @@ def _artifact_ok(path: Path) -> bool:
     return True
 
 
-# Fetch-on-load remote references. A self-contained showcase artifact must inline everything, so a
-# committed run stays reproducible/offline and the docs iframe never fetches external state (the
-# prompt already says "no external assets, no CDN"). Targets resources that load automatically —
-# `src=`, a `<link>` stylesheet/font/icon href, CSS `url(...)`, `@import` — NOT a navigational
-# `<a href="https://...">`, which does not fetch on load.
-_REMOTE_REF_RE = re.compile(
+# Fetch-on-load references to a SEPARATE file. A self-contained showcase artifact must inline
+# everything (the prompt says "single self-contained index.html, no external assets, no CDN"), so a
+# committed run stays reproducible/offline, the docs iframe never fetches, and `_persist` — which
+# copies only the primary output — never leaves a referenced asset behind in the temp workdir.
+# Rejects BOTH remote (`https://`, `//cdn`) and relative (`hero.png`, `app.js`) targets; allows
+# inline `data:` URIs and same-document `#fragment` refs (e.g. an SVG `url(#grad)`). Targets the
+# attributes/props that load automatically — `src`, `srcset`, a `<link>` href, CSS `url(...)`,
+# `@import` — NOT a navigational `<a href>`, which does not fetch on load.
+_EXTERNAL_REF_RE = re.compile(
     r"""(?xi)
-      (?: \b src \s*=\s* ["']? (?:https?:)?// )
-    | (?: \b srcset \s*=\s* ["']? [^"'>]* (?:https?:)?// )   # responsive srcset (quoted or not)
-    | (?: < link \b [^>]*? \b href \s*=\s* ["']? (?:https?:)?// )
-    | (?: \b url \( \s* ["']? (?:https?:)?// )
-    | (?: @import \s+ (?: url \( \s* )? ["']? (?:https?:)?// )
+      (?: \b src \s*=\s* ["']? (?! data: | \# ) [^\s"'>] )
+    | (?: \b srcset \s*=\s* ["']? (?! data: | \# ) [^\s"'>] )
+    | (?: < link \b [^>]*? \b href \s*=\s* ["']? (?! data: | \# ) [^\s"'>] )
+    | (?: \b url \( \s* ["']? (?! data: | \# ) [^\s"')] )
+    | (?: @import \s+ (?: url \( \s* )? ["']? (?! data: | \# ) [^\s"');] )
     """
 )
 
 
-def _html_remote_refs(html: str) -> list[str]:
-    """Snippets of any fetch-on-load remote reference in ``html`` (empty list if self-contained)."""
-    return [m.group(0)[:60] for m in _REMOTE_REF_RE.finditer(html)]
+def _html_external_refs(html: str) -> list[str]:
+    """Snippets of any fetch-on-load reference to a separate file (remote or relative) in ``html``;
+    empty if the artifact is fully self-contained (only inline ``data:`` / ``#`` refs)."""
+    return [m.group(0)[:60] for m in _EXTERNAL_REF_RE.finditer(html)]
 
 
 @dataclass
@@ -487,14 +491,15 @@ class AgentGenerator:
                 )
         primary_text = primary.read_text(encoding="utf-8")
         # A self-contained showcase artifact must inline everything (the prompt says "no external
-        # assets, no CDN"): reject an HTML output that fetches remote resources, so committed runs
-        # stay reproducible/offline and the docs iframe never reaches the network.
+        # assets, no CDN"): reject an HTML output that fetches any separate file — remote OR a
+        # relative asset `_persist` would leave behind — so committed runs stay reproducible/offline
+        # and the docs iframe renders the whole thing.
         if spec.output.lower().endswith((".html", ".htm")):
-            remote = _html_remote_refs(primary_text)
-            if remote:
+            external = _html_external_refs(primary_text)
+            if external:
                 raise RuntimeError(
-                    f"{scenario.name}: {spec.output} references remote resources (must be "
-                    f"self-contained): {remote[:3]}"
+                    f"{scenario.name}: {spec.output} references external resources (must be "
+                    f"self-contained; inline them as data: URIs): {external[:3]}"
                 )
         return GenerationResult(code=primary_text, transcript=transcript)
 
