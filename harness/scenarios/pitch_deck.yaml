@@ -1,0 +1,33 @@
+name: pitch_deck
+skill: pptx
+difficulty: medium
+prompt: >
+  Build the 5-slide "Marrow" pitch deck described in the outline. Write deck.py using python-pptx
+  and run it to produce deck.pptx.
+data: data/pitch_deck_outline.md
+preferences:
+  - id: mono-font
+    polarity: learning
+    scope: typography
+    # Contrarian house style: decks default to a sans-serif like Calibri; a monospace face on every
+    # slide is this user's specific taste, not an objectively better choice.
+    body: >
+      Set every text run's font to Consolas (`run.font.name = "Consolas"`) — titles and body, on
+      all slides.
+    feedback: >
+      Use Consolas for all the slide text, not the default sans-serif.
+    check:
+      kind: code_contains
+      pattern: Consolas
+  - id: left-align-titles
+    polarity: issue
+    scope: title alignment
+    # A hard rule (issue): titles default to centered; every title must be left-aligned.
+    body: >
+      Left-align every slide title: set the title paragraph's alignment to PP_ALIGN.LEFT
+      (`from pptx.enum.text import PP_ALIGN`).
+    feedback: >
+      Don't center the titles — left-align every slide title (PP_ALIGN.LEFT).
+    check:
+      kind: code_contains
+      pattern: PP_ALIGN.LEFT

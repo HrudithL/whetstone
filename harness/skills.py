@@ -92,9 +92,27 @@ _FRONTEND_DESIGN = SkillSpec(
 )
 
 
+_PPTX = SkillSpec(
+    name="pptx",
+    output="deck.py",
+    check_language="python",  # a python-pptx script → reuse the AST/tokenize stripper
+    required_artifacts=("deck.pptx",),  # the script must actually run and save the deck
+    intent_lead="a slide deck",
+    intent_dimensions=(
+        "slide layout, title alignment, typography, color and accent, background, "
+        "bullet density, and aspect ratio"
+    ),
+    prompt_tail=(
+        "The outline is in `{data}` in the current directory. Write `deck.py` using `python-pptx` "
+        "that builds the deck and saves it to `deck.pptx`, then run the script to produce "
+        "`deck.pptx`. Write only `deck.py`; do not create any other files."
+    ),
+)
+
+
 # Registry. Additional skills are registered in their own slices as they are vendored under
 # harness/skill/. Keyed by the scenario's `skill:` field.
-SPECS: dict[str, SkillSpec] = {s.name: s for s in (_GREAT_TABLES, _FRONTEND_DESIGN)}
+SPECS: dict[str, SkillSpec] = {s.name: s for s in (_GREAT_TABLES, _FRONTEND_DESIGN, _PPTX)}
 
 
 def get_spec(skill: str) -> SkillSpec:
