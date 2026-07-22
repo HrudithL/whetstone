@@ -1,0 +1,33 @@
+name: pricing_cards
+skill: frontend-design
+difficulty: medium
+prompt: >
+  Build the three-tier pricing section for "Marrow" described in the brief. Produce a single
+  self-contained index.html.
+data: data/pricing_brief.md
+preferences:
+  - id: courier-body-font
+    polarity: learning
+    scope: typography
+    # Contrarian on purpose: Courier on a SaaS pricing page is an unusual, deliberate look — exactly
+    # the kind of taste the cold run won't reach for on its own.
+    body: >
+      Set the base body font to Courier: `font-family: 'Courier New', monospace` on the root/body.
+    feedback: >
+      Use Courier for the body text — font-family: 'Courier New', monospace, not a sans-serif.
+    check:
+      kind: code_contains
+      pattern: 'Courier New'
+  - id: sharp-corners
+    polarity: issue
+    scope: corner radius
+    # A hard rule (issue), not a soft taste: pricing cards default to rounded corners, so square
+    # corners everywhere is a mandatory constraint the learned layer must enforce.
+    body: >
+      All cards, buttons, and inputs must have perfectly square corners: set `border-radius: 0`.
+      Never round any corner.
+    feedback: >
+      Don't round the corners — every card and button must be square (border-radius: 0).
+    check:
+      kind: regex
+      pattern: 'border-radius:\s*0\s*;'

@@ -71,9 +71,30 @@ _GREAT_TABLES = SkillSpec(
 )
 
 
-# Registry. Additional skills (frontend-design, pptx) are registered in their own slices as they are
-# vendored under harness/skill/. Keyed by the scenario's `skill:` field.
-SPECS: dict[str, SkillSpec] = {s.name: s for s in (_GREAT_TABLES,)}
+_FRONTEND_DESIGN = SkillSpec(
+    name="frontend-design",
+    output="index.html",
+    check_language="html",
+    # No extra render step: index.html IS the artifact (self-contained, opens in a browser). The
+    # AgentGenerator already fail-loud-checks the primary output is non-empty / non-whitespace.
+    required_artifacts=(),
+    intent_lead="a frontend web design",
+    intent_dimensions=(
+        "color palette and accent, typography and type scale, letter-spacing and casing, "
+        "corner radius, spacing and layout, shadow and depth, and motion"
+    ),
+    prompt_tail=(
+        "The brief is in `{data}` in the current directory. Build a single self-contained "
+        "`index.html` — all CSS in one inline `<style>` block, no external assets, no CDN, no "
+        "build step — that implements the brief. Use the frontend-design skill's guidance. Write "
+        "only `index.html`; do not create any other files."
+    ),
+)
+
+
+# Registry. Additional skills are registered in their own slices as they are vendored under
+# harness/skill/. Keyed by the scenario's `skill:` field.
+SPECS: dict[str, SkillSpec] = {s.name: s for s in (_GREAT_TABLES, _FRONTEND_DESIGN)}
 
 
 def get_spec(skill: str) -> SkillSpec:
