@@ -348,7 +348,7 @@ def _artifact_ok(path: Path) -> bool:
 _REMOTE_REF_RE = re.compile(
     r"""(?xi)
       (?: \b src \s*=\s* ["']? (?:https?:)?// )
-    | (?: \b srcset \s*=\s* ["'] [^"']* (?:https?:)?// )   # responsive <img>/<source> srcset
+    | (?: \b srcset \s*=\s* ["']? [^"'>]* (?:https?:)?// )   # responsive srcset (quoted or not)
     | (?: < link \b [^>]*? \b href \s*=\s* ["']? (?:https?:)?// )
     | (?: \b url \( \s* ["']? (?:https?:)?// )
     | (?: @import \s+ (?: url \( \s* )? ["']? (?:https?:)?// )

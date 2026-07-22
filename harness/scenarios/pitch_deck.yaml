@@ -17,8 +17,12 @@ preferences:
     feedback: >
       Use Consolas for all the slide text, not the default sans-serif.
     check:
+      # Match a real font assignment, not a bare mention/comment. This is a LEARNING (a soft taste),
+      # so confirming the model actually reached for Consolas is the honored signal — the committed
+      # deck sets it on every paragraph. AST-unparse normalizes quotes to single, so `= "Consolas"`
+      # in the source matches this too.
       kind: code_contains
-      pattern: Consolas
+      pattern: "font.name = 'Consolas'"
   - id: square-format
     polarity: issue
     scope: aspect ratio

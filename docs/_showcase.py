@@ -74,16 +74,20 @@ def _scroll(inner: str) -> str:
     return f'<div style="overflow-x:auto;max-width:100%">{inner}</div>'
 
 
-def _embed_html(native: str) -> str:
+def _embed_html(native: str, is_primary: bool = False) -> str:
     """Embed a committed HTML artifact in a panel.
 
     A full standalone document (a web skill's ``index.html``, with its own ``<html>`` and global CSS
     like ``*``/``body``) is sandboxed in an ``<iframe srcdoc>`` so its styles can't leak into — or
     reset — the surrounding docs page, and the cold/warm panels can't bleed into each other. A
     fragment (great-tables' ``table.html``, just a ``<table>``) is inlined and scrolled.
+
+    ``is_primary`` marks the skill's own primary output (always a full document) — it is always
+    sandboxed, regardless of the doctype sniff, so a long comment/preamble before ``<html>`` can't
+    trick a full page into being inlined unsandboxed.
     """
     head = native.lstrip()[:256].lower()
-    if head.startswith("<!doctype") or "<html" in head:
+    if is_primary or head.startswith("<!doctype") or "<html" in head:
         doc = _html.escape(native, quote=True)  # srcdoc attr value; the browser un-escapes to parse
         # `sandbox` (empty = most restrictive): the artifact is live-model-generated, so isolate
         # it — any <script>/inline handler is inert and gets a unique opaque origin, so it can't
@@ -113,7 +117,7 @@ def _panel_body(scenario: str, phase: str) -> str:
     for name in html_names:
         native = read_text(scenario, phase, name)
         if native and native.strip():
-            return _embed_html(native)
+            return _embed_html(native, is_primary=(name == primary))
     # 2) a rendered raster (great-tables)
     d = _scenario_dir(scenario)
     png = d / phase / "table.png" if d else None
