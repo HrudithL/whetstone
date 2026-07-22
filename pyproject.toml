@@ -72,6 +72,12 @@ showcase = [
     "jupyter",
     "ipykernel",
 ]
+# Docs site (spike/great-docs-site): great-docs auto-generates the /docs API+MCP reference site.
+# Needs Quarto on PATH too (installed separately, not a pip package). Install with:
+#   pip install -e ".[docs]"
+docs = [
+    "great-docs>=0.15",
+]
 
 [project.scripts]
 whetstone = "whetstone.server:main"
