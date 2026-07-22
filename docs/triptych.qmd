@@ -3,19 +3,23 @@ title: "Before / After"
 subtitle: "See the learned layer change the output."
 ---
 
-Each scenario runs the Great Tables skill three ways. **Before** and **After** are shown side by
-side, with **the learned layer** beneath them:
+Each scenario runs **one skill** three ways. **Before** and **After** are shown side by side, with
+**the learned layer** beneath them:
 
-1. **Before** — the table generated with an **empty** Whetstone store. The subjective preference we
+1. **Before** — the output generated with an **empty** Whetstone store. The subjective preference we
    later teach is (typically) not honored.
-2. **After** — the table generated once that learned layer was applied. The preference is honored.
+2. **After** — the output generated once that learned layer was applied. The preference is honored.
 3. **The learned layer** — the **exact text injected into the warm run's prompt** (rendered by
    Whetstone from the recalled learnings and issues, with their ids, scopes, and weights). This is
    verbatim what the model was told — not a paraphrase.
 
-*The three panels render Great Tables output natively (real tables, not screenshots) from the
-committed artifacts under `harness/out/`; a PNG fallback is used only if a scenario has no native
-HTML.*
+The scenarios span three skills — **Great Tables**, **frontend design**, and **PowerPoint decks** —
+each carrying its own arbitrary house-style preference. The substrate is the same for all three;
+only the skill and the taught preference change.
+
+*The panels render each skill's output natively from the committed artifacts under `harness/out/`:
+Great Tables tables inline, self-contained web pages sandboxed in an iframe, and — for binary
+formats like pptx — the generated build script (the `.pptx` itself is committed alongside it).*
 
 ```{python}
 # | echo: false
@@ -23,16 +27,30 @@ HTML.*
 import sys
 
 sys.path.insert(0, ".")
-from _showcase import learned_layer_html, not_generated_note, scenario_names, triptych_html  # noqa: E402
+from _showcase import not_generated_note, scenario_names, triptych_html  # noqa: E402
 from IPython.display import HTML, Markdown, display  # noqa: E402
 
-# Scoped to great-tables: this page's copy describes tables. The frontend-design / pptx artifacts
-# are committed but surfaced by the (deferred) multi-skill docs, not this Quarto page.
-names = scenario_names("great-tables")
-if not names:
-    display(not_generated_note("The before / learned-layer / after panels"))
-else:
+# One section per skill (friendly label + a one-line note on how its output renders in the panels),
+# in a fixed display order. The helpers are skill-generic; the per-skill prose lives here.
+SKILLS = [
+    ("great-tables", "Great Tables", "Native HTML tables — real tables, not screenshots."),
+    ("frontend-design", "Frontend design", "Self-contained pages, sandboxed in an iframe."),
+    ("pptx", "PowerPoint decks", "The generated python-pptx build script (the deck is a binary)."),
+]
+any_shown = False
+for skill, label, note in SKILLS:
+    names = scenario_names(skill)
+    if not names:
+        continue
+    any_shown = True
+    # Alternate Markdown headings with HTML bodies: two adjacent `display(Markdown(...))` outputs
+    # get concatenated without a block break under `output: asis` (the second would glue onto the
+    # first's trailing paragraph), so the per-skill note is emitted as an HTML block, not Markdown.
+    display(Markdown(f"# {label}"))
+    display(HTML(f"<p><em>{note}</em></p>"))
     for n in names:
         display(Markdown(f"## {n}"))
         display(HTML(triptych_html(n)))
+if not any_shown:
+    display(not_generated_note("The before / learned-layer / after panels"))
 ```

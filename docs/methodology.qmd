@@ -9,9 +9,9 @@ runs it and commits the artifacts under `harness/out/`, which this site only rea
 
 ## The cold → seed → warm loop
 
-For each scenario (a Great Tables prompt + an arbitrary subjective preference):
+For each scenario (a skill's prompt + an arbitrary subjective preference):
 
-1. **Cold** — generate a table with an **empty** store. Record whether the preference was honored
+1. **Cold** — generate the output with an **empty** store. Record whether the preference was honored
    (usually not — the "before").
 2. **Seed** — replay the scripted correction through Whetstone's `capture` tool, exactly as a user
    correcting the skill would. The preference becomes a tracked learning or issue, committed to the
@@ -20,13 +20,14 @@ For each scenario (a Great Tables prompt + an arbitrary subjective preference):
    Reinforce each learning (a repeated correction) so its weight/recurrence grows, and iterate until
    the preference is honored for a set streak of consecutive warm runs.
 
-Generation is done by the live model via the Claude Agent SDK with the Great Tables skill mounted.
+Generation is done by the live model via the Claude Agent SDK with the scenario's skill mounted.
 A deterministic **stub** generator exercises the identical pipeline with no API calls, so the wiring
 is verifiable without spend.
 
 ## What "honored" means
 
-Each preference carries a deterministic **check** against the generated `table.py` (comment- and
+Each preference carries a deterministic **check** against the generated primary output — `table.py`
+for great-tables, `index.html` for frontend-design, `deck.py` for pptx (comment- and
 docstring-stripped so prose can't fool it): a substring, a regex, or their absence. That check — not
 a subjective judgement — decides whether a run honored the preference.
 
@@ -69,9 +70,10 @@ def td(text: str) -> str:
 head = ("<tr><th>scenario</th><th>diff.</th><th>preference</th><th>polarity</th>"
         "<th>scope</th><th>rule</th><th>check</th></tr>")
 body = []
-# Scoped to great-tables (this page's copy describes checks against `table.py`); the frontend-design
-# / pptx scenarios are committed for the deferred multi-skill docs.
-for s in scenarios_meta("great-tables"):
+# Every scenario across all skills — the same set the Before / After and Metrics pages show. The
+# `check` column is the exact test run against that scenario's primary output (`table.py` for
+# great-tables, `index.html` for frontend-design, `deck.py` for pptx).
+for s in scenarios_meta():
     for p in s["preferences"]:
         chk = f"{html.escape(p['check']['kind'])} · <code>{html.escape(p['check']['pattern'])}</code>"
         body.append(
@@ -93,8 +95,8 @@ beyond formatting. Per scenario:
 
 | file | feeds |
 | --- | --- |
-| `cold/table.{py,png,html}` | the **Before** panel |
-| `warm/table.{py,png,html}` | the **After** panel |
+| `cold/<primary output>` | the **Before** panel (`table.{py,png,html}` / `index.html` / `deck.py`) |
+| `warm/<primary output>` | the **After** panel (same set, generated with the learned layer) |
 | `learned_layer.txt` | the middle **learned-layer** panel (verbatim injected prompt text) |
 | `recall.json` | the structured recall payload behind the learned layer |
 | `runs.jsonl` | per-run honored map + weight/recurrence — the raw record |
@@ -106,9 +108,10 @@ written straight from the tool calls.
 
 ## Coming next
 
-v1 is the **visual** skill class (Great Tables). The same substrate — attach, recall, capture,
-revise — applies unchanged to a **code-improvement** skill (objective ground truth: tests, lint,
-types) and a **context-organizing** skill; those are the next classes.
+v1 is the **visual** skill class, shown across three skills (Great Tables, frontend design, and
+PowerPoint decks). The same substrate — attach, recall, capture, revise — applies unchanged to a
+**code-improvement** skill (objective ground truth: tests, lint, types) and a **context-organizing**
+skill; those are the next classes.
 
 ## Reproduce it
 

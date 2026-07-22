@@ -12,11 +12,13 @@ the relevant ones at the start of every later run — no separate review step, a
 
 > A correction the skill received once is **tracked** and keeps being **honored** on later runs.
 
-This site proves that claim two ways, on a real skill ([Great Tables](https://posit-dev.github.io/great-tables/),
-which turns data into publication-ready tables):
+This site proves that claim two ways, across three real skills —
+[Great Tables](https://posit-dev.github.io/great-tables/) (data into publication-ready tables),
+frontend design (self-contained web pages), and PowerPoint decks (python-pptx) — each taught its own
+arbitrary house-style preference:
 
-- **[See it](triptych.qmd)** — a *before* table (empty store), the *learned layer* the skill recalled
-  in its own words, and the *after* table that applied it.
+- **[See it](triptych.qmd)** — a *before* output (empty store), the *learned layer* the skill recalled
+  in its own words, and the *after* output that applied it.
 - **[Measure it](metrics.qmd)** — two honest metrics read straight from Whetstone's telemetry:
   **runs-to-stick** (how quickly a correction stopped needing to be repeated) and
   **value-over-time** (how a learning's weight held up across later runs).
@@ -37,20 +39,23 @@ m = load_metrics()
 if m is None:
     out = not_generated_note("The headline numbers")
 else:
-    # Headline numbers are the great-tables slice — this site is scoped to great-tables (the
-    # frontend-design / pptx artifacts are committed for the deferred multi-skill docs, M4c).
-    a = m.get("skills", {}).get("great-tables") or m["aggregate"]
+    # Headline numbers span every skill — the full aggregate across great-tables, frontend-design,
+    # and pptx (the same set the Before / After and Metrics pages show).
+    a = m["aggregate"]
+    n_skills = len(m.get("skills", {})) or 1
     out = Markdown(
         f"### At a glance\n\n"
         f"- **{a['preferences_stuck']} of {a['preferences_total']}** corrected preferences stuck "
         f"(consistently re-applied after correction).\n"
         f"- Median **runs-to-stick: {a['median_runs_to_stick']}**.\n"
-        f"- Backend: `{m['backend']}` across **{a['scenarios']}** great-tables scenarios.\n"
+        f"- Backend: `{m['backend']}` across **{a['scenarios']}** scenarios in "
+        f"**{n_skills}** skills.\n"
     )
 out
 ```
 
 ## Scope
 
-v1 covers the **visual** skill class (Great Tables). The **code** and **context** classes — the same
-substrate applied to a code-improvement skill and a context-organizing skill — are coming next.
+v1 covers the **visual** skill class, demonstrated across three skills (Great Tables, frontend
+design, and PowerPoint decks). The **code** and **context** classes — the same substrate applied to
+a code-improvement skill and a context-organizing skill — are coming next.

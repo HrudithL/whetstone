@@ -25,20 +25,12 @@ m = load_metrics()
 if m is None:
     display(not_generated_note("The runs-to-stick chart and value-over-time trajectories"))
 else:
-    # Scope the metrics to great-tables so the numbers/charts match the (great-tables-only) triptych
-    # and methodology on this site; the frontend-design / pptx artifacts are committed for the
-    # deferred multi-skill docs (M4c). metrics.json still aggregates all skills honestly — we just
-    # view the great-tables slice here (skills["great-tables"] has the same shape as `aggregate`).
-    SKILL = "great-tables"
-    if m.get("skills", {}).get(SKILL):
-        m = {
-            **m,
-            "aggregate": m["skills"][SKILL],
-            "scenarios": {k: v for k, v in m["scenarios"].items() if v.get("skill") == SKILL},
-        }
+    # All skills. `aggregate` already spans every scenario in metrics.json; the charts and detail
+    # table read `scenarios` directly, so the numbers here cover great-tables, frontend-design, and
+    # pptx together — the same set the Before / After page shows.
     a = m["aggregate"]
     display(Markdown(
-        "### Aggregate\n\n"
+        "### Aggregate <small>(all skills)</small>\n\n"
         "| metric | value |\n| --- | --- |\n"
         f"| scenarios | {a['scenarios']} |\n"
         f"| preferences (total) | {a['preferences_total']} |\n"
@@ -46,19 +38,32 @@ else:
         f"| stuck after correction | {a['preferences_stuck']} ({a['stuck_rate']}) |\n"
         f"| median runs-to-stick | {a['median_runs_to_stick']} |\n"
     ))
+    # Per-skill breakdown — each slice has the same shape as `aggregate`, so the same substrate is
+    # shown holding across three different skill classes, not just one.
+    skills = m.get("skills", {})
+    if len(skills) > 1:
+        rows = ["\n### Per skill\n",
+                "| skill | scenarios | stuck after correction | median runs-to-stick |",
+                "| --- | --- | --- | --- |"]
+        for name, s in sorted(skills.items()):
+            rows.append(f"| {name} | {s['scenarios']} | "
+                        f"{s['preferences_stuck']}/{s['preferences_total']} ({s['stuck_rate']}) | "
+                        f"{s['median_runs_to_stick']} |")
+        display(Markdown("\n".join(rows)))
     # The charts (static SVG, light + dark surfaces from the validated dataviz palette).
     display(HTML(charts_html(m)))
     # Companion table view (the relief the light-surface contrast WARN requires): final weight +
     # runs-to-stick per preference, in the same order as the charts.
-    rows = ["\n### Per-preference detail\n", "| scenario | preference | polarity | runs-to-stick |"
-            " final weight |", "| --- | --- | --- | --- | --- |"]
+    rows = ["\n### Per-preference detail\n", "| skill | scenario | preference | polarity |"
+            " runs-to-stick | final weight |", "| --- | --- | --- | --- | --- | --- |"]
     for scn, s in m["scenarios"].items():
         for pid, pref in s["preferences"].items():
             traj = [v for v in pref.get("value_over_time", []) if v.get("weight") is not None]
             fw = f"{traj[-1]['weight']:.3f}" if traj else "—"
             rts = pref.get("runs_to_stick")
             display_rts = "didn't stick" if rts is None else rts
-            rows.append(f"| {scn} | {pid} | {pref['polarity']} | {display_rts} | {fw} |")
+            rows.append(f"| {s.get('skill', '—')} | {scn} | {pid} | {pref['polarity']} |"
+                        f" {display_rts} | {fw} |")
     display(Markdown("\n".join(rows)))
 ```
 
