@@ -92,13 +92,18 @@ _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 # scripting, and JS `//` line comments (which the block/HTML comment strippers miss) must not let
 # `// use #FF6B00` satisfy a presence check — or a scripted value defeat an absence check.
 _SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script\s*>", re.DOTALL | re.IGNORECASE)
+# JS-style `// ...` lines: invalid in HTML and CSS (a browser ignores such a line), so a token in
+# `// use #FF6B00` inside a <style> must not be scored as applied. Only whole comment-style lines
+# (first non-space is `//`) are dropped, so an inline `https://` / `url(//...)` is untouched.
+_SLASH_LINE_COMMENT_RE = re.compile(r"(?m)^[ \t]*//.*$")
 
 
 def _html_for_check(code: str) -> str:
-    """``code`` (HTML/CSS) with ``<script>`` blocks and ``<!-- -->``/``/* */`` comments removed."""
+    """``code`` with ``<script>`` blocks and ``<!-- -->``/``/* */``/``//`` comments removed."""
     code = _SCRIPT_RE.sub(" ", code)
     code = _HTML_COMMENT_RE.sub(" ", code)
-    return _BLOCK_COMMENT_RE.sub(" ", code)
+    code = _BLOCK_COMMENT_RE.sub(" ", code)
+    return _SLASH_LINE_COMMENT_RE.sub(" ", code)
 
 
 def code_for_check(code: str, language: str = "python") -> str:
@@ -343,6 +348,7 @@ def _artifact_ok(path: Path) -> bool:
 _REMOTE_REF_RE = re.compile(
     r"""(?xi)
       (?: \b src \s*=\s* ["']? (?:https?:)?// )
+    | (?: \b srcset \s*=\s* ["'] [^"']* (?:https?:)?// )   # responsive <img>/<source> srcset
     | (?: < link \b [^>]*? \b href \s*=\s* ["']? (?:https?:)?// )
     | (?: \b url \( \s* ["']? (?:https?:)?// )
     | (?: @import \s+ (?: url \( \s* )? ["']? (?:https?:)?// )

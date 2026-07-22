@@ -105,7 +105,7 @@ _PPTX = SkillSpec(
     prompt_tail=(
         "The outline is in `{data}` in the current directory. Write `deck.py` using `python-pptx` "
         "that builds the deck and saves it to `deck.pptx`, then run the script to produce "
-        "`deck.pptx`. Write only `deck.py`; do not create any other files."
+        "`deck.pptx`. Create no files other than `deck.py` and the `deck.pptx` it writes."
     ),
 )
 
