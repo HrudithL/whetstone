@@ -9,16 +9,38 @@ ordinary use without a benchmark, dataset, or eval harness. See
 
 ## Install
 
-Requires Python 3.11+.
+Requires Python 3.11+. The base install is light and dependency-free at retrieval time: it uses a
+small, deterministic `hashing` embedding backend (no torch, no network).
+
+```sh
+pipx install whetstone-mcp
+# or: uvx whetstone-mcp
+# or: pip install whetstone-mcp
+```
+
+Register it with an MCP host (e.g. Claude Code):
+
+```sh
+claude mcp add whetstone -- uvx whetstone-mcp
+```
+
+This installs two equivalent console scripts — `whetstone` (primary, used throughout this README)
+and `whetstone-mcp` (so `uvx whetstone-mcp` / `pipx run whetstone-mcp` resolve without needing the
+short name).
+
+For higher-quality embeddings, install the optional extra and set
+`embedding_backend = "sentence-transformers"` in config:
+
+```sh
+pipx install "whetstone-mcp[embeddings]"   # pulls in sentence-transformers
+```
+
+### From source (contributors)
 
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 ```
-
-The base install is light and dependency-free at retrieval time: it uses a small, deterministic
-`hashing` embedding backend (no torch, no network). For higher-quality embeddings, install the
-optional extra and set `embedding_backend = "sentence-transformers"` in config:
 
 ```sh
 .venv/bin/pip install -e '.[embeddings]'   # pulls in sentence-transformers
@@ -29,7 +51,8 @@ optional extra and set `embedding_backend = "sentence-transformers"` in config:
 Start the stdio MCP server:
 
 ```sh
-.venv/bin/whetstone
+whetstone            # PyPI install
+.venv/bin/whetstone   # from-source dev install
 ```
 
 Register it with an MCP host (e.g. Claude Code) under the server id `whetstone`, pointing the
@@ -54,7 +77,8 @@ Store compaction (retiring stale learnings, merging near-duplicate scopes) is de
 an MCP tool — it is out-of-band maintenance, run from the command line:
 
 ```sh
-.venv/bin/whetstone compact <skill>
+whetstone compact <skill>            # PyPI install
+.venv/bin/whetstone compact <skill>  # from-source dev install
 ```
 
 ## Storage & config
