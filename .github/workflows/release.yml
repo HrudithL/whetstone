@@ -1,0 +1,78 @@
+name: Release
+
+# Build and publish whetstone-mcp to PyPI when a GitHub Release is published (tagged v*). Uses
+# Trusted Publishing (OIDC) via pypa/gh-action-pypi-publish — no long-lived API token is stored in
+# the repo. One-time setup (manual, on pypi.org): create the project and configure a Trusted
+# Publisher for this repo + this workflow filename + the `pypi` environment below.
+#
+# Two jobs by design (defence in depth): `build` runs the network install + PEP 517 build with NO
+# OIDC permission, so a compromised build/backend/twine dependency can never mint a PyPI token;
+# `publish` is the only job granted `id-token: write`, and it runs nothing but the trusted-publish
+# action on the already-built artifacts.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Releases are tagged v* (e.g. v0.1.0); skip any other tag that could trigger a `release` event.
+    if: startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Verify release tag matches package version
+        # Guard against publishing the wrong artifact: e.g. tagging v0.2.0 before bumping
+        # project.version would otherwise upload whatever is in pyproject.toml. Fail early, before
+        # the build, if the tag (minus the leading v) does not equal the packaged version.
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          ver="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')"
+          echo "release tag=$tag  package version=$ver"
+          if [ "$tag" != "v$ver" ]; then
+            echo "::error::release tag '$tag' does not match package version 'v$ver' — bump pyproject.toml [project].version or fix the tag"
+            exit 1
+          fi
+
+      - name: Install build tooling
+        run: pip install build twine
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Verify distributions
+        run: twine check dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    if: startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    # Only this job gets the OIDC token, and it does nothing but publish the built artifacts.
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/project/whetstone-mcp/
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
