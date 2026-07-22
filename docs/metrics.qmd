@@ -25,6 +25,17 @@ m = load_metrics()
 if m is None:
     display(not_generated_note("The runs-to-stick chart and value-over-time trajectories"))
 else:
+    # Scope the metrics to great-tables so the numbers/charts match the (great-tables-only) triptych
+    # and methodology on this site; the frontend-design / pptx artifacts are committed for the
+    # deferred multi-skill docs (M4c). metrics.json still aggregates all skills honestly — we just
+    # view the great-tables slice here (skills["great-tables"] has the same shape as `aggregate`).
+    SKILL = "great-tables"
+    if m.get("skills", {}).get(SKILL):
+        m = {
+            **m,
+            "aggregate": m["skills"][SKILL],
+            "scenarios": {k: v for k, v in m["scenarios"].items() if v.get("skill") == SKILL},
+        }
     a = m["aggregate"]
     display(Markdown(
         "### Aggregate\n\n"

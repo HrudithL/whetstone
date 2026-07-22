@@ -88,10 +88,15 @@ def _python_for_check(code: str) -> str:
 # unlike Python it must never be split on.
 _HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+# Whole <script> blocks are dropped before matching: a check measures the rendered markup/CSS, not
+# scripting, and JS `//` line comments (which the block/HTML comment strippers miss) must not let
+# `// use #FF6B00` satisfy a presence check — or a scripted value defeat an absence check.
+_SCRIPT_RE = re.compile(r"<script\b[^>]*>.*?</script\s*>", re.DOTALL | re.IGNORECASE)
 
 
 def _html_for_check(code: str) -> str:
-    """``code`` (HTML/CSS/JS) with ``<!-- -->`` and ``/* */`` comments removed."""
+    """``code`` (HTML/CSS) with ``<script>`` blocks and ``<!-- -->``/``/* */`` comments removed."""
+    code = _SCRIPT_RE.sub(" ", code)
     code = _HTML_COMMENT_RE.sub(" ", code)
     return _BLOCK_COMMENT_RE.sub(" ", code)
 
@@ -330,6 +335,26 @@ def _artifact_ok(path: Path) -> bool:
     return True
 
 
+# Fetch-on-load remote references. A self-contained showcase artifact must inline everything, so a
+# committed run stays reproducible/offline and the docs iframe never fetches external state (the
+# prompt already says "no external assets, no CDN"). Targets resources that load automatically —
+# `src=`, a `<link>` stylesheet/font/icon href, CSS `url(...)`, `@import` — NOT a navigational
+# `<a href="https://...">`, which does not fetch on load.
+_REMOTE_REF_RE = re.compile(
+    r"""(?xi)
+      (?: \b src \s*=\s* ["']? (?:https?:)?// )
+    | (?: < link \b [^>]*? \b href \s*=\s* ["']? (?:https?:)?// )
+    | (?: \b url \( \s* ["']? (?:https?:)?// )
+    | (?: @import \s+ (?: url \( \s* )? ["']? (?:https?:)?// )
+    """
+)
+
+
+def _html_remote_refs(html: str) -> list[str]:
+    """Snippets of any fetch-on-load remote reference in ``html`` (empty list if self-contained)."""
+    return [m.group(0)[:60] for m in _REMOTE_REF_RE.finditer(html)]
+
+
 @dataclass
 class AgentGenerator:
     """Drive the live model via the Claude Agent SDK, the scenario's skill mounted, to produce that
@@ -454,7 +479,18 @@ class AgentGenerator:
                     f"{scenario.name}: agent wrote {spec.output} but no non-empty {artifact} in "
                     f"{workdir} (did the generated script run and produce it?)"
                 )
-        return GenerationResult(code=primary.read_text(encoding="utf-8"), transcript=transcript)
+        primary_text = primary.read_text(encoding="utf-8")
+        # A self-contained showcase artifact must inline everything (the prompt says "no external
+        # assets, no CDN"): reject an HTML output that fetches remote resources, so committed runs
+        # stay reproducible/offline and the docs iframe never reaches the network.
+        if spec.output.lower().endswith((".html", ".htm")):
+            remote = _html_remote_refs(primary_text)
+            if remote:
+                raise RuntimeError(
+                    f"{scenario.name}: {spec.output} references remote resources (must be "
+                    f"self-contained): {remote[:3]}"
+                )
+        return GenerationResult(code=primary_text, transcript=transcript)
 
 
 def _message_to_dict(msg: object) -> dict:
