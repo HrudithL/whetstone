@@ -5,7 +5,8 @@ A local [MCP](https://modelcontextprotocol.io) server that lets any skill learn 
 Whetstone attaches to an existing skill and maintains a git-tracked, per-skill store of what a
 user likes (`LEARNINGS`) and what the skill got wrong (`ISSUES`), so the skill can improve from
 ordinary use without a benchmark, dataset, or eval harness. See
-[`LEARNING_SKILLS_DESIGN.md`](./LEARNING_SKILLS_DESIGN.md) for the full design.
+[`LEARNING_SKILLS_DESIGN.md`](https://github.com/HrudithL/whetstone/blob/main/LEARNING_SKILLS_DESIGN.md)
+for the full design.
 
 ## Install
 
