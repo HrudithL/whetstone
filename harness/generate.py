@@ -317,6 +317,19 @@ class StubGenerator:
 # --------------------------------------------------------------------------------------------------
 
 
+def _artifact_ok(path: Path) -> bool:
+    """True if ``path`` is a non-empty file — and, for HTML, has non-WHITESPACE content.
+
+    A whitespace-only ``.html`` passes a size check but renders as nothing (the triptych's
+    ``native.strip()`` is falsy), so reject it here rather than commit a blank before/after panel.
+    """
+    if not (path.is_file() and path.stat().st_size > 0):
+        return False
+    if path.suffix.lower() in (".html", ".htm"):
+        return bool(path.read_text(encoding="utf-8", errors="ignore").strip())
+    return True
+
+
 @dataclass
 class AgentGenerator:
     """Drive the live model via the Claude Agent SDK, the scenario's skill mounted, to produce that
@@ -425,21 +438,18 @@ class AgentGenerator:
             await client.query(prompt)
             async for msg in client.receive_response():
                 transcript.append(_message_to_dict(msg))
+        # The primary output must exist and be non-empty; when it IS the rendered artifact (a web
+        # skill's index.html) require non-WHITESPACE content too — a whitespace-only file passes a
+        # size check but renders as nothing and there are no required_artifacts to catch it later.
         primary = workdir / spec.output
-        if not (primary.is_file() and primary.stat().st_size > 0):
+        if not _artifact_ok(primary):
             raise RuntimeError(
                 f"{scenario.name}: agent did not write a non-empty {spec.output} in {workdir}"
             )
-        # Every declared render artifact must exist and be non-empty (the before/after proof). For
-        # an HTML artifact require non-WHITESPACE content too: a whitespace-only file passes a size
-        # check but renders as nothing (the triptych's `native.strip()` would be falsy). Fail loudly
-        # rather than silently committing an incomplete set.
+        # Every declared render artifact must exist and be non-empty (the before/after proof), same
+        # non-whitespace rule for HTML. Fail loudly, not silently commit an incomplete set.
         for artifact in spec.required_artifacts:
-            f = workdir / artifact
-            ok = f.is_file() and f.stat().st_size > 0
-            if ok and artifact.endswith((".html", ".htm")):
-                ok = bool(f.read_text(encoding="utf-8", errors="ignore").strip())
-            if not ok:
+            if not _artifact_ok(workdir / artifact):
                 raise RuntimeError(
                     f"{scenario.name}: agent wrote {spec.output} but no non-empty {artifact} in "
                     f"{workdir} (did the generated script run and produce it?)"

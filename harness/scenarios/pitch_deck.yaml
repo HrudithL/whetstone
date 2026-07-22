@@ -19,17 +19,21 @@ preferences:
     check:
       kind: code_contains
       pattern: Consolas
-  - id: right-align-titles
+  - id: square-format
     polarity: issue
-    scope: title alignment
-    # A hard rule (issue) and a deliberately unusual one: slide titles are near-universally left- or
-    # center-aligned, so right-aligning every title is a distinctive taste a cold run won't reach for
-    # (left/center DO show up in cold decks, which is why the preference targets RIGHT specifically).
+    scope: aspect ratio
+    # A hard rule (issue) and a deliberately unusual one: a SQUARE 1:1 deck. This is a single
+    # DECK-LEVEL setting (not per-slide), so its presence honors it fully — no partial-compliance
+    # gap. Crucially it is cold-clean: normal decks are 4:3/16:9 with height 7.5in, so a cold run
+    # never sets slide_height to 10in (checking width=10 would false-positive — cold sets 4:3 width).
     body: >
-      Right-align every slide title: set the title paragraph's alignment to PP_ALIGN.RIGHT
-      (`from pptx.enum.text import PP_ALIGN`).
+      Use a SQUARE 1:1 slide format: set `prs.slide_width = Inches(10)` AND
+      `prs.slide_height = Inches(10)` on the Presentation (import Inches from `pptx.util`).
     feedback: >
-      Right-align every slide title (PP_ALIGN.RIGHT) — don't leave them left/center aligned.
+      Make the deck square (1:1), not the usual 4:3/16:9 — set prs.slide_width = Inches(10) and
+      prs.slide_height = Inches(10).
     check:
+      # Deck-level, single-point, and cold-clean: only a square deck sets HEIGHT to 10in (normal
+      # decks are 7.5in tall). AST-unparse normalizes spacing around `=`, so spelling doesn't matter.
       kind: code_contains
-      pattern: PP_ALIGN.RIGHT
+      pattern: slide_height = Inches(10)

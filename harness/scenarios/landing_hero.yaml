@@ -10,10 +10,11 @@ preferences:
     polarity: learning
     scope: color palette
     # Arbitrary house accent: the point is only that this preference, once corrected, is tracked and
-    # re-applied — not that burnt orange is the "right" accent for a developer tool.
+    # re-applied — not that burnt orange is the "right" accent for a developer tool. Scoped to "use
+    # #FF6B00 as the accent" (what the check verifies); derived hover shades are not policed.
     body: >
-      Use the burnt-orange hex `#FF6B00` as the single accent color — the primary CTA button
-      background and any links. Do not introduce other accent hues.
+      Use the burnt-orange hex `#FF6B00` as the accent color for the primary CTA button background
+      and for links.
     feedback: >
       Make the accent #FF6B00 (burnt orange), not the blue you used — for the CTA button and links.
     check:

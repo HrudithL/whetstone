@@ -21,17 +21,18 @@ preferences:
   - id: sharp-corners
     polarity: issue
     scope: corner radius
-    # A hard rule (issue), not a soft taste: pricing cards default to rounded corners, so square
-    # corners everywhere is a mandatory constraint the learned layer must enforce.
+    # A hard rule (issue) enforced GLOBALLY: a `* { border-radius: 0 !important }` reset squares
+    # every corner regardless of per-element rules, so its single presence genuinely honors the
+    # whole page — no partial-compliance gap, and no need to detect every possible rounded value.
+    # Contrarian: pricing cards default to rounded corners.
     body: >
-      All cards, buttons, and inputs must have perfectly square corners: set `border-radius: 0`.
-      Never round any corner.
+      Force perfectly square corners across the whole page: add the rule
+      `* { border-radius: 0 !important; }` as the first rule in the stylesheet. Never round any corner.
     feedback: >
-      Don't round the corners — every card and button must be square (border-radius: 0).
+      Don't round the corners — add a global `* { border-radius: 0 !important; }` reset so every
+      card and button is square.
     check:
-      # "Never round ANY corner" is an absence property: honored iff NO non-zero radius appears.
-      # A presence check for `border-radius: 0` would pass on a reset even beside rounded cards.
-      # `[1-9]` catches the common rounded forms (8px, 12px, 16px, 1rem, ...); `border-radius: 0`
-      # / `0px` start with 0 and are correctly NOT matched.
-      kind: regex_absent
-      pattern: 'border-radius:\s*[1-9]'
+      # The global !important reset is what actually enforces "never round any corner", so checking
+      # for it is both robust and honest (case-insensitive; tolerant of the spacing).
+      kind: regex
+      pattern: '(?i)border-radius:\s*0\s*!important'

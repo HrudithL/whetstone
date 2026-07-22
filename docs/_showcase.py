@@ -68,6 +68,25 @@ def _scroll(inner: str) -> str:
     return f'<div style="overflow-x:auto;max-width:100%">{inner}</div>'
 
 
+def _embed_html(native: str) -> str:
+    """Embed a committed HTML artifact in a panel.
+
+    A full standalone document (a web skill's ``index.html``, with its own ``<html>`` and global CSS
+    like ``*``/``body``) is sandboxed in an ``<iframe srcdoc>`` so its styles can't leak into — or
+    reset — the surrounding docs page, and the cold/warm panels can't bleed into each other. A
+    fragment (great-tables' ``table.html``, just a ``<table>``) is inlined and scrolled.
+    """
+    head = native.lstrip()[:256].lower()
+    if head.startswith("<!doctype") or "<html" in head:
+        doc = _html.escape(native, quote=True)  # srcdoc attr value; the browser un-escapes to parse
+        return (
+            f'<iframe srcdoc="{doc}" title="rendered output" loading="lazy" '
+            'style="width:100%;height:520px;border:1px solid var(--bs-border-color,#ddd);'
+            'border-radius:4px;background:#fff"></iframe>'
+        )
+    return _scroll(native)
+
+
 def _panel_body(scenario: str, phase: str) -> str:
     """HTML for one before/after panel, per the scenario's skill.
 
@@ -80,11 +99,12 @@ def _panel_body(scenario: str, phase: str) -> str:
     """
     primary = (load_summary(scenario) or {}).get("output", "table.py")
     # 1) native, self-contained HTML: a web skill's primary output, or great-tables' side table.html
+    #    (a full document is sandboxed in an iframe; a table fragment is inlined — see _embed_html).
     html_names = ([primary] if primary.lower().endswith((".html", ".htm")) else []) + ["table.html"]
     for name in html_names:
         native = read_text(scenario, phase, name)
         if native and native.strip():
-            return _scroll(native)
+            return _embed_html(native)
     # 2) a rendered raster (great-tables)
     d = _scenario_dir(scenario)
     png = d / phase / "table.png" if d else None
