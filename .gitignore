@@ -1,6 +1,10 @@
 # Agent private working notes (CONTRIBUTING.md §2) — never committed
 .planning/
 
+# Agent memory — symlink to the harness's canonical per-project memory dir
+# (~/.claude/projects/<hash>/memory). Kept visible in-tree but never committed.
+/memory
+
 # Python
 __pycache__/
 *.py[cod]
