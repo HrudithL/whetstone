@@ -17,9 +17,11 @@ verifies the whole pipeline) or ``--agent`` (the live Claude Agent SDK, for the 
 The runner itself always exercises real Whetstone, so the recall payloads, weights, and events are
 genuine either way.
 
-Outputs per scenario under ``out/<name>/``: ``cold/table.py`` (+ png/transcript for the agent),
-``warm/table.py``, ``recall.json`` (verbatim final learned layer), ``diff.txt``, and ``runs.jsonl``
-(per-run honored map + weight/recurrence snapshots — the input to the metrics slice).
+Outputs per scenario under ``out/<skill>/<name>/``: ``cold/<primary>`` (+ the skill's render
+artifacts / transcript for the agent), ``warm/<primary>``, ``recall.json`` (verbatim final learned
+layer), ``diff.txt``, and ``runs.jsonl`` (per-run honored map + weight/recurrence snapshots — the
+input to the metrics slice). The primary artifact and render set come from the skill's
+:class:`~harness.skills.SkillSpec` (``table.py`` for great-tables, ``index.html`` for a web skill).
 """
 
 from __future__ import annotations
@@ -44,27 +46,38 @@ from .generate import (
     honors,
 )
 from .schema import Scenario, load_scenarios
+from .skills import SkillSpec, get_spec
 
 SCENARIOS_DIR = config.HARNESS_ROOT / "scenarios"
 OUT_ROOT = config.HARNESS_ROOT / "out"
-SKILL_DIR = config.HARNESS_ROOT / "skill" / "great-tables"
+SKILL_ROOT = config.HARNESS_ROOT / "skill"
 
 DEFAULT_MAX_RUNS = 5
 DEFAULT_STICK_STREAK = 2
 
 
-def elaborated_intent(scenario: Scenario) -> str:
+def elaborated_intent(scenario: Scenario, spec: SkillSpec) -> str:
     """A recall ``intent`` that elaborates the task's styling dimensions (per recall's contract).
 
-    Deliberately generic — it names the *dimensions* a table decision spans, not the answers — so
-    retrieval must match the seeded scopes rather than being handed them.
+    Deliberately generic — it names the *dimensions* a decision spans, not the answers — so
+    retrieval must match the seeded scopes rather than being handed them. The lead phrase and the
+    dimensions come from the scenario's :class:`~harness.skills.SkillSpec`.
     """
     return (
-        f"Styling a great-tables display table for this task: {scenario.prompt.strip()} "
-        "Consider column alignment, number formatting, currency formatting, percentage formatting, "
-        "color palette and encoding, column-label and header styling, row-group label styling, "
-        "column grouping and spanners, row ordering, and table density."
+        f"Styling {spec.intent_lead} for this task: {scenario.prompt.strip()} "
+        f"Consider {spec.intent_dimensions}."
     )
+
+
+def store_id(scenario: Scenario) -> str:
+    """The Whetstone ``skill`` id for a scenario's isolated store: ``<skill>-<scenario>``.
+
+    Keyed by skill (the store dirs group by skill) yet unique per scenario, so each scenario's
+    COLD run still sees a genuinely empty store — a literally-shared per-skill store would let one
+    scenario's seeded learnings pollute another's cold baseline. Slugified by Whetstone into
+    ``<skill>-<scenario>-<hash>`` under the gitignored ``.store/``.
+    """
+    return f"{scenario.skill}-{scenario.name}"
 
 
 def _recall(skill: str, intent: str) -> dict:
@@ -149,13 +162,16 @@ def _make_workdir(scenario: Scenario) -> _Work:
     return _Work(d)
 
 
-def _persist(result: GenerationResult, workdir: Path, phase_dir: Path) -> None:
+def _persist(
+    result: GenerationResult, spec: SkillSpec, workdir: Path, phase_dir: Path
+) -> None:
     """Copy the generated artifacts out of the (soon-deleted) workdir into ``phase_dir``."""
     phase_dir.mkdir(parents=True, exist_ok=True)
-    (phase_dir / "table.py").write_text(result.code, encoding="utf-8")
-    # Capture the rendered outputs from the workdir before it is torn down: table.png (raster) and
-    # table.html (self-contained, embedded natively by the triptych). Both are best-effort.
-    for artifact in ("table.png", "table.html"):
+    (phase_dir / spec.output).write_text(result.code, encoding="utf-8")
+    # Capture the skill's rendered artifacts from the workdir before it is torn down (e.g.
+    # great-tables' table.png raster + native table.html; a slide skill's deck.pptx). Best-effort:
+    # the stub does not produce them, and the agent path has already fail-loud-checked them.
+    for artifact in spec.required_artifacts:
         src = workdir / artifact
         if src.is_file():
             shutil.copy2(src, phase_dir / artifact)
@@ -173,11 +189,12 @@ def run_scenario(
     stick_streak: int = DEFAULT_STICK_STREAK,
     out_root: Path = OUT_ROOT,
 ) -> dict:
-    """Run the cold→seed→warm loop for one scenario; write ``out/<name>/`` and return a summary.
+    """Run the cold→seed→warm loop for one scenario; write ``out/<skill>/<name>/`` and return a
+    summary.
 
-    Artifacts are written to a staging dir and swapped into ``out/<name>`` **only after the whole
-    scenario succeeds**, so a mid-run failure (e.g. the agent renders no PNG, or the API aborts)
-    leaves the previously committed artifacts intact rather than half-deleted.
+    Artifacts are written to a staging dir and swapped into ``out/<skill>/<name>`` **only after the
+    whole scenario succeeds**, so a mid-run failure (e.g. the agent renders no PNG, or the API
+    aborts) leaves the previously committed artifacts intact rather than half-deleted.
     """
     # Validate the data file BEFORE anything destructive: _reset_store() deletes the per-scenario
     # store, so a missing CSV must fail here rather than after wiping a prior run's telemetry.
@@ -187,7 +204,7 @@ def run_scenario(
             f"{scenario.name}: data file not found: {scenario.data} (resolved {src})"
         )
 
-    _reset_store(scenario.name)
+    _reset_store(store_id(scenario))
     stage = Path(tempfile.mkdtemp(prefix=f"whetstone-stage-{scenario.name}-"))
     try:
         summary = _run_scenario_into(
@@ -196,7 +213,7 @@ def run_scenario(
     except BaseException:
         shutil.rmtree(stage, ignore_errors=True)
         raise
-    _swap_into_place(stage, out_root / scenario.name)
+    _swap_into_place(stage, out_root / scenario.skill / scenario.name)
     return summary
 
 
@@ -235,7 +252,9 @@ def _run_scenario_into(
 ) -> dict:
     """The cold→seed→warm loop, writing all artifacts under ``out_dir`` (a staging dir)."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    intent = elaborated_intent(scenario)
+    spec = get_spec(scenario.skill)
+    skill = store_id(scenario)
+    intent = elaborated_intent(scenario, spec)
     prefs = scenario.preferences
     runs: list[dict] = []
     cold_code = warm_code = ""
@@ -244,17 +263,17 @@ def _run_scenario_into(
     # ---- COLD (run 1): empty store, nothing injected -------------------------------------------
     # Recall anyway (the model consults the skill and finds nothing) so the cold run is a real,
     # empty-payload recall event; its run_id ties the seeding corrections to this run.
-    cold_recall = _recall(scenario.name, intent)
+    cold_recall = _recall(skill, intent)
     cold_run_id = cold_recall.get("run_id")
     with _make_workdir(scenario) as wd:
         cold = generator.generate(scenario, "", wd)
-        _persist(cold, wd, out_dir / "cold")
+        _persist(cold, spec, wd, out_dir / "cold")
     cold_code = cold.code
     runs.append(
         {
             "run": 1,
             "phase": "cold",
-            "honored": {p.id: honors(cold.code, p.check) for p in prefs},
+            "honored": {p.id: honors(cold.code, p.check, spec.check_language) for p in prefs},
             "weights": {p.id: None for p in prefs},
             "recurrence": {p.id: None for p in prefs},
         }
@@ -264,7 +283,7 @@ def _run_scenario_into(
     entry_ids: dict[str, str | None] = {}
     for p in prefs:
         res = _capture(
-            scenario.name, p.polarity, p.body, p.scope, f"showcase:{scenario.name}", cold_run_id
+            skill, p.polarity, p.body, p.scope, f"showcase:{scenario.name}", cold_run_id
         )
         entry_ids[p.id] = res.get("entry_id")
 
@@ -273,20 +292,20 @@ def _run_scenario_into(
     final_learned = ""
     while run_no < max_runs:
         run_no += 1
-        payload = _recall(scenario.name, intent)
+        payload = _recall(skill, intent)
         final_recall = payload
         warm_run_id = payload.get("run_id")
         learned = format_learned_layer(payload)
         final_learned = learned
         with _make_workdir(scenario) as wd:
             warm = generator.generate(scenario, learned, wd)
-            _persist(warm, wd, out_dir / "warm")
+            _persist(warm, spec, wd, out_dir / "warm")
         warm_code = warm.code
         weights, recurrence, honored = {}, {}, {}
         for p in prefs:
             w, r = _weight_recurrence(payload, entry_ids.get(p.id) or "")
             weights[p.id], recurrence[p.id] = w, r
-            honored[p.id] = honors(warm.code, p.check)
+            honored[p.id] = honors(warm.code, p.check, spec.check_language)
         runs.append(
             {"run": run_no, "phase": "warm", "honored": honored,
              "weights": weights, "recurrence": recurrence}
@@ -295,18 +314,18 @@ def _run_scenario_into(
         for p in prefs:
             if p.polarity == "learning":
                 _capture(
-                    scenario.name, p.polarity, p.body, p.scope,
+                    skill, p.polarity, p.body, p.scope,
                     f"showcase:{scenario.name}", warm_run_id,
                 )
         if _all_stuck(runs, prefs, stick_streak):
             break
 
-    _write_outputs(out_dir, scenario, prefs, runs, cold_code, warm_code, final_recall)
+    _write_outputs(out_dir, scenario, prefs, runs, cold_code, warm_code, final_recall, spec.output)
     # The exact learned-layer text injected into the final warm run's prompt — this, not the raw
     # recall.json, is "what the model was told", so the triptych's middle panel renders it verbatim.
     (out_dir / "learned_layer.txt").write_text(final_learned, encoding="utf-8")
     summary = _scenario_summary(
-        scenario, generator, runs, stick_streak, max_runs, usage_kpis=_metrics(scenario.name)
+        scenario, generator, runs, stick_streak, max_runs, usage_kpis=_metrics(skill)
     )
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
@@ -339,6 +358,8 @@ def _scenario_summary(
         }
     return {
         "scenario": scenario.name,
+        "skill": scenario.skill,
+        "output": get_spec(scenario.skill).output,  # primary artifact filename (site reads it)
         "difficulty": scenario.difficulty,
         "generator": generator.name,
         "params": {"max_runs": max_runs, "stick_streak": stick_streak},
@@ -381,7 +402,7 @@ def _runs_to_stick(runs: list[dict], pref_id: str, stick_streak: int) -> int | N
 
 def _write_outputs(
     out_dir: Path, scenario: Scenario, prefs, runs: list[dict], cold_code: str,
-    warm_code: str, final_recall: dict,
+    warm_code: str, final_recall: dict, output: str,
 ) -> None:
     (out_dir / "recall.json").write_text(
         json.dumps(
@@ -391,9 +412,11 @@ def _write_outputs(
         ),
         encoding="utf-8",
     )
+    # Label the diff with the skill's actual primary artifact (table.py / index.html / deck.py),
+    # not a hard-coded table.py, so the before/after audit points at files that really exist.
     diff = difflib.unified_diff(
         cold_code.splitlines(keepends=True), warm_code.splitlines(keepends=True),
-        fromfile="cold/table.py", tofile="warm/table.py",
+        fromfile=f"cold/{output}", tofile=f"warm/{output}",
     )
     (out_dir / "diff.txt").write_text("".join(diff), encoding="utf-8")
     with (out_dir / "runs.jsonl").open("w", encoding="utf-8") as fh:
@@ -423,12 +446,24 @@ def _load_harness_env() -> None:
 
 
 def _build_generator(args: argparse.Namespace) -> Generator:
+    # The skill dir is per-scenario now (a run may span several skills), so it is resolved inside
+    # AgentGenerator per scenario; main() preflights each scenario's skill before any run.
     if args.agent:
-        if not SKILL_DIR.is_dir():
-            print(f"error: --agent needs a mounted skill at {SKILL_DIR}", file=sys.stderr)
-            raise SystemExit(2)
-        return AgentGenerator(skill_dir=SKILL_DIR, model=args.model)
+        return AgentGenerator(model=args.model)
     return StubGenerator()
+
+
+def _preflight_skills(scenarios: list[Scenario], *, need_dir: bool) -> str | None:
+    """Return an error string if any scenario's skill lacks a SkillSpec (or, for ``--agent``, a
+    vendored dir); ``None`` if all are runnable. Runs before any destructive work."""
+    for s in scenarios:
+        try:
+            spec = get_spec(s.skill)
+        except KeyError as exc:
+            return f"{s.name}: {exc}"
+        if need_dir and not (SKILL_ROOT / spec.name).is_dir():
+            return f"{s.name}: --agent needs a mounted skill dir at {SKILL_ROOT / spec.name}"
+    return None
 
 
 def main() -> int:
@@ -474,6 +509,12 @@ def main() -> int:
             return 2
     if not scenarios:
         print("error: no scenarios selected", file=sys.stderr)
+        return 2
+
+    # Preflight the skill mapping before any destructive run (run_scenario resets each store).
+    err = _preflight_skills(scenarios, need_dir=args.agent)
+    if err:
+        print(f"error: {err}", file=sys.stderr)
         return 2
 
     # Only --agent writes the committed artifacts. --stub is a verification-only run, so route BOTH

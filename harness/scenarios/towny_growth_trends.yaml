@@ -1,4 +1,5 @@
 name: towny_growth_trends
+skill: great-tables
 difficulty: hard
 prompt: >
   Create a table showing population-density growth for the 15 fastest-growing Ontario towns,

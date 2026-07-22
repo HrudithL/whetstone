@@ -1,4 +1,5 @@
 name: airquality_monthly_summary
+skill: great-tables
 difficulty: medium
 prompt: >
   Create a table comparing the average temperature, wind speed, and ozone level for each month in the

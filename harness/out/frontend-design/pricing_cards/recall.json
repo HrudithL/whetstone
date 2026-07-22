@@ -1,0 +1,18 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Set the base body font to Courier: `font-family: 'Courier New', monospace` on the root/body.",
+      "scope": "typography",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": [
+    {
+      "id": "I1",
+      "rule": "Force perfectly square corners across the whole page: add the rule `* { border-radius: 0 !important; }` as the first rule in the stylesheet. Never round any corner.",
+      "scope": "corner radius"
+    }
+  ]
+}

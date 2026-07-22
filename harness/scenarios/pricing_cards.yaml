@@ -1,0 +1,38 @@
+name: pricing_cards
+skill: frontend-design
+difficulty: medium
+prompt: >
+  Build the three-tier pricing section for "Marrow" described in the brief. Produce a single
+  self-contained index.html.
+data: data/pricing_brief.md
+preferences:
+  - id: courier-body-font
+    polarity: learning
+    scope: typography
+    # Contrarian on purpose: Courier on a SaaS pricing page is an unusual, deliberate look — exactly
+    # the kind of taste the cold run won't reach for on its own.
+    body: >
+      Set the base body font to Courier: `font-family: 'Courier New', monospace` on the root/body.
+    feedback: >
+      Use Courier for the body text — font-family: 'Courier New', monospace, not a sans-serif.
+    check:
+      kind: code_contains
+      pattern: 'Courier New'
+  - id: sharp-corners
+    polarity: issue
+    scope: corner radius
+    # A hard rule (issue) enforced GLOBALLY: a `* { border-radius: 0 !important }` reset squares
+    # every corner regardless of per-element rules, so its single presence genuinely honors the
+    # whole page — no partial-compliance gap, and no need to detect every possible rounded value.
+    # Contrarian: pricing cards default to rounded corners.
+    body: >
+      Force perfectly square corners across the whole page: add the rule
+      `* { border-radius: 0 !important; }` as the first rule in the stylesheet. Never round any corner.
+    feedback: >
+      Don't round the corners — add a global `* { border-radius: 0 !important; }` reset so every
+      card and button is square.
+    check:
+      # The global !important reset is what actually enforces "never round any corner", so checking
+      # for it is both robust and honest (case-insensitive; tolerant of the spacing).
+      kind: regex
+      pattern: '(?i)border-radius:\s*0\s*!important'

@@ -1,0 +1,35 @@
+name: landing_hero
+skill: frontend-design
+difficulty: medium
+prompt: >
+  Build the hero section for the "Marrow" landing page described in the brief. Produce a single
+  self-contained index.html.
+data: data/landing_hero_brief.md
+preferences:
+  - id: accent-burnt-orange
+    polarity: learning
+    scope: color palette
+    # Arbitrary house accent: the point is only that this preference, once corrected, is tracked and
+    # re-applied — not that burnt orange is the "right" accent for a developer tool. Scoped to "use
+    # #FF6B00 as the accent" (what the check verifies); derived hover shades are not policed.
+    body: >
+      Use the burnt-orange hex `#FF6B00` as the accent color for the primary CTA button background
+      and for links.
+    feedback: >
+      Make the accent #FF6B00 (burnt orange), not the blue you used — for the CTA button and links.
+    check:
+      # Case-insensitive: CSS hex is case-insensitive, so `#ff6b00` must count as honoring too.
+      kind: regex
+      pattern: '(?i)#ff6b00'
+  - id: hero-wide-tracking
+    polarity: learning
+    scope: typography
+    # Deliberately against the grain: big display headlines usually get tight/negative tracking; wide
+    # positive tracking on the headline is this user's specific taste.
+    body: >
+      Give the main headline wide letter-spacing of exactly 0.2em (`letter-spacing: 0.2em`).
+    feedback: >
+      Widen the headline letter tracking — use letter-spacing: 0.2em, not tight spacing.
+    check:
+      kind: regex
+      pattern: 'letter-spacing:\s*0.2em'

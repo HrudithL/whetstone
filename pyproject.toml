@@ -64,6 +64,9 @@ showcase = [
     "claude-agent-sdk",
     "matplotlib",
     "pyyaml",
+    # The pptx showcase skill's generated deck.py builds a deck with python-pptx; the --agent runner
+    # runs that script in this venv, so the dep must be importable here.
+    "python-pptx",
     # Quarto site render (jupyter engine): the docs/ pages execute Python to read out/ and render
     # great-tables natively + matplotlib charts.
     "jupyter",

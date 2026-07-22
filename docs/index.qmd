@@ -37,7 +37,9 @@ m = load_metrics()
 if m is None:
     out = not_generated_note("The headline numbers")
 else:
-    a = m["aggregate"]
+    # Headline numbers are the great-tables slice — this site is scoped to great-tables (the
+    # frontend-design / pptx artifacts are committed for the deferred multi-skill docs, M4c).
+    a = m.get("skills", {}).get("great-tables") or m["aggregate"]
     out = Markdown(
         f"### At a glance\n\n"
         f"- **{a['preferences_stuck']} of {a['preferences_total']}** corrected preferences stuck "

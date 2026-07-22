@@ -69,7 +69,9 @@ def td(text: str) -> str:
 head = ("<tr><th>scenario</th><th>diff.</th><th>preference</th><th>polarity</th>"
         "<th>scope</th><th>rule</th><th>check</th></tr>")
 body = []
-for s in scenarios_meta():
+# Scoped to great-tables (this page's copy describes checks against `table.py`); the frontend-design
+# / pptx scenarios are committed for the deferred multi-skill docs.
+for s in scenarios_meta("great-tables"):
     for p in s["preferences"]:
         chk = f"{html.escape(p['check']['kind'])} · <code>{html.escape(p['check']['pattern'])}</code>"
         body.append(
