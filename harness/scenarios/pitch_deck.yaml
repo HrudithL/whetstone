@@ -19,15 +19,17 @@ preferences:
     check:
       kind: code_contains
       pattern: Consolas
-  - id: left-align-titles
+  - id: right-align-titles
     polarity: issue
     scope: title alignment
-    # A hard rule (issue): titles default to centered; every title must be left-aligned.
+    # A hard rule (issue) and a deliberately unusual one: slide titles are near-universally left- or
+    # center-aligned, so right-aligning every title is a distinctive taste a cold run won't reach for
+    # (left/center DO show up in cold decks, which is why the preference targets RIGHT specifically).
     body: >
-      Left-align every slide title: set the title paragraph's alignment to PP_ALIGN.LEFT
+      Right-align every slide title: set the title paragraph's alignment to PP_ALIGN.RIGHT
       (`from pptx.enum.text import PP_ALIGN`).
     feedback: >
-      Don't center the titles — left-align every slide title (PP_ALIGN.LEFT).
+      Right-align every slide title (PP_ALIGN.RIGHT) — don't leave them left/center aligned.
     check:
       kind: code_contains
-      pattern: PP_ALIGN.LEFT
+      pattern: PP_ALIGN.RIGHT
