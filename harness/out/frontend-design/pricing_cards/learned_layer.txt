@@ -1,0 +1,6 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L1] (typography, weight 0.67) Set the base body font to Courier: `font-family: 'Courier New', monospace` on the root/body.
+Issues (mandatory constraints):
+  - [I1] (corner radius) All cards, buttons, and inputs must have perfectly square corners: set `border-radius: 0`. Never round any corner.

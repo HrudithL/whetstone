@@ -1,0 +1,18 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Set every text run's font to Consolas (`run.font.name = \"Consolas\"`) \u2014 titles and body, on all slides.",
+      "scope": "typography",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": [
+    {
+      "id": "I1",
+      "rule": "Right-align every slide title: set the title paragraph's alignment to PP_ALIGN.RIGHT (`from pptx.enum.text import PP_ALIGN`).",
+      "scope": "title alignment"
+    }
+  ]
+}

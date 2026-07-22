@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marrow Pricing</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background-color: #fafaf9;
+      color: #1a1a1a;
+      line-height: 1.6;
+      padding: 60px 20px;
+    }
+
+    .pricing-section {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .pricing-header h1 {
+      font-size: 36px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+
+    .pricing-header p {
+      font-size: 14px;
+      color: #404040;
+      font-weight: 400;
+      letter-spacing: 0.2px;
+    }
+
+    .pricing-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .card {
+      border: 1px solid #404040;
+      border-radius: 0;
+      padding: 40px 30px;
+      display: flex;
+      flex-direction: column;
+      background-color: #ffffff;
+      position: relative;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .card:focus-within {
+      border-color: #2563eb;
+    }
+
+    .card.recommended {
+      border: 2px solid #2563eb;
+      background-color: #f0f7ff;
+    }
+
+    .card.recommended::before {
+      content: 'RECOMMENDED';
+      position: absolute;
+      top: -12px;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      background-color: #2563eb;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      padding: 4px 12px;
+      width: fit-content;
+      border-radius: 0;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+
+    .card-price {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    .card-price-label {
+      font-size: 12px;
+      color: #404040;
+      margin-bottom: 28px;
+      letter-spacing: 0.1px;
+    }
+
+    .card-features {
+      list-style: none;
+      margin-bottom: 32px;
+      flex-grow: 1;
+    }
+
+    .card-features li {
+      font-size: 13px;
+      margin-bottom: 12px;
+      padding-left: 20px;
+      position: relative;
+      color: #1a1a1a;
+      letter-spacing: 0.1px;
+    }
+
+    .card-features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    .card-cta {
+      padding: 12px 0;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid #404040;
+      border-radius: 0;
+      background-color: transparent;
+      color: #1a1a1a;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      font-family: 'Courier New', monospace;
+    }
+
+    .card-cta:hover {
+      background-color: #1a1a1a;
+      color: #ffffff;
+    }
+
+    .card-cta:focus {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    .card.recommended .card-cta {
+      background-color: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
+    }
+
+    .card.recommended .card-cta:hover {
+      background-color: #1d4ed8;
+      border-color: #1d4ed8;
+    }
+
+    @media (max-width: 768px) {
+      .pricing-header h1 {
+        font-size: 28px;
+      }
+
+      .pricing-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 32px 24px;
+      }
+
+      .card-price {
+        font-size: 24px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card,
+      .card-cta {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="pricing-section">
+    <div class="pricing-header">
+      <h1>Pricing</h1>
+      <p>Start free. Upgrade when your team does.</p>
+    </div>
+
+    <div class="pricing-cards">
+      <!-- Solo Card -->
+      <div class="card">
+        <h2 class="card-title">Solo</h2>
+        <div class="card-price">$0</div>
+        <div class="card-price-label">forever</div>
+        <ul class="card-features">
+          <li>1 developer</li>
+          <li>Local test maps</li>
+          <li>Community support</li>
+        </ul>
+        <button class="card-cta">Start free</button>
+      </div>
+
+      <!-- Team Card (Recommended) -->
+      <div class="card recommended">
+        <h2 class="card-title">Team</h2>
+        <div class="card-price">$12</div>
+        <div class="card-price-label">per user / month</div>
+        <ul class="card-features">
+          <li>Everything in Solo</li>
+          <li>Shared team maps</li>
+          <li>CI integration</li>
+          <li>Email support</li>
+        </ul>
+        <button class="card-cta">Start 14-day trial</button>
+      </div>
+
+      <!-- Enterprise Card -->
+      <div class="card">
+        <h2 class="card-title">Enterprise</h2>
+        <div class="card-price">Custom</div>
+        <div class="card-price-label">contact for pricing</div>
+        <ul class="card-features">
+          <li>Everything in Team</li>
+          <li>SSO / SAML</li>
+          <li>Self-hosted option</li>
+          <li>Dedicated support</li>
+        </ul>
+        <button class="card-cta">Contact sales</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

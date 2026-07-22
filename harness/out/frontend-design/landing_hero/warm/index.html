@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marrow — Test Coverage Mapping for Engineers</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        .hero {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+        }
+
+        .hero-content {
+            max-width: 700px;
+            text-align: center;
+        }
+
+        .eyebrow {
+            font-size: 0.875rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #666666;
+            margin-bottom: 2rem;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: 0.2em;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+            word-spacing: 0.1em;
+        }
+
+        .subtext {
+            font-size: 1.125rem;
+            line-height: 1.8;
+            color: #444444;
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .cta-primary {
+            display: inline-block;
+            background-color: #FF6B00;
+            color: #ffffff;
+            padding: 0.875rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(255, 107, 0, 0.2);
+        }
+
+        .cta-primary:hover {
+            background-color: #e55a00;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .cta-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba(255, 107, 0, 0.2);
+        }
+
+        .cta-primary:focus {
+            outline: 2px solid #FF6B00;
+            outline-offset: 2px;
+        }
+
+        .cta-secondary {
+            display: inline-block;
+            color: #FF6B00;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            border-bottom: 1px solid transparent;
+        }
+
+        .cta-secondary:hover {
+            color: #e55a00;
+            border-bottom-color: #e55a00;
+        }
+
+        .cta-secondary:focus {
+            outline: 2px solid #FF6B00;
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+
+        .trust-line {
+            font-size: 0.9rem;
+            color: #888888;
+            font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Menlo, Courier, monospace;
+            letter-spacing: 0.03em;
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtext {
+                font-size: 1rem;
+            }
+
+            .cta-group {
+                gap: 0.75rem;
+            }
+
+            .hero {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .cta-primary,
+            .cta-secondary {
+                transition: none;
+            }
+
+            .cta-primary:hover {
+                transform: none;
+            }
+        }
+
+        @media (min-width: 641px) {
+            .cta-group {
+                flex-direction: row;
+                justify-content: center;
+                gap: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <div class="hero-content">
+            <div class="eyebrow">Open source · MIT</div>
+            <h1>Know what your tests actually cover.</h1>
+            <p class="subtext">Marrow watches a single test run and draws the real map from test to code — no coverage annotations, no config. Find the dead tests. Find the untested lines. In one command.</p>
+            <div class="cta-group">
+                <button class="cta-primary">Install Marrow</button>
+                <a href="#" class="cta-secondary">Read the docs</a>
+            </div>
+            <div class="trust-line">Works with pytest, Jest, and go test.</div>
+        </div>
+    </section>
+</body>
+</html>

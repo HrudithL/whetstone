@@ -1,0 +1,5 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L1] (color palette, weight 0.67) Use the burnt-orange hex `#FF6B00` as the single accent color — the primary CTA button background and any links. Do not introduce other accent hues.
+  - [L2] (typography, weight 0.67) Give the main headline wide letter-spacing of exactly 0.2em (`letter-spacing: 0.2em`).

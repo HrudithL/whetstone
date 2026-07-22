@@ -1,0 +1,18 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Set the base body font to Courier: `font-family: 'Courier New', monospace` on the root/body.",
+      "scope": "typography",
+      "recurrence": 2,
+      "weight": 0.6667
+    }
+  ],
+  "issues": [
+    {
+      "id": "I1",
+      "rule": "All cards, buttons, and inputs must have perfectly square corners: set `border-radius: 0`. Never round any corner.",
+      "scope": "corner radius"
+    }
+  ]
+}

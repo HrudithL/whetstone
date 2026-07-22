@@ -1,0 +1,6 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L1] (typography, weight 0.67) Set every text run's font to Consolas (`run.font.name = "Consolas"`) — titles and body, on all slides.
+Issues (mandatory constraints):
+  - [I1] (title alignment) Right-align every slide title: set the title paragraph's alignment to PP_ALIGN.RIGHT (`from pptx.enum.text import PP_ALIGN`).
