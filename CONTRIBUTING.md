@@ -330,7 +330,7 @@ The agent MUST NOT:
 - Delete any branch without user approval.
 - Commit secrets, tokens, credentials, or `.env` files. If one is discovered committed, stop and alert the user.
 - Make a genuine-fork decision on the human's behalf — a §10 category (product/UX, public API shape, naming, deps, architecture, security posture) or a choice with multiple materially-different reasonable implementations (see [§10.1](#101-when-to-decide-vs-ask)). Straightforward fixes are the agent's to make.
-- Merge a PR up the tree before the Codex review loop completes.
+- Merge a PR up the tree before the review loop ([§6](#6-phase-5--codex-auto-review-loop)) completes — a clean Codex signal, or the agent self-review stand-in when Codex is rate-limited/unavailable.
 - Treat "the CI passed" as a substitute for the Codex review.
 
 ---
