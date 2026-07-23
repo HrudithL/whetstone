@@ -24,8 +24,8 @@ document the harness or internals. How much of Whetstone can great-docs actually
 - **CLI auto-docs do not apply.** great-docs' CLI support targets **Click** command objects.
   Whetstone's CLI (`whetstone serve` / `whetstone compact <skill>`) is hand-rolled `argv` parsing in
   `server.main()`, so there is nothing for great-docs to introspect. Documented in prose instead.
-- **Subpath hosting at `/docs` works structurally** (relative asset offsets), but the
-  great-docs–generated **`sitemap.xml` / `robots.txt` ignore `site_url`** (see Gap 1).
+- **Subpath hosting at `/docs` works** (relative asset offsets). SEO files (`sitemap.xml` /
+  `robots.txt` / canonical) read a *separate* key, `seo.canonical.base_url` — now set (see Gap 1).
 - **Integration is the real work.** GitHub Pages serves one site per repo, and `great-docs
   setup-github-pages` would write a *second*, conflicting deploy workflow. Instead, the existing
   `pages.yml` was extended to build both and assemble one artifact (root showcase + great-docs at
@@ -77,23 +77,31 @@ committed.
 | **CLI auto-docs** | great-docs expects a **Click** command object (`cli.module` / `cli.name`). Whetstone's `serve`/`compact` CLI is manual `argv` parsing in `server.main()`. No auto command tree; covered in prose only. |
 | **`init` interactivity in CI** | `great-docs init` prompts (`Add 'great-docs/' to .gitignore? [Y/n]`) and errors on EOF when non-interactive. Fine — `init` is a one-time local bootstrap; CI only runs `build`. `great-docs/` is git-ignored on this branch regardless. |
 
-## Gaps / bugs found 🐞
+## Gaps found 🐞 — and their resolution
 
-1. **`sitemap.xml` + `robots.txt` ignore `site_url`.** With `site_url:
-   "https://hrudithl.github.io/whetstone/docs/"` set and correctly written into the generated
-   `_quarto.yml` as `website.site-url`, the great-docs SEO step still emits
-   `<loc>https://HrudithL.github.io/whetstone/…</loc>` — **repo-derived host, GitHub owner casing
-   (`HrudithL`), and no `/docs/` subpath.** So for a subpath deploy the sitemap/robots URLs are wrong.
-   Cosmetic for humans (pages use relative links and load fine); matters only for crawlers. Not
-   blocking; flagged upstream-worthy.
-2. **Landing page links `llms.txt` / `llms-full.txt` that `build` does not emit.** `index.qmd` (from
-   the README-derived landing) links both files, but `great-docs build` produced neither in `_site`
-   (`find _site -iname 'llms*'` → nothing). Two broken links on the landing page as built here.
-3. **`.well-known/mcp.json` run command is a guess.** It advertises `python -m whetstone.server`,
-   but the real entry points are the `whetstone` / `whetstone-mcp` console scripts (and
-   `whetstone.server` has no `__main__`, so that command would not actually start the server).
-4. **One broken-link warning:** `WARN: Unable to resolve link target: LEARNING_SKILLS_DESIGN.md` —
-   the README links a repo doc that isn't part of the docs tree. Non-fatal.
+All four were addressed on the follow-up branch `whetstone-great-docs-fixes`.
+
+1. **`sitemap.xml` + `robots.txt` + `<link rel=canonical>` ignored `site_url`.** They are generated
+   from a **separate** config key, `seo.canonical.base_url`, *not* `site_url`. Left unset, great-docs
+   derived a repo URL with the wrong owner casing (`HrudithL`) and no `/docs/` subpath. **FIXED** by
+   setting `seo.canonical.base_url: "https://hrudithl.github.io/whetstone/docs/"` in `great-docs.yml`.
+   Verified: sitemap `<loc>`, robots `Sitemap:`, and per-page canonical links all now use the correct
+   host + subpath.
+2. **Landing page links `llms.txt` / `llms-full.txt` that `build` did not emit → dead links.** Root
+   cause (in `great_docs/core.py`): the landing template appends these links *unconditionally*, but
+   `_generate_llms_txt` returns early unless `_quarto.yml` has a populated **`api-reference`** section.
+   Whetstone has an *MCP* reference, not a Python api-reference, so no file is written, and there is no
+   config toggle to hide the links. **Upstream great-docs limitation for MCP-only packages.**
+   Worked around by synthesizing both files from the build's own `.well-known/mcp.json`
+   (`.github/scripts/gen_llms_txt.py`, run in the deploy pipeline). Verified both land in
+   `_deploy/docs/` so the links resolve.
+3. **~~`.well-known/mcp.json` run command is wrong~~ — NOT A BUG (this spike doc was mistaken).** The
+   manifest advertises `python -m whetstone.server`, and `src/whetstone/server.py` **does** have
+   `if __name__ == "__main__": main()`, so that command starts the stdio server correctly (verified:
+   clean start, exit 0 on stdin EOF). No change needed; claim corrected here.
+4. **Broken-link warning `WARN: Unable to resolve link target: LEARNING_SKILLS_DESIGN.md`** — the
+   README (source of the landing page) used a repo-relative link. **FIXED** by making it an absolute
+   GitHub blob URL (still correct on GitHub); the warning is gone.
 
 ## Hosting at `<site>/docs` — the integration
 
@@ -118,25 +126,31 @@ _deploy/                <- uploaded to Pages
     └── .well-known/{mcp.json, agent-skills/…}
 ```
 
-`site_url` in `great-docs.yml` is `https://hrudithl.github.io/whetstone/docs/`. The assembly was
-verified locally (root `index.html`, `docs/index.html`, and `docs/reference/mcp/recall.html` all
-present). **Nothing deploys until this branch merges to `main`** (and Pages source stays "GitHub
-Actions").
+`site_url` in `great-docs.yml` is `https://hrudithl.github.io/whetstone/docs/`. Deployed and verified
+live after the initial merge; the gap fixes below refine it.
 
-## Changes on this branch
+## Changes — initial spike (merged, PR #28)
 
 - `great-docs.yml` — committed config (module `whetstone`, numpy parser, `site_url` = the `/docs`
   subpath). Source of truth; `reference:` intentionally empty.
 - `.github/workflows/pages.yml` — build root showcase **and** great-docs, assemble `_deploy/`
-  (great-docs at `/docs`), upload the combined artifact. Triggers add `great-docs.yml` + `src/**`.
+  (great-docs at `/docs`), upload the combined artifact.
 - `pyproject.toml` — new `[docs]` extra (`great-docs>=0.15`).
 - `.gitignore` — ignore the ephemeral `great-docs/` build dir (config stays committed).
+
+## Changes — gap fixes (branch `whetstone-great-docs-fixes`)
+
+- `great-docs.yml` — add `seo.canonical.base_url` = the `/docs` subpath (Gap 1).
+- `README.md` — `LEARNING_SKILLS_DESIGN.md` link → absolute GitHub URL (Gap 4).
+- `.github/scripts/gen_llms_txt.py` + a `pages.yml` step — synthesize `llms.txt` / `llms-full.txt`
+  from the built `mcp.json` so the landing links resolve (Gap 2 workaround).
+- This doc — corrected Gap 3 (not a bug).
 
 ## Recommendation
 
 great-docs is a **good fit for a `/docs` reference site** specifically because of its MCP-tool
 auto-detection — it documents Whetstone's actual interface, not its irrelevant Python internals, with
-almost no authoring. Before promoting past a spike: (a) fix or suppress the `llms.txt` landing links
-(Gap 2), (b) decide whether the sitemap host mismatch (Gap 1) matters for our SEO, (c) correct the
-`mcp.json` run command (Gap 3), and (d) add a short prose CLI page (`serve` / `compact`) since CLI
-auto-docs don't apply.
+almost no authoring. Gaps 1, 2, and 4 are resolved and Gap 3 was a false alarm. The one remaining
+nice-to-have (not blocking): a short prose CLI page (`serve` / `compact`), since CLI auto-docs target
+Click and don't apply here. The Gap 2 llms shim should be retired if great-docs later emits llms files
+for MCP-only packages (worth reporting upstream, given great-docs is a Posit tool).

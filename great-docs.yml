@@ -79,6 +79,15 @@ reference:
 # .well-known/ discovery, and sitemaps.
 site_url: "https://hrudithl.github.io/whetstone/docs/"
 
+# SEO
+# ---
+# The sitemap.xml, robots.txt, and <link rel="canonical"> are generated from
+# seo.canonical.base_url — a SEPARATE key from site_url. Without it, great-docs derives the host
+# from the GitHub remote (wrong owner casing, and no /docs subpath). Pin it to the deployed subpath.
+seo:
+  canonical:
+    base_url: "https://hrudithl.github.io/whetstone/docs/"
+
 # Site Settings
 # -------------
 # site:
