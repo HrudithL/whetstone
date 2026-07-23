@@ -1,0 +1,33 @@
+name: plotnine_sp500_close_trend
+skill: plotnine
+difficulty: medium
+prompt: >
+  Show the trend of the S&P 500 closing price over the most recent year of data.
+data: data/sp500.csv
+# MEDIUM task (2 preferences) — the mid-complexity point for the convergence-vs-complexity metric.
+preferences:
+  - id: line-crimson
+    polarity: learning
+    scope: color encoding
+    # Deliberately against the grain: the skill's house accent for a single un-mapped series is a
+    # muted blue (#2C6FB3). Crimson is this user's taste, not an objectively better color.
+    body: >
+      Draw the single trend line in crimson `#D1495B`, not the house blue accent.
+    feedback: >
+      Make the line #D1495B (crimson), not the default blue.
+    check:
+      # Case-insensitive: CSS/plotnine hex is case-insensitive, so #d1495b must count as honoring.
+      kind: regex
+      pattern: '(?i)#d1495b'
+  - id: line-thick
+    polarity: learning
+    scope: geoms
+    # Arbitrary house taste: a heavier stroke than plotnine's default line width. The skill pins no
+    # line size, so the cold run has no reason to reach for this exact value.
+    body: >
+      Give the trend line a thicker stroke, `size=1.5`, in geom_line.
+    feedback: >
+      Make the line thicker — geom_line(size=1.5).
+    check:
+      kind: regex
+      pattern: 'geom_line\([^)]*size\s*=\s*1\.5'
