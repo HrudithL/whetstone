@@ -1,0 +1,48 @@
+import pandas as pd
+from plotnine import (
+    ggplot, aes, geom_line, labs, theme, theme_minimal,
+    element_text, element_line, element_blank, scale_y_continuous
+)
+from mizani.labels import label_comma, label_date
+import datetime
+
+# Step 1: Load and clean data
+df = pd.read_csv("sp500.csv")
+df["date"] = pd.to_datetime(df["date"])
+
+# Filter to the most recent year
+max_date = df["date"].max()
+one_year_ago = max_date - pd.Timedelta(days=365)
+df_year = df[df["date"] >= one_year_ago].copy()
+
+# Sort by date for line plot
+df_year = df_year.sort_values("date").reset_index(drop=True)
+
+# Step 2 & 3: Build the plot with geom_line and single accent color
+p = (
+    ggplot(df_year, aes(x="date", y="close"))
+    + geom_line(color="#D1495B", size=1.5)  # L1: crimson, L2: thicker stroke
+
+    # Step 4: Labels and scales
+    + labs(
+        title="S&P 500 Closing Price Trend",
+        x="Date",
+        y="Closing Price ($)"
+    )
+    + scale_y_continuous(labels=label_comma())
+
+    # Step 5: Theme
+    + theme_minimal(base_size=12)
+    + theme(
+        figure_size=(8, 5),
+        plot_title=element_text(size=15, weight="bold", color="#222222"),
+        axis_title=element_text(size=12, color="#222222"),
+        axis_text=element_text(size=10, color="#222222"),
+        panel_grid_major=element_line(color="#E6E6E6", size=0.4),
+        panel_grid_minor=element_blank(),
+    )
+)
+
+# Step 6: Render to PNG
+p.save("plot.png", width=8, height=5, dpi=200, verbose=False)
+print("Plot saved to plot.png")

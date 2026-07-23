@@ -1,0 +1,4 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L2] (scales, weight 0.80) Put the price (msrp) axis on a log scale with `scale_y_log10()`.

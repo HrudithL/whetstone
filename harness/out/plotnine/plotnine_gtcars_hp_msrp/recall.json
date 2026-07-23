@@ -1,0 +1,12 @@
+{
+  "learnings": [
+    {
+      "id": "L2",
+      "rule": "Put the price (msrp) axis on a log scale with `scale_y_log10()`.",
+      "scope": "scales",
+      "recurrence": 4,
+      "weight": 0.8
+    }
+  ],
+  "issues": []
+}
