@@ -110,9 +110,31 @@ _PPTX = SkillSpec(
 )
 
 
+_PLOTNINE = SkillSpec(
+    name="plotnine",
+    output="plot.py",
+    check_language="python",  # a plotnine script → reuse the AST/tokenize stripper
+    required_artifacts=("plot.png",),  # the script must actually render the PNG via p.save()
+    intent_lead="a plotnine plot",
+    intent_dimensions=(
+        "geom / chart family, color palette and encoding, axis scales and number/date formatting, "
+        "theme and gridlines, legend placement, and figure size and dpi"
+    ),
+    prompt_tail=(
+        "The data is in `{data}` in the current directory. Write a Python script `plot.py` that "
+        "builds the requested plot with `plotnine`, then render it to `plot.png` with the skill's "
+        'mandatory renderer `p.save("plot.png", ...)` (plotnine renders through matplotlib '
+        "in-process — no browser). Run the script to confirm it works. Create no files other than "
+        "`plot.py` and the `plot.png` it writes."
+    ),
+)
+
+
 # Registry. Additional skills are registered in their own slices as they are vendored under
 # harness/skill/. Keyed by the scenario's `skill:` field.
-SPECS: dict[str, SkillSpec] = {s.name: s for s in (_GREAT_TABLES, _FRONTEND_DESIGN, _PPTX)}
+SPECS: dict[str, SkillSpec] = {
+    s.name: s for s in (_GREAT_TABLES, _FRONTEND_DESIGN, _PPTX, _PLOTNINE)
+}
 
 
 def get_spec(skill: str) -> SkillSpec:
