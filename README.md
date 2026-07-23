@@ -45,8 +45,9 @@ pip install whetstone-mcp       # into the current environment
 uvx whetstone-mcp
 ```
 
-This installs two equivalent commands — `whetstone` (primary) and `whetstone-mcp`. Running either
-starts the stdio MCP server; it waits for an MCP client, so you don't run it by hand — a host does.
+`pipx` / `pip` install two equivalent commands — `whetstone` (primary) and `whetstone-mcp`; `uvx`
+runs the server on demand **without** installing anything on your PATH. Either way it's a stdio MCP
+server that waits for an MCP client, so you don't run it by hand — a host does.
 
 ### 2. Register it with your MCP host
 
@@ -80,10 +81,15 @@ The default `hashing` backend is deterministic and dependency-free. For embeddin
 (better matching of your intent to stored preferences):
 
 ```sh
-pipx install "whetstone-mcp[embeddings]"          # fresh install, with the extra
-pipx inject whetstone-mcp sentence-transformers   # add to an existing pipx install
-pip install "whetstone-mcp[embeddings]"           # pip
+pipx install "whetstone-mcp[embeddings]"           # fresh install, with the extra
+pipx inject whetstone-mcp sentence-transformers    # add to an existing pipx install
+pip install "whetstone-mcp[embeddings]"            # pip
+uvx --from "whetstone-mcp[embeddings]" whetstone   # no-install run, with the extra
 ```
+
+For the no-install path, register the host with the same `--from` form (e.g.
+`claude mcp add whetstone -- uvx --from "whetstone-mcp[embeddings]" whetstone`) so recall/capture
+actually have `sentence-transformers` available.
 
 then set `embedding_backend = "sentence-transformers"` in `~/.config/whetstone/config.toml`.
 
@@ -126,6 +132,7 @@ config):
 <store-root>/<skill-slug>/
   learnings/<scope-slug>.md   your preferences, grouped by scope (source of truth)
   issues/<scope-slug>.md      hard rules, grouped by scope (source of truth)
+  next_ids.json               per-store id counters (git-tracked; prevents id reuse)
   index.sqlite                derived embedding cache (rebuildable, git-ignored)
   events.jsonl                per-run telemetry for metrics (git-ignored)
   .git/                       full version history of the markdown
