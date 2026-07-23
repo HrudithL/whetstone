@@ -57,7 +57,9 @@ claude mcp add whetstone -- whetstone            # if installed (pipx / pip)
 claude mcp add whetstone -- uvx whetstone-mcp    # no install; uv fetches & runs on demand
 ```
 
-Any other MCP host works too — configure a stdio server whose command is `whetstone`.
+Any other MCP host works too — configure a stdio server whose command matches how you installed it:
+`whetstone` (pipx / pip), `uvx whetstone-mcp` (no install), or the venv's `.venv/bin/whetstone`
+(from source).
 
 ### 3. Use it — the loop
 
