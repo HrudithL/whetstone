@@ -1,0 +1,5 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Learnings (preferences):
+  - [L1] (color encoding, weight 0.67) Draw the single trend line in crimson `#D1495B`, not the house blue accent.
+  - [L2] (geoms, weight 0.67) Give the trend line a thicker stroke, `size=1.5`, in geom_line.

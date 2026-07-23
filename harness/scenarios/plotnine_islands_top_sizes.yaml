@@ -1,0 +1,21 @@
+name: plotnine_islands_top_sizes
+skill: plotnine
+difficulty: easy
+prompt: >
+  Chart the largest landmasses in this dataset by area, so the biggest ones are easy to compare.
+data: data/islands.csv
+# SIMPLE task (1 preference) — the low-complexity anchor for the convergence-vs-complexity metric.
+preferences:
+  - id: theme-classic
+    polarity: learning
+    scope: theme
+    # Arbitrary house taste, deliberately against the grain: the skill's fixed base theme is
+    # theme_minimal; theme_classic (axis lines, no panel grid) is this user's look. Not "right" —
+    # the point is only that once corrected it is tracked and re-applied.
+    body: >
+      Use plotnine's `theme_classic()` as the base theme instead of the house `theme_minimal`.
+    feedback: >
+      Use theme_classic() as the base, not theme_minimal.
+    check:
+      kind: code_contains
+      pattern: theme_classic

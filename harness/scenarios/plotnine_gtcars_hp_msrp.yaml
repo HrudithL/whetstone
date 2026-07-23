@@ -1,0 +1,70 @@
+name: plotnine_gtcars_hp_msrp
+skill: plotnine
+difficulty: hard
+prompt: >
+  Plot how price relates to horsepower for these sports cars, and show the country of origin.
+data: data/gtcars.csv
+# COMPLEX task (5 simultaneous preferences) — the high-complexity anchor for the
+# convergence-vs-complexity metric. Many partly against-the-grain tastes at once, so the task has
+# genuine room to take more warm runs (or wobble) before ALL of them are honored together, unlike
+# the 1-preference islands task. Each preference is arbitrary house style, tracked and re-applied.
+preferences:
+  - id: palette-dark2
+    polarity: learning
+    scope: color encoding
+    # The skill picks a qualitative palette from its own big_color.md for categorical hues; ColorBrewer
+    # Dark2 is this user's override, not the skill's default choice.
+    body: >
+      Color-encode country of origin with the ColorBrewer qualitative `Dark2` palette via
+      `scale_color_brewer(type="qual", palette="Dark2")`.
+    feedback: >
+      Use the Dark2 qualitative palette for the country colors.
+    check:
+      kind: code_contains
+      pattern: Dark2
+  - id: price-log-axis
+    polarity: learning
+    scope: scales
+    # Against the grain: the cold run plots price on a linear axis by default. A log price axis is
+    # this user's taste for the wide MSRP spread.
+    body: >
+      Put the price (msrp) axis on a log scale with `scale_y_log10()`.
+    feedback: >
+      Log the price axis — use scale_y_log10().
+    check:
+      kind: code_contains
+      pattern: scale_y_log10
+  - id: legend-bottom
+    polarity: learning
+    scope: legend placement
+    # The skill's default legend position is "right"; bottom is this user's taste.
+    body: >
+      Place the legend at the bottom with `legend_position="bottom"` in theme().
+    feedback: >
+      Move the legend to the bottom, not the right.
+    check:
+      kind: regex
+      pattern: 'legend_position\s*=\s*["'']bottom["'']'
+  - id: points-large
+    polarity: learning
+    scope: geoms
+    # Arbitrary taste: larger points than plotnine's default. The skill pins no point size.
+    body: >
+      Make the scatter points larger, `size=3` in geom_point.
+    feedback: >
+      Make the points bigger — size=3.
+    check:
+      kind: regex
+      pattern: 'size\s*=\s*3\b'
+  - id: points-translucent
+    polarity: learning
+    scope: geoms
+    # Arbitrary taste: translucent points. gtcars is not dense enough for the skill's overplotting
+    # rule to reach for alpha on its own, so this is a genuine learned preference.
+    body: >
+      Make the scatter points translucent, `alpha=0.6` in geom_point.
+    feedback: >
+      Add some transparency to the points — alpha=0.6.
+    check:
+      kind: regex
+      pattern: 'alpha\s*=\s*0\.6'

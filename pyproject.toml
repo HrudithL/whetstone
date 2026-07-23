@@ -67,6 +67,9 @@ showcase = [
     # The pptx showcase skill's generated deck.py builds a deck with python-pptx; the --agent runner
     # runs that script in this venv, so the dep must be importable here.
     "python-pptx",
+    # The plotnine showcase skill's generated plot.py renders via p.save("plot.png"); same reason —
+    # the --agent runner executes that script in this venv (plotnine renders through matplotlib).
+    "plotnine",
     # Quarto site render (jupyter engine): the docs/ pages execute Python to read out/ and render
     # great-tables natively + matplotlib charts.
     "jupyter",

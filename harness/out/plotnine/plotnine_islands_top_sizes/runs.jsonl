@@ -1,0 +1,3 @@
+{"run": 1, "phase": "cold", "honored": {"theme-classic": false}, "weights": {"theme-classic": null}, "recurrence": {"theme-classic": null}}
+{"run": 2, "phase": "warm", "honored": {"theme-classic": true}, "weights": {"theme-classic": 0.5}, "recurrence": {"theme-classic": 1}}
+{"run": 3, "phase": "warm", "honored": {"theme-classic": true}, "weights": {"theme-classic": 0.6667}, "recurrence": {"theme-classic": 2}}
