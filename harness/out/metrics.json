@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-22T08:33:48.358721+00:00",
+  "generated_at": "2026-07-23T14:37:34.938579+00:00",
   "scenarios": {
     "landing_hero": {
       "scenario": "landing_hero",
@@ -652,6 +652,338 @@
       },
       "skill": "great-tables"
     },
+    "plotnine_gtcars_hp_msrp": {
+      "scenario": "plotnine_gtcars_hp_msrp",
+      "skill": "plotnine",
+      "output": "plot.py",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 5,
+      "preferences": {
+        "palette-dark2": {
+          "polarity": "learning",
+          "scope": "color encoding",
+          "cold_honored": false,
+          "runs_to_stick": null,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        },
+        "price-log-axis": {
+          "polarity": "learning",
+          "scope": "scales",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            },
+            {
+              "run": 4,
+              "weight": 0.75,
+              "recurrence": 3
+            },
+            {
+              "run": 5,
+              "weight": 0.8,
+              "recurrence": 4
+            }
+          ]
+        },
+        "legend-bottom": {
+          "polarity": "learning",
+          "scope": "legend placement",
+          "cold_honored": false,
+          "runs_to_stick": null,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        },
+        "points-large": {
+          "polarity": "learning",
+          "scope": "geoms",
+          "cold_honored": true,
+          "runs_to_stick": null,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        },
+        "points-translucent": {
+          "polarity": "learning",
+          "scope": "geoms",
+          "cold_honored": false,
+          "runs_to_stick": null,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "plotnine-plotnine_gtcars_hp_msrp",
+        "runs": 5,
+        "avg_learnings_applied_per_run": 0.8,
+        "captures_by_status": {
+          "committed": 5,
+          "reinforced": 20,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.8,
+          "reinforcements": 20,
+          "learnings_created": 5
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "plotnine_islands_top_sizes": {
+      "scenario": "plotnine_islands_top_sizes",
+      "skill": "plotnine",
+      "output": "plot.py",
+      "difficulty": "easy",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "theme-classic": {
+          "polarity": "learning",
+          "scope": "theme",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "plotnine-plotnine_islands_top_sizes",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.6667,
+        "captures_by_status": {
+          "committed": 1,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "plotnine_sp500_close_trend": {
+      "scenario": "plotnine_sp500_close_trend",
+      "skill": "plotnine",
+      "output": "plot.py",
+      "difficulty": "medium",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "line-crimson": {
+          "polarity": "learning",
+          "scope": "color encoding",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "line-thick": {
+          "polarity": "learning",
+          "scope": "geoms",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "plotnine-plotnine_sp500_close_trend",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 1.3333,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 4,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 4,
+          "learnings_created": 2
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
     "pitch_deck": {
       "scenario": "pitch_deck",
       "skill": "pptx",
@@ -754,6 +1086,15 @@
       "corrected_and_stuck": 8,
       "median_runs_to_stick": 2.0
     },
+    "plotnine": {
+      "scenarios": 3,
+      "preferences_total": 8,
+      "preferences_wrong_in_cold": 7,
+      "preferences_stuck": 4,
+      "stuck_rate": 0.5,
+      "corrected_and_stuck": 4,
+      "median_runs_to_stick": 2.0
+    },
     "pptx": {
       "scenarios": 1,
       "preferences_total": 2,
@@ -765,12 +1106,12 @@
     }
   },
   "aggregate": {
-    "scenarios": 9,
-    "preferences_total": 18,
-    "preferences_wrong_in_cold": 14,
-    "preferences_stuck": 18,
-    "stuck_rate": 1.0,
-    "corrected_and_stuck": 14,
+    "scenarios": 12,
+    "preferences_total": 26,
+    "preferences_wrong_in_cold": 21,
+    "preferences_stuck": 22,
+    "stuck_rate": 0.8462,
+    "corrected_and_stuck": 18,
     "median_runs_to_stick": 2.0
   },
   "showcase_only_kpis": {
