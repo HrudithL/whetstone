@@ -211,7 +211,18 @@ Poll on a **modest cadence (~every 30s) within a bounded window (~15–20 min)**
 - **To begin the FIX pass** — proceed once the **full CI run has completed (green OR red)** *and* the review signal is in (first-pass 👍 on the PR body / any 👀 resolved; or a re-review referencing your latest commit — a `pulls/reviews` entry with findings, or the clean issue comment). You need CI *finished*, not passing, so you can collect and fix its failures. Match on the **reviewed-commit SHA**, not merely "a review exists" — a review of a prior commit is stale.
 - **To MERGE up** — CI must be **fully green** (all jobs) in addition to a clean review signal (see [§7](#7-phase-6--merging-up-the-tree)).
 
-Re-request **at most once per round of fixes**. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), Codex has opted out — the agent MUST NOT invent a substitute; it MUST **ask the human user how review should be handled for this repository** (e.g., which reviewer, which bot, what criteria) and follow the instruction given.
+Re-request **at most once per round of fixes**. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), or Codex reports it is **rate-limited**, Codex is unavailable for this PR — fall back to the **Claude self-review** below rather than inventing some other substitute or silently skipping review.
+
+### Fallback when Codex is unavailable (rate limits)
+
+Codex code review runs against the account's usage limits and can be **rate-limited** — instead of reviewing, `chatgpt-codex-connector[bot]` posts an issue comment such as *"You have reached your Codex usage limits for code reviews."* When Codex is unavailable this way (or gives no signal within the polling window), the Claude Code agent driving the branch **performs the review itself and posts it as a PR comment**, standing in for Codex:
+
+- Review with the same rigor Codex would: read the **full diff** and post a single PR comment (`gh pr review <pr> --comment`, or `gh pr comment <pr>`), clearly labelled as the stand-in review. List findings **ordered most-severe first**, each with a concrete failure scenario, then a short **verdict** on whether it is safe to merge up. Say in the comment that it stands in for the rate-limited Codex.
+- Then apply the same [§10.1](#101-when-to-decide-vs-ask) discipline to your own findings: fix what is clear, escalate only genuine forks, decline what would overcomplicate.
+
+This self-review **satisfies the review gate** for merging up the tree — it is not a licence to skip review, it is the *same* review performed by the agent when the external reviewer cannot run. Only if a self-review genuinely cannot be produced should the agent instead **ask the human** how review should be handled.
+
+> An external `@claude review` GitHub Action is deliberately **not** used as the fallback: it runs Claude inside CI, which requires paid auth (a Claude Max OAuth token or an `ANTHROPIC_API_KEY`) this repo does not carry. The Claude Code agent already driving the work provides the equivalent review at no extra cost.
 
 ### Iterating on review feedback
 
@@ -224,7 +235,7 @@ For each Codex comment, apply the [§10.1](#101-when-to-decide-vs-ask) test:
 3. **Decline what would overcomplicate.** A suggestion that adds scope, abstraction, or infrastructure beyond what the spec needs may be declined or deferred — briefly note why on the PR. Keeping it simple (§1) outranks satisfying every suggestion.
 4. Repeat until Codex issues a clean/approving pass **and** any genuinely-escalated fork has a human answer.
 
-The PR is only eligible to merge up when **both** are true: a **clean Codex review signal** for your latest commit (a first-pass 👍 on the PR body, or a clean requested re-review — the `issues/<pr>/comments` note whose `Reviewed commit` SHA equals HEAD — NOT necessarily a 👍, since a clean re-review signals via that comment and posts no `pulls/reviews` entry) AND any escalated forks resolved by the human.
+The PR is only eligible to merge up when **both** are true: a **clean review signal** for your latest commit — a clean Codex signal (a first-pass 👍 on the PR body, or a clean requested re-review — the `issues/<pr>/comments` note whose `Reviewed commit` SHA equals HEAD — NOT necessarily a 👍, since a clean re-review signals via that comment and posts no `pulls/reviews` entry), **or**, when Codex is unavailable (rate-limited / no signal), the agent's **self-review** posted for your latest commit per the fallback above — AND any escalated forks resolved by the human.
 
 ---
 
@@ -340,7 +351,7 @@ Per slice:
 Per PR:
 - [ ] Waited for the **entire CI run** (completed, green or red) AND the **entire Codex review** to finish before making any fix — no reacting to partial signals.
 - [ ] Detected the pass-aware Codex signal for HEAD: first-pass 👍 on the PR body, or (after `@codex review`) a re-review referencing HEAD — a findings review (`pulls/reviews` `commit_id`) or the clean issue comment (`Reviewed commit` SHA).
-- [ ] If no Codex signal appeared, asked the human how to proceed.
+- [ ] If Codex was unavailable (rate-limited / no signal), posted the Claude **self-review** stand-in for HEAD as a PR comment (or asked the human only if that wasn't possible).
 - [ ] Made the reasonable fixes at own discretion; declined/deferred anything that would overcomplicate (noted why).
 - [ ] Escalated only genuine forks (multiple reasonable implementations, or a §10 decision); recorded the human's answer.
 - [ ] Merged up with a **merge commit** (not squash, not rebase).
