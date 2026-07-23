@@ -1,0 +1,53 @@
+name: Claude Review
+
+# Fallback reviewer for when the Codex connector is rate-limited (see CONTRIBUTING.md §6).
+# Comment `@claude review` on a pull request and Claude posts a Codex-style review comment.
+#
+# Auth: uses the repo owner's Claude subscription via an OAuth token, NOT an API key.
+#   1. Run `claude setup-token` in Claude Code (requires a Claude Max subscription) to mint a token.
+#   2. Add it as the repo secret `CLAUDE_CODE_OAUTH_TOKEN` (Settings -> Secrets and variables -> Actions).
+# The review comment is posted with the default GITHUB_TOKEN (permissions below), so the Claude
+# GitHub App is optional for this comment-only workflow.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+# One review at a time per PR; a newer `@claude review` supersedes an in-flight one.
+concurrency:
+  group: claude-review-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude-review:
+    # Only on PR comments (not plain issues) that contain the exact trigger `@claude review`.
+    if: >
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@claude review')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude review
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: >
+            You are reviewing this pull request as a code reviewer, standing in for the
+            rate-limited Codex connector. Read the PR diff and review it for correctness,
+            security, missing tests, and needless complexity. Then post ONE pull-request
+            comment titled "Claude Review" with your findings ordered most-severe first
+            (or state that there are no blocking issues), each with a concrete failure
+            scenario, followed by a short verdict on whether it is safe to merge. Be
+            specific and concise; do not restate the whole diff.
+          claude_args: "--max-turns 20"
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
