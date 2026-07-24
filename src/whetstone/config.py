@@ -28,6 +28,11 @@ class Config:
     learnings_decay: bool = True
     learnings_k: int = 12
     mmr_lambda: float = 0.7
+    # M5e — the learned global layer. When on, `recall` runs the SAME per-store retrieval over the
+    # reserved `__global__` store too and unions the (origin-tagged) results, so a preference that
+    # recurs across skills applies everywhere. Off makes the payload byte-identical to
+    # per-skill-only recall (the one-line bisect switch, §M5e). Retrieval logic is unchanged.
+    consult_global: bool = True
     embedding_model: str = "all-MiniLM-L6-v2"
     # Which embedding implementation to use (see whetstone.embeddings). "hashing" is a small,
     # dependency-free, deterministic default that keeps the base install light and lets tests run
@@ -66,6 +71,17 @@ class Config:
     # ε_c (cosine >= this) OR their name/phrase embeddings are within ε_n (cosine >= this).
     scope_merge_centroid_eps: float = 0.9
     scope_merge_name_eps: float = 0.9
+    # M5a — behavioral mining thresholds for the `compact` pass (all advisory-report-only in v1).
+    # A learning reinforced this many times and never weakened is a "harden" candidate (suggest
+    # promoting it to an issue). PROVISIONAL / UNCALIBRATED.
+    harden_reinforcements: int = 4
+    # A learning `recall` has surfaced across at least this many runs without ever being reinforced
+    # (or not surfaced at all across that many runs) is a usage-based "stale" nudge — richer than
+    # pure weight decay. PROVISIONAL / UNCALIBRATED.
+    stale_runs: int = 20
+    # `compact --all` clusters near-duplicate learnings appearing in at least this many distinct
+    # skills and promotes the cluster into the `__global__` layer (M5e). PROVISIONAL / UNCALIBRATED.
+    global_skill_count: int = 3
     store_root: Path = field(default_factory=default_store_root)
 
     def __post_init__(self) -> None:
@@ -103,6 +119,7 @@ _FIELD_TYPES: dict[str, type] = {
     "learnings_decay": bool,
     "learnings_k": int,
     "mmr_lambda": float,
+    "consult_global": bool,
     "embedding_model": str,
     "embedding_backend": str,
     "embedding_dim": int,
@@ -115,6 +132,9 @@ _FIELD_TYPES: dict[str, type] = {
     "retire_weight_threshold": float,
     "scope_merge_centroid_eps": float,
     "scope_merge_name_eps": float,
+    "harden_reinforcements": int,
+    "stale_runs": int,
+    "global_skill_count": int,
     "store_root": Path,
 }
 

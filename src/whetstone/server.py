@@ -15,7 +15,7 @@ import json
 import re
 import secrets
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 
 from mcp.server.fastmcp import FastMCP
@@ -42,10 +42,12 @@ from .store.access import (
 from .store.entries import IssueEntry, LearningEntry
 from .store.index import IndexedEntry, entry_text
 from .store.layout import (
+    GLOBAL_SLUG,
     StoreLocation,
     attach_skill,
     commit_store,
     ensure_store,
+    global_store_location,
     read_registry,
     store_location,
     store_write_lock,
@@ -103,6 +105,11 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     pass back on any follow-up ``capture``. An empty/unlearned store returns empty lists — never an
     error. ``learnings_k`` caps the number of (MMR-diversified) learnings returned; leave it unset
     to use the configured default (``learnings_k`` in config / ``WHETSTONE_LEARNINGS_K``).
+
+    Each entry carries an ``origin``: ``"skill"`` (this skill's own learned store) or ``"global"``
+    (a preference that recurred across skills and was promoted to Whetstone's learned global layer,
+    §M5e). Prefer a more specific ``"skill"`` entry when it conflicts with a broader ``"global"``
+    one. The global layer can be disabled with ``consult_global=false`` in config.
     """
     config = load_config()
     ensure_store(skill, config)
@@ -115,6 +122,25 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     # Append the per-run event (§5.2, §11): the ids returned are the only per-run denominator for
     # application-rate metrics, since a run the user simply accepts produces no follow-up capture.
     emit_recall(loc, run_id, intent, [x.id for x in learnings], [x.id for x in issues])
+
+    # M5e — the learned global layer. Orchestration ONLY: run the SAME per-store retrieval over the
+    # reserved `__global__` store and union the (origin-tagged) results. Retrieval logic is
+    # untouched — global entries default to origin "skill" from `retrieve()`, re-stamped here.
+    # `consult_global=false` (or recalling the global store itself) skips this, so the payload is
+    # byte-identical to per-skill-only recall.
+    if config.consult_global and loc.slug != GLOBAL_SLUG:
+        ensure_store(GLOBAL_SLUG, config)
+        g_loc = global_store_location(config)
+        index.ensure_index(g_loc, backend)
+        g_learnings, g_issues = retrieve(g_loc, intent, backend, config, learnings_k)
+        if g_learnings or g_issues:
+            # Give the global store its own usage telemetry (its stale/harden mining reasons over
+            # its own log), keyed to the same run_id so a follow-up capture can still be correlated.
+            emit_recall(
+                g_loc, run_id, intent, [x.id for x in g_learnings], [x.id for x in g_issues]
+            )
+        learnings = learnings + [replace(x, origin="global") for x in g_learnings]
+        issues = issues + [replace(x, origin="global") for x in g_issues]
     return {
         "skill": skill,
         "run_id": run_id,
@@ -873,13 +899,19 @@ def _find_duplicate(
     return best
 
 
-_USAGE = "usage: whetstone [serve | compact <skill>]"
+_USAGE = "usage: whetstone [serve | compact <skill> | promote <skill> <id>]"
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Console entry point. No args (or ``serve``) runs the stdio MCP server as usual; ``compact
-    <skill>`` runs the out-of-band compaction pass (§7) and prints its summary. Compaction is
-    deliberately NOT one of the five MCP tools — it is maintenance, invoked out of band."""
+    """Console entry point. No args (or ``serve``) runs the stdio MCP server as usual.
+
+    Out-of-band maintenance subcommands (deliberately NOT part of the five-tool MCP surface — they
+    are periodic/deliberate operator actions, never fired mid-task by the model):
+
+    - ``compact <skill>`` — the maintenance pass (§7).
+    - ``promote <skill> <id>`` — lift one learning/issue into the learned global layer by hand
+      (§M5e).
+    """
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] == "serve":
         mcp.run()
@@ -892,6 +924,14 @@ def main(argv: list[str] | None = None) -> None:
         from .compaction import compact
 
         print(json.dumps(compact(args[1]), indent=2))
+        return
+    if args[0] == "promote":
+        if len(args) != 3:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        from .promotion import promote_to_global
+
+        print(json.dumps(promote_to_global(args[1], args[2]), indent=2))
         return
     print(_USAGE, file=sys.stderr)
     raise SystemExit(2)

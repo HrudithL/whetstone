@@ -60,9 +60,11 @@ def test_recall_payload_shape_matches_spec(env):
 
     assert result["learnings"], "the currency learning should be recalled"
     learning = result["learnings"][0]
-    assert set(learning) == {"id", "rule", "scope", "recurrence", "weight"}
+    assert set(learning) == {"id", "rule", "scope", "recurrence", "weight", "origin"}
+    assert learning["origin"] == "skill"
     issue = result["issues"][0]
-    assert set(issue) == {"id", "rule", "scope"}
+    assert set(issue) == {"id", "rule", "scope", "origin"}
+    assert issue["origin"] == "skill"
 
 
 def test_recall_on_empty_store_returns_empty_lists(env):

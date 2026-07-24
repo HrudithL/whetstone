@@ -38,6 +38,10 @@ class RecalledLearning:
     scope: str
     recurrence: int
     weight: float
+    # Which store this came from (§M5e): "skill" (this skill's own store) or "global" (the learned
+    # cross-skill layer). Defaults to "skill" so `retrieve()` is untouched — the global-origin tag
+    # is stamped by the recall orchestration in the server, never inside retrieval.
+    origin: str = "skill"
 
 
 @dataclass
@@ -45,6 +49,7 @@ class RecalledIssue:
     id: str
     rule: str
     scope: str
+    origin: str = "skill"
 
 
 def _scope_similarity(query: list[float], scope: ScopeVectors) -> float:
