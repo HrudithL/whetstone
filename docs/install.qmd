@@ -1,0 +1,89 @@
+---
+title: "Install & quickstart"
+subtitle: "Get Whetstone running with your MCP host in a couple of minutes."
+---
+
+Whetstone is a local, stdio [MCP](https://modelcontextprotocol.io) server. You don't run it by
+hand — an MCP **host** (Claude Code, or any other MCP client) launches it and talks to it over
+stdio. Requires **Python 3.11+**.
+
+## 1 · Install the server
+
+```sh
+pipx install whetstone-mcp      # recommended: isolated, puts `whetstone` on your PATH
+# or:
+pip install whetstone-mcp       # into the current environment
+# or, run it without installing anything:
+uvx whetstone-mcp
+```
+
+`pipx` / `pip` install two equivalent commands — **`whetstone`** (primary) and **`whetstone-mcp`**.
+`uvx` runs the server on demand **without** putting anything on your PATH.
+
+## 2 · Register it with your host
+
+Point your host at the server under the id `whetstone`. For
+[Claude Code](https://claude.com/claude-code):
+
+```sh
+claude mcp add whetstone -- whetstone            # if installed (pipx / pip)
+claude mcp add whetstone -- uvx whetstone-mcp    # no install; uv fetches & runs on demand
+```
+
+Any other MCP host works too — configure a stdio server whose command matches how you installed it:
+`whetstone` (pipx / pip), `uvx whetstone-mcp` (no install), or the venv's `.venv/bin/whetstone`
+(from source).
+
+## 3 · Use it — the loop
+
+Once registered, a skill (or your agent) uses Whetstone around each task:
+
+1. **`recall`** at the start of a task → Whetstone returns the learnings and issues relevant to what
+   you're doing, and the skill applies them.
+2. You review the output and **correct** something.
+3. **`capture`** turns that correction into a scoped entry — a preference becomes a *learning*, an
+   "always/never" becomes an *issue*. Next time, `recall` surfaces it and it's applied automatically.
+
+`attach` scaffolds a skill's store the first time it's used; `revise` lets you reinforce, weaken, or
+remove an entry by id. See **[Tools](tools.qmd)** for the full surface, and **[Concepts](concepts.qmd)**
+for how learnings, issues, weights, and scopes fit together.
+
+## Optional — higher-quality recall
+
+The default `hashing` backend is deterministic and dependency-free (no torch, no network). For
+embedding-based retrieval that matches your intent to stored preferences more accurately, add the
+`embeddings` extra:
+
+```sh
+pipx install "whetstone-mcp[embeddings]"           # fresh install, with the extra
+pipx inject whetstone-mcp sentence-transformers    # add to an existing pipx install
+pip install "whetstone-mcp[embeddings]"            # pip
+uvx --from "whetstone-mcp[embeddings]" whetstone   # no-install run, with the extra
+```
+
+For the no-install path, register the host with the same `--from` form so recall/capture actually
+have `sentence-transformers` available:
+
+```sh
+claude mcp add whetstone -- uvx --from "whetstone-mcp[embeddings]" whetstone
+```
+
+Then set the backend in `~/.config/whetstone/config.toml`:
+
+```toml
+embedding_backend = "sentence-transformers"
+```
+
+## From source (contributors)
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+.venv/bin/whetstone            # run the server
+```
+
+::: {.callout-tip}
+Everything Whetstone learns is plain markdown in a git repo you own — see
+**[Concepts → Storage & config](concepts.qmd#storage-config)**. Read it, edit it, `git revert` it.
+Nothing leaves your machine.
+:::

@@ -133,6 +133,197 @@ whetstone doctor <skill>           # read-only health check for the learned loop
 store; `recall` runs the same retrieval over it too and unions the (origin-tagged) results, so a
 correction taught once applies everywhere. Disable with `consult_global = false` in config.
 
+## How it works, end to end
+
+Whetstone is a plain [stdio MCP](https://modelcontextprotocol.io) server. Your MCP host (Claude
+Code, Cursor, …) launches it as a subprocess and speaks JSON-RPC over stdin/stdout; the five tools
+above are the entire API surface. Nothing is hosted, nothing is trained — the server reads and
+writes markdown files in a git repo on your disk and answers tool calls.
+
+### The lifecycle at a glance
+
+```mermaid
+flowchart TB
+    user(["You"])
+
+    subgraph host["MCP host — Claude Code, Cursor, any client"]
+        agent["Agent running a skill<br/>e.g. great-tables"]
+    end
+
+    subgraph server["whetstone — local stdio MCP server"]
+        direction TB
+        t_recall["tool: recall"]
+        t_capture["tool: capture / revise"]
+        retr["retrieval<br/>scope-match → MMR → fallback"]
+        emb["embedding backend<br/>hashing (default) · sentence-transformers (optional)"]
+    end
+
+    subgraph store["per-skill store — a git repo on your disk"]
+        direction TB
+        md["learnings/*.md + issues/*.md<br/><i>source of truth</i>"]
+        idx["index.sqlite<br/><i>derived embedding cache</i>"]
+        ev["events.jsonl<br/><i>telemetry</i>"]
+    end
+
+    user -->|"1 · asks for a table"| agent
+    agent -->|"2 · recall(skill, elaborated intent)"| t_recall
+    t_recall --> retr
+    retr -->|"embed the intent"| emb
+    retr -->|"read scope + entry vectors"| idx
+    t_recall -->|"3 · learnings + issues (JSON)"| agent
+    agent -->|"4 · applies them, returns output"| user
+    user -->|"5 · corrects something"| agent
+    agent -->|"6 · capture(polarity, body, scope)"| t_capture
+    t_capture -->|"embed + dedup / conflict check"| emb
+    t_capture -->|"7 · write markdown + git commit"| md
+    t_capture -->|"rebuild"| idx
+    md -.->|"rebuilt from, when stale"| idx
+    t_recall -.-> ev
+    t_capture -.-> ev
+```
+
+The loop is just steps **2 → 6**: `recall` at the start of a task, `capture` (or `revise`) the
+moment you correct the output. Everything else is bookkeeping the server does for you.
+
+### A concrete round trip
+
+This is the actual JSON that crosses the wire for one table, styled with the `great-tables` skill:
+
+```mermaid
+sequenceDiagram
+    participant U as You
+    participant A as Agent + skill
+    participant W as whetstone
+    participant S as store — git + sqlite
+
+    Note over A,W: task start — call recall blindly
+    A->>W: recall("great-tables", intent="styling a gtcars table:<br/>currency formatting, color encoding, alignment, banding")
+    W->>S: embed intent, read index.sqlite
+    W-->>A: { run_id, learnings:[{id:"L1", rule:"Format msrp as USD,<br/>0 decimals", weight:0.67}], issues:[], how_to_use, capture_contract }
+    A-->>U: table with msrp already USD-formatted, per L1
+
+    Note over U,A: you correct the color scale
+    U->>A: "use a warm palette, not green"
+    A->>W: capture(polarity="learning", scope="color encoding",<br/>body="Heat-map msrp with a warm YlOrBr ramp — never green/blue", run_id)
+    W->>S: embed → dedup/conflict → write markdown → rebuild index → git commit
+    W-->>A: { status:"committed", entry_id:"L2", recurrence:1 }
+    Note over A,S: the next recall for a similar table returns L2 too — the fix sticks
+```
+
+### The tool API — request & response shapes
+
+Each tool is a normal MCP tool: the host sends the arguments below and gets a JSON object back.
+
+**`recall(skill, intent, learnings_k?)`** — the linchpin is `intent`: pass an *elaborated* description
+of what you're about to make (the dimensions — "currency formatting, color encoding, row banding"),
+never the user's raw words. Returns:
+
+```jsonc
+{
+  "skill": "great-tables",
+  "run_id": "r-2026-07-24-9f3c…",           // pass this back on the follow-up capture/revise
+  "learnings": [                              // soft, weighted preferences (MMR-diversified)
+    { "id": "L1", "rule": "Format msrp as USD, 0 decimals",
+      "scope": "currency formatting", "recurrence": 2, "weight": 0.6667 }
+  ],
+  "issues": [                                 // hard rules — every one is MANDATORY, unweighted
+    { "id": "I1", "rule": "Never round any corner…", "scope": "corner radius" }
+  ],
+  "how_to_use": "Learnings have a 0–1 weight = how firmly to apply. Issues have NO weight…",
+  "capture_contract": "When the user asks for a change, also record it via capture/revise…"
+}
+```
+
+An empty or unlearned store returns empty lists — never an error, so you can call it blindly.
+
+**`capture(skill, polarity, body, scope, provenance, run_id?, confirm?)`** — call it the moment you
+act on feedback. `polarity` is `"learning"` (a taste/preference) or `"issue"` (a mistake to never
+repeat, or an explicit always/never rule). `body` is the generalized rule; `scope` is a short phrase
+for when it applies. Returns a `status`: `committed` (new entry written), `reinforced` (a
+near-duplicate learning — recurrence bumped), `noop` (a near-duplicate issue), `conflict` (it
+contradicts an existing opposite rule — resolve with `revise`), or `needs_confirmation`.
+
+**`revise(skill, entry_id, action, body?, scope?, run_id?, confirm?)`** — for something `recall`
+already showed you (use its `id`). `action` ∈ `reinforce | weaken | promote | demote | remove`.
+Confirmation-gated for anything destructive or for a promotion to a hard rule.
+
+### How preferences are stored
+
+Each attached skill gets **its own git repository**. Every learning and issue is one legible
+markdown block — this is the source of truth, the thing you can read, edit by hand, and `git revert`:
+
+```markdown
+## L1 · Format the price column as US dollars
+- recurrence: 2
+- first_seen: 2026-07-23
+- last_seen: 2026-07-24
+- scope: currency formatting
+- provenance: "2026-07-24 — 'make the revenue column US dollars'"
+
+Format the price (msrp) column as US dollars with no decimal places.
+```
+
+Issue blocks are identical minus the `recurrence`/`first_seen`/`last_seen` fields (issues don't
+decay and aren't weighted). Files are grouped by scope (`learnings/currency-formatting-<hash>.md` — a readable slug plus a short
+hash of the full scope phrase, so distinct scopes never collide), written atomically, and committed
+after every change — so the repo *is* the full history of your taste.
+
+### How recall finds the right preferences (embeddings + retrieval)
+
+The markdown is the source of truth; **embeddings live in a derived `index.sqlite`** that any call
+can rebuild from the markdown. Per store it holds:
+
+- **entries** — each learning/issue's vector plus the fields recall surfaces (recurrence, dates,
+  body, scope).
+- **scopes** — for each scope, two vectors: the **centroid** (mean of that scope's entry vectors)
+  and the **phrase** vector (the scope label itself, embedded).
+- **meta** — a fingerprint of the markdown + the embedding model's identity. When the markdown
+  changes (or you switch embedding backends) the fingerprint no longer matches and the index is
+  rebuilt automatically; otherwise it's reused. Vectors are packed as 32-bit floats; cosine
+  similarity is brute-force (no ANN library needed at this scale).
+
+Two embedding backends plug in behind the same interface:
+
+- **`hashing`** (default) — a deterministic, dependency-free feature-hashing embedder (word
+  unigrams + bigrams + character trigrams → hashed into a 384-dim L2-normalized vector). No torch,
+  no network, runs offline. Good enough for scope matching; it's why the base install is light.
+- **`sentence-transformers`** (optional `[embeddings]` extra) — the `all-MiniLM-L6-v2` model, for
+  higher-quality semantic matching of your intent to stored scopes.
+
+Retrieval (given the elaborated `intent`, embedded once):
+
+1. **Scope match** — a scope matches when `max(cos(intent, centroid), cos(intent, phrase))` clears
+   its cutoff. Learnings and issues have separate cutoffs (issues lower — including a marginally
+   relevant mandatory "don't do X" is cheap).
+2. **Rank & cap** — learnings from matched scopes are capped to `learnings_k` by **MMR** (a diverse,
+   high-value subset, not `k` near-duplicates); issues from matched scopes are all returned.
+3. **Fallback floor** — if *no* scope clears its cutoff, return the top-weight learnings plus the
+   nearest few issue scopes, so a real-but-thin request never comes back empty.
+
+A learning's `weight` is derived, never stored: `weight = r × recency`, where
+`r = 1 − 1/(1 + recurrence)` (a saturating trust signal from how often you've reaffirmed it) and
+`recency = exp(−ln2 · Δ / H)` decays with days since `last_seen` (`H` = 180-day half-life by
+default). Issues have no weight — every returned issue is mandatory.
+
+### How a correction becomes a learning (capture)
+
+When you `capture` a correction, the server, under a per-store lock:
+
+1. **Distills** — derives a short title, normalizes the `scope`, and embeds the entry text and the
+   scope phrase.
+2. **Dedups** — finds the nearest same-polarity entry in the same/close scope. Above the dedup
+   threshold it's a near-duplicate: a learning is *reinforced* (recurrence +1, `last_seen`
+   refreshed), an issue is a *noop*.
+3. **Conflict-checks** — a new preference that an existing issue forbids (or a new "never X" over an
+   existing preference/mandate) returns `conflict` instead of silently committing — you resolve it
+   with `revise`.
+4. **Commits** — otherwise it writes the markdown block, rebuilds `index.sqlite`, and `git commit`s.
+   A learning reinforced to the promotion threshold (default 4) prompts to promote it to a hard
+   `issue`.
+
+Every `recall`/`capture`/`revise` also appends one line to `events.jsonl`, the local telemetry the
+`metrics` tool reports from. It's git-ignored — derived, not source of truth.
+
 ## Storage & config
 
 Each skill's learned layer is its **own git repository** under the XDG data dir (default

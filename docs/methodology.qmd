@@ -27,9 +27,9 @@ is verifiable without spend.
 ## What "honored" means
 
 Each preference carries a deterministic **check** against the generated primary output — `table.py`
-for great-tables, `index.html` for frontend-design, `deck.py` for pptx (comment- and
-docstring-stripped so prose can't fool it): a substring, a regex, or their absence. That check — not
-a subjective judgement — decides whether a run honored the preference.
+for great-tables, `index.html` for frontend-design, `plot.py` for plotnine, `deck.py` for pptx
+(comment- and docstring-stripped so prose can't fool it): a substring, a regex, or their absence.
+That check — not a subjective judgement — decides whether a run honored the preference.
 
 ## The two metrics
 
@@ -108,8 +108,8 @@ written straight from the tool calls.
 
 ## Coming next
 
-v1 is the **visual** skill class, shown across three skills (Great Tables, frontend design, and
-PowerPoint decks). The same substrate — attach, recall, capture, revise — applies unchanged to a
+v1 is the **visual** skill class, shown across four skills (Great Tables, frontend design, plotnine,
+and PowerPoint decks). The same substrate — attach, recall, capture, revise — applies unchanged to a
 **code-improvement** skill (objective ground truth: tests, lint, types) and a **context-organizing**
 skill; those are the next classes.
 
