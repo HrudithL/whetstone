@@ -1,0 +1,111 @@
+---
+title: "Tools"
+subtitle: "The five MCP tools Whetstone exposes, plus out-of-band compaction."
+---
+
+Whetstone is a stdio MCP server. A skill (or your agent) calls these tools around each task — you
+rarely call them by hand. All state is a git-tracked, per-skill store (see
+**[Concepts](concepts.qmd)**).
+
+```{=html}
+<div class="ws-cards" style="margin-top:1.5rem;">
+  <a class="ws-card" href="#attach"><h3 class="ws-card-title"><code>attach</code></h3>
+    <p class="ws-card-body">Register a skill so Whetstone tracks its learned layer.</p></a>
+  <a class="ws-card" href="#recall"><h3 class="ws-card-title"><code>recall</code></h3>
+    <p class="ws-card-body">At task start, retrieve the learnings and issues relevant to your intent.</p></a>
+  <a class="ws-card" href="#capture"><h3 class="ws-card-title"><code>capture</code></h3>
+    <p class="ws-card-body">Turn a correction into a scoped, deduped entry.</p></a>
+  <a class="ws-card" href="#revise"><h3 class="ws-card-title"><code>revise</code></h3>
+    <p class="ws-card-body">Reinforce, weaken, remove, promote, or demote an entry by id.</p></a>
+  <a class="ws-card" href="#metrics"><h3 class="ws-card-title"><code>metrics</code></h3>
+    <p class="ws-card-body">Reporting only — per-skill KPIs from the event log.</p></a>
+</div>
+```
+
+## `attach` {#attach}
+
+```python
+attach(skill: str, path: str | None = None) -> dict
+```
+
+Register a skill so Whetstone tracks its learned layer. Scaffolds a git-tracked, scope-organized
+store for `skill` and records it in the registry. **Idempotent** — attaching an already-attached
+skill is a no-op that reports `already_attached`. `recall` / `capture` create a store lazily if you
+skip this, so `attach` is optional setup. `path` is an optional reference to the target skill's
+location, recorded as provenance.
+
+Returns a summary: `skill`, `slug`, `path` (store dir), and `created`.
+
+## `recall` {#recall}
+
+```python
+recall(skill: str, intent: str, learnings_k: int | None = None) -> dict
+```
+
+Call at the **start** of any task that might use an attached skill — call it blindly; an empty
+result is fine. Pass `intent` as a concrete, **elaborated** description of what you're about to
+produce, expanding vague requests into their specific dimensions (e.g. *"styling a table: color
+palette, number formatting, column alignment, row banding, density"*) — not the user's raw words.
+Retrieval quality lives and dies on this: *"make a table styled well"* embeds nowhere near a scope
+named *"currency formatting"*.
+
+Returns the weighted **learnings** (soft preferences) and **issues** (mandatory constraints) that
+match the intent, ready for the skill to apply. `learnings_k` optionally caps how many learnings
+come back.
+
+## `capture` {#capture}
+
+```python
+capture(skill, polarity, body, scope, provenance=None, run_id=None, confirm=False) -> dict
+```
+
+Call the moment you act on user feedback about output from an attached skill, when it's something
+**new**. Cues: a fix (*"right-align that"*), a preference (*"I like muted palettes"*), a rejection
+(*"no, not like that"*), or approval of a specific choice.
+
+Classify it: taste / preference → `polarity:"learning"`; a mistake to never repeat or an explicit
+"always/never" rule → `polarity:"issue"` (word the body objectively). Generalize the feedback into a
+scoped rule of a few short sentences that capture the user's *why*. `capture` dedupes and
+conflict-checks against existing entries before writing.
+
+## `revise` {#revise}
+
+```python
+revise(skill, entry_id, action, body=None, scope=None, run_id=None, confirm=False) -> dict
+```
+
+Call when feedback concerns a learning or issue that `recall` **already showed** you (use its `id`).
+`action` is one of:
+
+| action | when |
+| --- | --- |
+| `reinforce` | the user repeated a preference (raises its weight) |
+| `weaken` | the user contradicted one (lowers its weight) |
+| `promote` | a preference should become an always/never rule (reword required) |
+| `demote` | a hard rule should soften back to a preference |
+| `remove` | the user rejected it outright |
+
+Confirmation-gated: destructive actions require `confirm=True`. Optional `body` / `scope` supply
+reworded prose (required for `promote`).
+
+## `metrics` {#metrics}
+
+```python
+metrics(skill: str | None = None) -> dict
+```
+
+**Reporting only** — never call during normal work. Computes per-skill KPIs from each store's
+`events.jsonl` and current state: runs, average learnings-applied-per-run, capture counts by status,
+the reinforcement rate (a repeat-correction proxy — the "money metric"), and % survived. KPIs that
+need a labeled/calibration set — capture-rate, regressions-prevented, retrieval-precision — are
+returned as `{"value": null, "note": …}` rather than guessed. See the **[Metrics](metrics.qmd)** page
+for the live numbers and **[Methodology](methodology.qmd)** for how they're produced.
+
+## Compaction (CLI, not a tool)
+
+Retiring stale learnings and merging near-duplicate scopes is deliberate, out-of-band maintenance —
+run from the command line rather than exposed as a tool an agent might call mid-task:
+
+```sh
+whetstone compact <skill>
+```

@@ -1,0 +1,577 @@
+/*-- scss:defaults --*/
+// Whetstone design system — layered on cosmo (light) and darkly (dark).
+// The visual language follows clianything.cc / styles.refero.design: clean, developer-focused,
+// light-first, generous whitespace, strong type hierarchy, monospace CLI, subtle bordered cards.
+// Most theming is done with CSS custom properties in scss:rules (so light/dark stay in lockstep);
+// only the handful of Bootstrap knobs that must be set at SASS-compile time live here.
+
+// Type — Inter for UI/prose, JetBrains Mono for code/CLI (loaded via include-in-header in _quarto.yml).
+$font-family-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !default;
+$font-family-monospace: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace !default;
+$font-size-root: 16px;
+$headings-font-weight: 750;
+$headings-line-height: 1.15;
+
+// Accent — a confident indigo that reads well in light and dark, on links and filled buttons.
+$primary: #4f46e5;
+$link-color: #4f46e5;
+$link-decoration: none;
+$link-hover-decoration: underline;
+
+// Softer, more modern radii + a calmer default border.
+$border-radius: 0.55rem;
+$border-radius-sm: 0.4rem;
+$border-radius-lg: 0.85rem;
+$border-color: #e6e6ea;
+
+// Let CSS paint the navbar (theme-aware, translucent + blurred) instead of Quarto's solid fill,
+// which otherwise renders as a dark bar in light mode.
+$navbar-bg: transparent;
+
+// Roomier code blocks.
+$code-color: #4f46e5;
+$code-bg: #f4f4f6;
+
+/*-- scss:rules --*/
+
+// ---------------------------------------------------------------------------
+// Design tokens. One set per theme; every component below reads these vars so
+// the light/dark split lives in exactly one place.
+// ---------------------------------------------------------------------------
+:root {
+  --ws-bg: #ffffff;
+  --ws-bg-subtle: #f7f7f9;
+  --ws-surface: #ffffff;
+  --ws-surface-hover: #fbfbfd;
+  --ws-text: #18181b;
+  --ws-text-muted: #55555f;
+  --ws-text-faint: #8a8a94;
+  --ws-border: #e6e6ea;
+  --ws-border-strong: #d6d6dc;
+  --ws-accent: #4f46e5;
+  --ws-accent-hover: #4338ca;
+  --ws-accent-soft: #eef1ff;
+  --ws-accent-contrast: #ffffff;
+  --ws-nav-bg: rgba(255, 255, 255, 0.82);
+  // The CLI/terminal box is intentionally dark in both themes (like the reference sites).
+  --ws-term-bg: #0f1117;
+  --ws-term-text: #e6e7ea;
+  --ws-term-prompt: #7c8cff;
+  --ws-term-border: #23252d;
+  --ws-shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 6px 20px rgba(24, 24, 27, 0.06);
+  --ws-shadow-hover: 0 2px 6px rgba(24, 24, 27, 0.06), 0 14px 40px rgba(24, 24, 27, 0.10);
+  --ws-maxw: 1120px;
+}
+
+// Dark PAGE mode only. Anchored at the page root (body class / <html> attribute) — NOT a bare
+// [data-bs-theme="dark"], because Quarto hard-codes data-bs-theme="dark" on the <nav>, which would
+// otherwise flip every token to dark inside the navbar even on a light page.
+body.quarto-dark,
+html[data-bs-theme="dark"] {
+  --ws-bg: #0b0c10;
+  --ws-bg-subtle: #101218;
+  --ws-surface: #14161c;
+  --ws-surface-hover: #191c23;
+  --ws-text: #f3f3f5;
+  --ws-text-muted: #a6a7b0;
+  --ws-text-faint: #74757e;
+  --ws-border: #262932;
+  --ws-border-strong: #333744;
+  --ws-accent: #8b93ff;
+  --ws-accent-hover: #a5abff;
+  --ws-accent-soft: rgba(139, 147, 255, 0.12);
+  --ws-accent-contrast: #0b0c10;
+  --ws-nav-bg: rgba(11, 12, 16, 0.82);
+  --ws-term-bg: #05060a;
+  --ws-term-text: #e6e7ea;
+  --ws-term-prompt: #8b93ff;
+  --ws-term-border: #1c1e26;
+  --ws-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 26px rgba(0, 0, 0, 0.45);
+  --ws-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.5), 0 18px 50px rgba(0, 0, 0, 0.55);
+}
+
+// ---------------------------------------------------------------------------
+// Base
+// ---------------------------------------------------------------------------
+body {
+  background-color: var(--ws-bg);
+  color: var(--ws-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+#quarto-content,
+main.content {
+  color: var(--ws-text);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--ws-text);
+  letter-spacing: -0.018em;
+}
+
+// Body prose readability + comfortable measure.
+main p,
+main li {
+  color: var(--ws-text);
+}
+main .lead,
+main p.subtitle,
+.quarto-title .subtitle {
+  color: var(--ws-text-muted);
+}
+
+a {
+  color: var(--ws-accent);
+  transition: color 0.15s ease;
+}
+a:hover { color: var(--ws-accent-hover); }
+
+// Inline code + fenced blocks.
+code:not(.sourceCode) {
+  background: var(--ws-accent-soft);
+  color: var(--ws-accent);
+  padding: 0.12em 0.4em;
+  border-radius: 0.35rem;
+  font-size: 0.86em;
+}
+div.sourceCode,
+pre.sourceCode {
+  border: 1px solid var(--ws-border);
+  border-radius: var(--bs-border-radius-lg, 0.85rem);
+  background: var(--ws-bg-subtle);
+}
+
+// Blockquotes — used for "the one claim".
+main blockquote,
+.blockquote {
+  border-left: 3px solid var(--ws-accent);
+  background: var(--ws-accent-soft);
+  color: var(--ws-text);
+  padding: 0.9rem 1.2rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-size: 1.05rem;
+}
+
+// Tables — calmer, bordered, zebra-free.
+main table.table {
+  --bs-table-bg: transparent;
+  border: 1px solid var(--ws-border);
+  border-radius: 0.6rem;
+  overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+main table.table th {
+  background: var(--ws-bg-subtle);
+  color: var(--ws-text);
+  font-weight: 650;
+  border-bottom: 1px solid var(--ws-border);
+}
+main table.table td { border-color: var(--ws-border); }
+
+// ---------------------------------------------------------------------------
+// Navbar — quiet, bordered, blurred; active link gets an accent underline.
+// ---------------------------------------------------------------------------
+.navbar {
+  // Drive Bootstrap's own navbar color tokens so brand, links, and the tool icons (github,
+  // theme toggle, search) all pick up themed colors — not the near-white Quarto default.
+  --bs-navbar-color: var(--ws-text-muted);
+  --bs-navbar-hover-color: var(--ws-text);
+  --bs-navbar-active-color: var(--ws-text);
+  --bs-navbar-brand-color: var(--ws-text);
+  --bs-navbar-brand-hover-color: var(--ws-text);
+  background: var(--ws-nav-bg) !important;
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1px solid var(--ws-border);
+  box-shadow: none;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+// Navbar tool icons (github / theme toggle / search) inherit the themed navbar color.
+.navbar .quarto-navbar-tools .quarto-navigation-tool,
+.navbar .quarto-navbar-tools a {
+  color: var(--ws-text-muted);
+}
+.navbar .quarto-navbar-tools .quarto-navigation-tool:hover,
+.navbar .quarto-navbar-tools a:hover { color: var(--ws-text); }
+.navbar .navbar-brand {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ws-text) !important;
+  font-size: 1.18rem;
+}
+.navbar .navbar-nav .nav-link {
+  color: var(--ws-text-muted) !important;
+  font-weight: 550;
+  font-size: 0.95rem;
+  padding-inline: 0.7rem;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.navbar .navbar-nav .nav-link:hover { color: var(--ws-text) !important; }
+.navbar .navbar-nav .nav-link.active {
+  color: var(--ws-text) !important;
+  border-bottom-color: var(--ws-accent);
+}
+
+// ---------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------
+.btn {
+  border-radius: 0.55rem;
+  font-weight: 600;
+  padding: 0.6rem 1.15rem;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease, color 0.15s ease;
+}
+.ws-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.55rem;
+  font-weight: 600;
+  padding: 0.62rem 1.2rem;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.15s ease,
+    border-color 0.15s ease, color 0.15s ease;
+}
+.ws-btn:hover { text-decoration: none; transform: translateY(-1px); }
+.ws-btn-primary {
+  background: var(--ws-accent);
+  color: var(--ws-accent-contrast);
+  box-shadow: var(--ws-shadow);
+}
+.ws-btn-primary:hover {
+  background: var(--ws-accent-hover);
+  color: var(--ws-accent-contrast);
+  box-shadow: var(--ws-shadow-hover);
+}
+.ws-btn-ghost {
+  background: var(--ws-surface);
+  color: var(--ws-text);
+  border-color: var(--ws-border-strong);
+}
+.ws-btn-ghost:hover {
+  color: var(--ws-text);
+  border-color: var(--ws-text-faint);
+  background: var(--ws-surface-hover);
+}
+
+// ---------------------------------------------------------------------------
+// Layout helpers — full-bleed sections + a constrained inner column. Quarto's
+// article body is narrow; landing sections opt out via .column-screen.
+// ---------------------------------------------------------------------------
+.ws-section {
+  padding-block: clamp(2.75rem, 6vw, 5rem);
+}
+.ws-section--alt {
+  background: var(--ws-bg-subtle);
+  border-block: 1px solid var(--ws-border);
+}
+.ws-wrap {
+  max-width: var(--ws-maxw);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+.ws-eyebrow {
+  display: inline-block;
+  font-family: var(--bs-font-monospace, monospace);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ws-accent);
+  margin-bottom: 0.6rem;
+}
+.ws-section-title {
+  font-size: clamp(1.6rem, 3vw, 2.15rem);
+  font-weight: 780;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.6rem;
+}
+.ws-section-lead {
+  color: var(--ws-text-muted);
+  font-size: 1.08rem;
+  max-width: 46rem;
+}
+
+// ---------------------------------------------------------------------------
+// Hero
+// ---------------------------------------------------------------------------
+.ws-hero {
+  position: relative;
+  text-align: center;
+  padding-block: clamp(3.5rem, 9vw, 7rem);
+  overflow: hidden;
+}
+// Subtle radial wash + hairline grid behind the hero.
+.ws-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 55% at 50% 0%, var(--ws-accent-soft) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+.ws-hero > * { position: relative; z-index: 1; }
+.ws-hero-title {
+  font-size: clamp(2.4rem, 6vw, 4.1rem);
+  font-weight: 820;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  margin: 0 auto 1.1rem;
+  max-width: 16ch;
+}
+.ws-hero-title .ws-grad {
+  background: linear-gradient(100deg, var(--ws-accent), #8b93ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ws-hero-sub {
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+  color: var(--ws-text-muted);
+  max-width: 42rem;
+  margin: 0 auto 1.8rem;
+  line-height: 1.6;
+}
+.ws-hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+// ---------------------------------------------------------------------------
+// Install / terminal block with copy button
+// ---------------------------------------------------------------------------
+.ws-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: var(--ws-term-bg);
+  color: var(--ws-term-text);
+  border: 1px solid var(--ws-term-border);
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.7rem 0.7rem 1.05rem;
+  font-family: var(--bs-font-monospace, monospace);
+  font-size: 0.95rem;
+  box-shadow: var(--ws-shadow);
+  max-width: 100%;
+}
+.ws-install code {
+  background: transparent;
+  color: var(--ws-term-text);
+  padding: 0;
+  font-size: inherit;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.ws-install .ws-install-prompt {
+  color: var(--ws-term-prompt);
+  user-select: none;
+  font-weight: 700;
+}
+.ws-copy {
+  flex: none;
+  cursor: pointer;
+  border: 1px solid var(--ws-term-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ws-term-text);
+  border-radius: 0.45rem;
+  padding: 0.32rem 0.55rem;
+  font-size: 0.78rem;
+  font-family: var(--bs-font-monospace, monospace);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.ws-copy:hover { background: rgba(255, 255, 255, 0.14); }
+.ws-copy.ws-copied { background: var(--ws-accent); color: #fff; border-color: var(--ws-accent); }
+
+// ---------------------------------------------------------------------------
+// Stat tiles (headline metric row)
+// ---------------------------------------------------------------------------
+.ws-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.ws-stat {
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: 0.8rem;
+  padding: 1.2rem 1.1rem;
+  text-align: center;
+  box-shadow: var(--ws-shadow);
+}
+.ws-stat-num {
+  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ws-text);
+}
+.ws-stat-num .ws-accent { color: var(--ws-accent); }
+.ws-stat-label {
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--ws-text-muted);
+  line-height: 1.4;
+}
+
+// ---------------------------------------------------------------------------
+// Cards + grid
+// ---------------------------------------------------------------------------
+.ws-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.1rem;
+  margin-top: 1.75rem;
+}
+.ws-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: 0.85rem;
+  padding: 1.4rem;
+  box-shadow: var(--ws-shadow);
+  transition: transform 0.16s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  text-decoration: none;
+  color: var(--ws-text);
+  height: 100%;
+}
+a.ws-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--ws-shadow-hover);
+  border-color: var(--ws-border-strong);
+  color: var(--ws-text);
+  text-decoration: none;
+}
+.ws-card-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.6rem;
+  background: var(--ws-accent-soft);
+  color: var(--ws-accent);
+  font-size: 1.25rem;
+  margin-bottom: 0.9rem;
+}
+.ws-card-title {
+  font-weight: 700;
+  font-size: 1.12rem;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.015em;
+}
+.ws-card-body {
+  color: var(--ws-text-muted);
+  font-size: 0.96rem;
+  line-height: 1.6;
+  margin: 0;
+}
+.ws-card-more {
+  margin-top: auto;
+  padding-top: 0.9rem;
+  color: var(--ws-accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+// ---------------------------------------------------------------------------
+// Numbered steps (how it works)
+// ---------------------------------------------------------------------------
+.ws-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.1rem;
+  margin-top: 1.75rem;
+  counter-reset: ws-step;
+}
+.ws-step {
+  position: relative;
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: 0.85rem;
+  padding: 1.4rem 1.4rem 1.4rem 1.4rem;
+  box-shadow: var(--ws-shadow);
+}
+.ws-step::before {
+  counter-increment: ws-step;
+  content: counter(ws-step);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: var(--ws-accent);
+  color: var(--ws-accent-contrast);
+  font-family: var(--bs-font-monospace, monospace);
+  font-weight: 700;
+  margin-bottom: 0.85rem;
+}
+.ws-step-title { font-weight: 700; margin: 0 0 0.35rem; letter-spacing: -0.01em; }
+.ws-step-body { color: var(--ws-text-muted); font-size: 0.96rem; margin: 0; line-height: 1.6; }
+.ws-step code { font-size: 0.85em; }
+
+// Pills / tags.
+.ws-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--ws-accent-soft);
+  color: var(--ws-accent);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin: 0.2rem 0.15rem;
+}
+
+// ---------------------------------------------------------------------------
+// Footer
+// ---------------------------------------------------------------------------
+.nav-footer {
+  background: var(--ws-bg-subtle);
+  border-top: 1px solid var(--ws-border);
+  color: var(--ws-text-muted);
+  font-size: 0.9rem;
+}
+.nav-footer a { color: var(--ws-text-muted); }
+.nav-footer a:hover { color: var(--ws-accent); }
+
+// ---------------------------------------------------------------------------
+// TOC + sidebar polish
+// ---------------------------------------------------------------------------
+#TOC .active,
+.sidebar nav a.active { color: var(--ws-accent) !important; font-weight: 600; }
+#quarto-margin-sidebar .nav-link { color: var(--ws-text-muted); }
+#quarto-margin-sidebar .nav-link:hover { color: var(--ws-text); }
+
+// ---------------------------------------------------------------------------
+// Motion — progressive enhancement. The hidden initial state applies ONLY when
+// the page root carries .ws-anim (added by an inline head script, so no flash of
+// pre-hidden content). Without JS, .ws-anim is absent and .ws-reveal content is
+// always visible. site.js then adds .ws-in on scroll (IntersectionObserver).
+// ---------------------------------------------------------------------------
+@media (prefers-reduced-motion: no-preference) {
+  .ws-anim .ws-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    will-change: opacity, transform;
+  }
+  .ws-anim .ws-reveal.ws-in {
+    opacity: 1;
+    transform: none;
+  }
+}

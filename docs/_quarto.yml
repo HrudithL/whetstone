@@ -3,6 +3,10 @@ project:
   output-dir: _site
   # Execute page code from the project dir (docs/) so `_showcase.py` imports resolve consistently.
   execute-dir: project
+  # site.js is pulled in via include-after-body (a <script src>), so list it as a resource to
+  # guarantee it is copied into _site.
+  resources:
+    - site.js
 
 website:
   title: "Whetstone"
@@ -18,6 +22,14 @@ website:
         text: Metrics
       - href: methodology.qmd
         text: Methodology
+      - text: Docs
+        menu:
+          - href: install.qmd
+            text: Install & quickstart
+          - href: tools.qmd
+            text: Tools
+          - href: concepts.qmd
+            text: Concepts
     right:
       - icon: github
         href: https://github.com/HrudithL/whetstone
@@ -28,9 +40,22 @@ website:
 format:
   html:
     theme:
-      light: cosmo
-      dark: darkly
+      light: [cosmo, theme.scss]
+      dark: [darkly, theme.scss]
     css: styles.css
+    # Inter (UI/prose) + JetBrains Mono (code/CLI); the design system in theme.scss expects them.
+    include-in-header:
+      - text: |
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+          <script>document.documentElement.classList.add('ws-anim');</script>
+    # Progressive-enhancement JS (copy-to-clipboard + scroll reveal); site works without it.
+    # onerror drops .ws-anim if site.js fails to load, so .ws-reveal content can never be left
+    # hidden when JS is enabled but the script is missing.
+    include-after-body:
+      - text: |
+          <script src="site.js" onerror="document.documentElement.classList.remove('ws-anim')"></script>
     toc: true
     code-fold: true
     code-tools: true
