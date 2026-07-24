@@ -45,6 +45,28 @@ stance `whetstone metrics` takes for its labeled KPIs. The store runs on the
 **sentence-transformers** backend (the calibrated one); when retrieval genuinely misses a seeded
 entry, the site shows that miss rather than hiding it.
 
+## The labeled KPIs — the calibration harness
+
+Three §11 KPIs need a *labeled* ground truth that ordinary usage never has, so the runtime `metrics`
+tool returns them as `null` by design: **capture-rate**, **regressions-prevented**, and
+**retrieval-precision**. A second command-only harness, `python -m harness.calibrate`, computes them
+against a small **hand-labeled set** ([`harness/calibration/labels.yaml`](https://github.com/HrudithL/whetstone/blob/main/harness/calibration/labels.yaml))
+— a human vouches for every case — and writes `out/calibration.json`, which the
+**[Metrics](metrics.qmd)** page reads:
+
+- **retrieval-precision** — for each labeled `(intent → relevant scopes)` case, seed a store, `recall`,
+  and score the returned scopes against the labels (precision / recall / F1). Key-free.
+- **capture-rate** — for each labeled correction turn, drive `capture` and count how often it lands as
+  `committed` / `reinforced` rather than a no-op. Key-free.
+- **regressions-prevented** — a key-free **proxy** checks that an in-scope issue is recalled for an
+  intent that would violate it (so the model is warned before it can regress); a live `--agent`
+  cold-vs-warm generation is the published figure.
+
+The boundary is deliberate and stays intact: the **runtime `metrics` tool still returns `null`** for
+these three — only this published showcase, linked to the labeled set and the runner that produced it,
+shows the numbers. When `calibration.json` is absent the Metrics page falls back to the same
+null-with-note it always showed.
+
 ## What was taught, and how "honored" is judged
 
 Every preference below is an **arbitrary house-style choice** — the point is only that a correction,
@@ -119,5 +141,6 @@ skill; those are the next classes.
 pip install -e ".[showcase,embeddings]"
 export ANTHROPIC_API_KEY=sk-ant-...     # or harness/.env
 python -m harness.run --agent            # regenerate out/ (paid, command-only)
-python -m harness.metrics                # aggregate -> out/metrics.json
+python -m harness.calibrate              # labeled KPIs -> out/calibration.json (key-free)
+python -m harness.metrics                # aggregate -> out/metrics.json (folds in calibration.json)
 ```

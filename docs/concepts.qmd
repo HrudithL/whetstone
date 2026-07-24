@@ -53,6 +53,53 @@ Entries are grouped by **scope** — a short slug describing *what* the preferen
 your elaborated intent against scopes, so a table-styling task surfaces table-styling preferences and
 nothing else. It's also why passing a rich, elaborated `intent` to `recall` matters so much.
 
+## The learned global layer {#global-layer}
+
+Some preferences aren't about one skill — *"muted palettes, never neon"* is taste you hold whether
+you're making a table, a slide, or a web page. Whetstone keeps a reserved, cross-skill store (the
+**global layer**) for exactly these.
+
+It changes `recall` by **orchestration only, never by rewriting retrieval**: `recall` runs the *same*
+scope-matching it already does against your skill's store, and then runs it a second time against the
+global store, and returns the union. Every entry is tagged with an `origin` — `"skill"` or
+`"global"` — so when a broad global preference and a specific skill preference disagree, the model has
+what it needs to prefer the specific one. Turn the layer off entirely with `consult_global = false`
+in config, and `recall` returns a byte-identical per-skill result.
+
+Preferences reach the global layer two ways, both deliberate: `whetstone promote <skill> <id>` lifts
+one by hand, and `whetstone compact --all` promotes a preference automatically once it recurs across
+enough distinct skills (retiring the per-skill copies). Whetstone **cannot** write your host's memory
+(CLAUDE.md, Cursor rules, …) — it is host-agnostic — so this learned, weighted, relevance-retrieved
+layer is its honest home for cross-skill taste. It coexists with authored host memory rather than
+replacing it.
+
+## Maintenance: compaction & behavioral mining {#maintenance}
+
+Stores stay healthy on their own, but `whetstone compact <skill>` is the periodic tidy-up — run it by
+hand or on a schedule, never mid-task. It has two passes:
+
+- A **structural** pass (auto-applied): collapse near-duplicate entries, merge overlapping scopes,
+  and retire learnings whose weight has decayed below threshold. Issues are never auto-retired.
+- A **behavioral mining** pass (**advisory only**): reading the event log, it flags learnings that
+  have earned promotion (`harden`), scopes with capture churn (`bad_capture`), learnings that have
+  gone unused (`stale`), and unresolved conflicts (`conflict_residue`). These are *reported* — printed
+  and written to a git-ignored `compact-report.md` — and **never applied automatically**; you enact
+  one with a `revise`. See **[Tools → compact](tools.qmd#the-out-of-band-cli-not-tools)**.
+
+The split is the whole point: only safe, mechanical cleanup mutates on its own; anything that changes
+the *meaning* of your store (promoting a preference to a rule, retiring one you still use) stays your
+call.
+
+## Preference packs {#packs}
+
+Because a store is just markdown, your taste is portable. `whetstone export <skill>` writes a
+**preference pack** — a `.tar.gz` of the `learnings/` + `issues/` markdown and a `pack.toml` manifest
+(private telemetry, the derived index, and git history are left out) — and `whetstone import <skill>
+<pack>` folds it into a store. Import is dedup- and conflict-aware (it reuses the exact `capture`
+logic) and always **re-mints ids**, so importing a teammate's pack can never collide with your own
+entries. It's the friendly, safe path for sharing a house style; because each store is already a git
+repo, power users can also just `git remote` and pull.
+
 ## Storage & config {#storage-config}
 
 Each skill's learned layer is its **own git repository** under the XDG data dir (default
@@ -66,11 +113,15 @@ config):
   next_ids.json               per-store id counters (git-tracked; prevents id reuse)
   index.sqlite                derived embedding cache (rebuildable, git-ignored)
   events.jsonl                per-run telemetry for metrics (git-ignored)
+  compact-report.md           latest advisory mining findings (git-ignored)
   .git/                       full version history of the markdown
+<store-root>/__global__/      the cross-skill learned layer — same structure, its own git repo
 ```
 
-The markdown is the **source of truth** — read it, edit it, `git revert` it. The SQLite index and
-the event log are derived and git-ignored. Nothing leaves your machine.
+The markdown is the **source of truth** — read it, edit it, `git revert` it. The SQLite index, the
+event log, and the compaction report are derived and git-ignored. The reserved `__global__` store
+holds the cross-skill [learned global layer](#global-layer); it is a normal store you can read and
+edit like any other. Nothing leaves your machine.
 
 Configuration is read from `~/.config/whetstone/config.toml`, and every key also has a
 `WHETSTONE_*` environment override. The most common one is the recall backend:
@@ -78,6 +129,7 @@ Configuration is read from `~/.config/whetstone/config.toml`, and every key also
 ```toml
 # ~/.config/whetstone/config.toml
 embedding_backend = "sentence-transformers"   # default: "hashing" (deterministic, dependency-free)
+consult_global    = true                       # default true; false = pure per-skill recall
 ```
 
 The default `hashing` backend needs no extra dependencies and no network. The
