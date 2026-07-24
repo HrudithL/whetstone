@@ -43,9 +43,11 @@ format:
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
           <script>document.documentElement.classList.add('ws-anim');</script>
     # Progressive-enhancement JS (copy-to-clipboard + scroll reveal); site works without it.
+    # onerror drops .ws-anim if site.js fails to load, so .ws-reveal content can never be left
+    # hidden when JS is enabled but the script is missing.
     include-after-body:
       - text: |
-          <script src="site.js"></script>
+          <script src="site.js" onerror="document.documentElement.classList.remove('ws-anim')"></script>
     toc: true
     code-fold: true
     code-tools: true

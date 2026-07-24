@@ -2,8 +2,8 @@
 (function () {
   "use strict";
 
-  // Copy-to-clipboard for install/terminal blocks. A .ws-copy button copies the text of the
-  // command it is associated with (its sibling <code data-cmd> or [data-clipboard-text]).
+  // Copy-to-clipboard for install/terminal blocks. A .ws-copy button copies its own
+  // [data-clipboard-text] if set, else the text of the <code> in its nearest .ws-install.
   function initCopy() {
     document.querySelectorAll(".ws-copy").forEach(function (btn) {
       btn.addEventListener("click", function () {
