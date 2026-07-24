@@ -253,8 +253,9 @@ Format the price (msrp) column as US dollars with no decimal places.
 ```
 
 Issue blocks are identical minus the `recurrence`/`first_seen`/`last_seen` fields (issues don't
-decay and aren't weighted). Files are grouped by scope (`learnings/currency-formatting.md`), written
-atomically, and committed after every change — so the repo *is* the full history of your taste.
+decay and aren't weighted). Files are grouped by scope (`learnings/currency-formatting-<hash>.md` — a readable slug plus a short
+hash of the full scope phrase, so distinct scopes never collide), written atomically, and committed
+after every change — so the repo *is* the full history of your taste.
 
 ### How recall finds the right preferences (embeddings + retrieval)
 
