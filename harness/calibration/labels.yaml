@@ -1,0 +1,56 @@
+# M5b — calibration labeled set (internal showcase only).
+#
+# This file is the HAND-LABELED ground truth the calibration harness (`python -m harness.calibrate`)
+# uses to compute the three §11 KPIs the product `metrics` tool leaves null by design — capture_rate,
+# regressions_prevented, retrieval_precision. It is NOT read by the MCP server and NOT part of the
+# distributed package; only the published showcase renders the numbers it produces. Keep the labels
+# small, legible, and honest — every case is a claim a human vouches for.
+#
+# The labels are great-tables-flavored (the showcase's first skill), but the harness is skill-
+# agnostic: the entries/turns/cases are plain Whetstone learnings/issues + intents.
+
+# --- retrieval_precision -----------------------------------------------------------------------
+# Seed one store with `entries`, then for each `case` run recall(intent) and score the RETURNED
+# scopes against the hand-labeled `relevant` set (precision/recall/F1). The headline value is mean
+# precision: of the scopes recall surfaced, how many were actually relevant.
+retrieval_precision:
+  entries:
+    - {polarity: learning, scope: "currency formatting", body: "Right-align currency columns and show two decimal places with a thousands separator."}
+    - {polarity: learning, scope: "row banding", body: "Use subtle zebra striping on wide tables to help the eye track rows."}
+    - {polarity: learning, scope: "column headers", body: "Bold column headers and set them in small caps for a compact look."}
+    - {polarity: learning, scope: "negative numbers", body: "Show negative values in parentheses, e.g. (1,234), rather than with a leading minus."}
+    - {polarity: issue, scope: "small tables", body: "Never apply row banding to tables with fewer than ten rows."}
+    - {polarity: learning, scope: "sparklines", body: "Prefer inline sparklines over a separate trend column when space is tight."}
+  cases:
+    - intent: "formatting monetary columns: currency alignment, decimal places, thousands separators, negative sign style"
+      relevant: ["currency formatting", "negative numbers"]
+    - intent: "row striping and banding density for a long wide financial table"
+      relevant: ["row banding"]
+    - intent: "styling the header row of a table: header weight, caps, emphasis"
+      relevant: ["column headers"]
+
+# --- capture_rate ------------------------------------------------------------------------------
+# Each turn labeled `contains_correction: true` is a real user correction the system SHOULD capture.
+# Drive capture() for each; a turn counts as captured when the result is committed OR reinforced (a
+# noop or conflict is a miss). Rate = captured / correction-turns. The paired near-duplicate issue
+# turns deliberately produce a commit then a noop, so the metric is not trivially 1.0.
+capture_rate:
+  turns:
+    - {contains_correction: true, polarity: learning, scope: "currency formatting", body: "Right-align the revenue column and give it two decimals.", feedback: "Please right-align revenue with two decimals."}
+    - {contains_correction: true, polarity: learning, scope: "row banding", body: "Add gentle zebra striping to this long table.", feedback: "Band the rows lightly so it's easier to read."}
+    - {contains_correction: true, polarity: issue, scope: "small tables", body: "Never band tables with fewer than ten rows.", feedback: "Don't band this — it's only six rows."}
+    - {contains_correction: true, polarity: issue, scope: "small tables", body: "Never band tables with fewer than ten rows.", feedback: "Again — no banding on tiny tables."}
+
+# --- regressions_prevented ---------------------------------------------------------------------
+# Each case pairs an in-scope issue (a hard "never") with an intent that describes work which WOULD
+# violate it. Key-free proxy: seed the issue, recall the violating intent, and check the issue is
+# surfaced in-scope (so the model is warned before it can regress). A live-generation variant
+# (--agent) replaces the proxy with a real cold-vs-warm output check; the published number uses it.
+regressions_prevented:
+  cases:
+    - issue: {scope: "small tables", body: "Never apply row banding to tables with fewer than ten rows."}
+      intent: "styling a small six-row summary table: row banding, striping, density"
+    - issue: {scope: "gridlines", body: "Never draw vertical gridlines between columns."}
+      intent: "adding gridlines and cell borders to separate the columns of a table"
+    - issue: {scope: "color contrast", body: "Never use light-gray text on a white background."}
+      intent: "choosing text colors and a muted low-contrast palette for table body text"

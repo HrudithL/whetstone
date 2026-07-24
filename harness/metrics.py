@@ -24,12 +24,37 @@ from pathlib import Path
 from . import config
 
 OUT_ROOT = config.HARNESS_ROOT / "out"
+CALIBRATION_PATH = OUT_ROOT / "calibration.json"
 
 _SHOWCASE_ONLY_NOTE = (
-    "Not computed: the showcase seeds corrections via capture() directly against per-scenario "
-    "isolated stores, so this labeled KPI has no honest denominator here. See runs_to_stick and "
-    "value_over_time for the metrics this harness does measure."
+    "Not computed here: the scenario runner seeds corrections via capture() directly against "
+    "per-scenario isolated stores, so this labeled KPI has no honest denominator in the scenario "
+    "pass. Run `python -m harness.calibrate` to compute it against the labeled set; see "
+    "runs_to_stick and value_over_time for the metrics the scenario pass does measure."
 )
+# The three labeled KPIs the calibration harness (M5b) computes, keyed as in calibration.json.
+_CALIBRATED_KPIS = ("capture_rate", "regressions_prevented", "retrieval_precision")
+
+
+def _showcase_only_kpis(calibration_path: Path = CALIBRATION_PATH) -> dict:
+    """The three labeled KPIs: real figures from ``calibration.json`` when present (M5b), else the
+    honest null-with-note fallback (deterministic, key-free site build)."""
+    calibration = {}
+    if calibration_path.exists():
+        calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
+    result = {}
+    for kpi in _CALIBRATED_KPIS:
+        if kpi in calibration:
+            result[kpi] = calibration[kpi]
+        else:
+            result[kpi] = {"value": None, "note": _SHOWCASE_ONLY_NOTE}
+    if calibration:
+        result["calibration_source"] = {
+            "backend": calibration.get("backend"),
+            "generated_at": calibration.get("generated_at"),
+            "labels": calibration.get("labels"),
+        }
+    return result
 
 
 def _load_summaries(out_root: Path) -> list[dict]:
@@ -95,11 +120,7 @@ def build_metrics(out_root: Path = OUT_ROOT) -> dict:
         "scenarios": {s["scenario"]: s for s in summaries},
         "skills": _aggregate_by_skill(summaries),
         "aggregate": _aggregate(summaries),
-        "showcase_only_kpis": {
-            "capture_rate": {"value": None, "note": _SHOWCASE_ONLY_NOTE},
-            "regressions_prevented": {"value": None, "note": _SHOWCASE_ONLY_NOTE},
-            "retrieval_precision": {"value": None, "note": _SHOWCASE_ONLY_NOTE},
-        },
+        "showcase_only_kpis": _showcase_only_kpis(out_root / "calibration.json"),
     }
 
 

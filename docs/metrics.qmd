@@ -67,6 +67,37 @@ else:
     display(Markdown("\n".join(rows)))
 ```
 
-The three §11 *labeled* KPIs (`capture_rate`, `regressions_prevented`, `retrieval_precision`) are
-reported **`null` with a note** — the showcase drives capture directly against per-scenario isolated
-stores, so they have no honest denominator here. We show only what we can measure honestly.
+## Labeled KPIs (calibration harness)
+
+The three §11 *labeled* KPIs — `capture_rate`, `regressions_prevented`, `retrieval_precision` — the
+product `metrics` tool returns **`null` by design** (ordinary runtime usage has no ground truth).
+The internal calibration harness (`python -m harness.calibrate`) scores them against a small
+**hand-labeled set** ([`harness/calibration/labels.yaml`](https://github.com/HrudithL/whetstone/blob/main/harness/calibration/labels.yaml))
+and writes `out/calibration.json`, which this page reads. The runtime tool still returns null — only
+this published showcase, linked to the labeled set, shows the numbers.
+
+```{python}
+# | echo: false
+# | output: asis
+if m is None:
+    display(not_generated_note("The labeled calibration KPIs"))
+else:
+    k = m["showcase_only_kpis"]
+    src = k.get("calibration_source")
+    rows = ["| KPI | value |", "| --- | --- |"]
+    for key in ("capture_rate", "regressions_prevented", "retrieval_precision"):
+        entry = k[key]
+        val = entry.get("value")
+        rows.append(f"| {key} | {'—  <small>(not yet calibrated)</small>' if val is None else val} |")
+    display(Markdown("\n".join(rows)))
+    if src:
+        display(Markdown(
+            f"\n<small>Computed on the `{src['backend']}` backend at {src['generated_at']} "
+            f"from `{src['labels']}`.</small>"
+        ))
+    else:
+        display(Markdown(
+            "\n<small>Run `python -m harness.calibrate` (needs the `[showcase,embeddings]` extra) "
+            "to populate these from the labeled set.</small>"
+        ))
+```
