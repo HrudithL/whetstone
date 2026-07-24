@@ -558,17 +558,19 @@ a.ws-card:hover {
 #quarto-margin-sidebar .nav-link:hover { color: var(--ws-text); }
 
 // ---------------------------------------------------------------------------
-// Motion — progressive enhancement. Elements marked .ws-reveal fade/slide in
-// once site.js adds .ws-in (IntersectionObserver). Without JS they are visible.
+// Motion — progressive enhancement. The hidden initial state applies ONLY when
+// the page root carries .ws-anim (added by an inline head script, so no flash of
+// pre-hidden content). Without JS, .ws-anim is absent and .ws-reveal content is
+// always visible. site.js then adds .ws-in on scroll (IntersectionObserver).
 // ---------------------------------------------------------------------------
 @media (prefers-reduced-motion: no-preference) {
-  .ws-reveal {
+  .ws-anim .ws-reveal {
     opacity: 0;
     transform: translateY(14px);
     transition: opacity 0.5s ease, transform 0.5s ease;
     will-change: opacity, transform;
   }
-  .ws-reveal.ws-in {
+  .ws-anim .ws-reveal.ws-in {
     opacity: 1;
     transform: none;
   }
