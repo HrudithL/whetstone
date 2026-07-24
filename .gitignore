@@ -43,3 +43,9 @@ great-docs/
 
 # OS / editor
 .DS_Store
+
+# Great Docs versioned-build artifacts
+_great_docs_build/
+.great-docs-build/
+.great-docs-cache/
+.great-docs/

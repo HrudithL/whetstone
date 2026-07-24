@@ -14,7 +14,6 @@ on:
       - "harness/scenarios/**"
       - "great-docs.yml"
       - "src/**"
-      - ".github/scripts/gen_llms_txt.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -60,15 +59,12 @@ jobs:
       - name: Build great-docs reference (great-docs/_site)
         env:
           QUARTO_PYTHON: python
-        # Introspects the installed whetstone package: auto-generates the MCP tool reference from the
-        # FastMCP @mcp.tool() functions. site_url in great-docs.yml points at the /docs subpath.
+        # NATIVE build — no post-processing, no workarounds. Introspects the installed whetstone
+        # package and auto-generates the MCP tool reference from the FastMCP @mcp.tool() functions.
+        # This deploys exactly what `great-docs build` produces out of the box, so /docs shows the
+        # unmodified native output, warts and all. The gaps in that output are catalogued in
+        # GREAT_DOCS_NATIVE_GAPS.md — deliberately NOT fixed here.
         run: great-docs build
-
-      - name: Generate llms.txt / llms-full.txt (upstream gap workaround)
-        # great-docs links these on the landing page but only writes them for packages with a Python
-        # api-reference; Whetstone has an MCP reference, so we synthesize them from the built
-        # mcp.json. See GREAT_DOCS_SPIKE.md (Gap 2).
-        run: python .github/scripts/gen_llms_txt.py great-docs/_site
 
       - name: Assemble combined tree (root showcase + great-docs at /docs)
         run: |
@@ -79,8 +75,6 @@ jobs:
           test -f _deploy/index.html
           test -f _deploy/docs/index.html
           test -f _deploy/docs/reference/mcp/recall.html
-          test -f _deploy/docs/llms.txt
-          test -f _deploy/docs/llms-full.txt
 
       - uses: actions/configure-pages@v5
 
