@@ -48,6 +48,7 @@ from .store.layout import (
     commit_store,
     ensure_store,
     global_store_location,
+    is_store,
     read_registry,
     store_location,
     store_write_lock,
@@ -132,10 +133,10 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     # reserved `__global__` store and union the (origin-tagged) results. Retrieval logic is
     # untouched — global entries default to origin "skill" from `retrieve()`, re-stamped here.
     # `consult_global=false` (or recalling the global store itself) skips this, so the payload is
-    # byte-identical to per-skill-only recall.
-    if config.consult_global and loc.slug != GLOBAL_SLUG:
-        ensure_store(GLOBAL_SLUG, config)
-        g_loc = global_store_location(config)
+    # byte-identical to per-skill-only recall. recall never *creates* the global store — it only
+    # consults it when a writer (promote / compact --all) has already populated it.
+    g_loc = global_store_location(config)
+    if config.consult_global and loc.slug != GLOBAL_SLUG and is_store(g_loc.path):
         index.ensure_index(g_loc, backend)
         g_learnings, g_issues = retrieve(g_loc, intent, backend, config, learnings_k)
         if g_learnings or g_issues:
