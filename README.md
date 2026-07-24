@@ -333,7 +333,7 @@ Configuration is read from `~/.config/whetstone/config.toml`; every key also has
 environment override.
 
 For the full design see
-[`LEARNING_SKILLS_DESIGN.md`](https://github.com/HrudithL/whetstone/blob/main/LEARNING_SKILLS_DESIGN.md),
+[`LEARNING_SKILLS_DESIGN.md`](./LEARNING_SKILLS_DESIGN.md),
 and the [showcase site](https://hrudithl.github.io/whetstone/) for the before/after proof across the
 great-tables, frontend-design, and pptx skills.
 
