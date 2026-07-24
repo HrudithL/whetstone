@@ -15,7 +15,7 @@ import json
 import re
 import secrets
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 
 from mcp.server.fastmcp import FastMCP
@@ -42,10 +42,13 @@ from .store.access import (
 from .store.entries import IssueEntry, LearningEntry
 from .store.index import IndexedEntry, entry_text
 from .store.layout import (
+    GLOBAL_SLUG,
     StoreLocation,
     attach_skill,
     commit_store,
     ensure_store,
+    global_store_location,
+    is_store,
     read_registry,
     store_location,
     store_write_lock,
@@ -70,6 +73,8 @@ _CAPTURE_CONTRACT = (
 )
 
 _MAX_TITLE = 60
+# revise statuses that represent a committed change worth announcing to the user (§M5d).
+_REVISE_TERMINAL = {"reinforced", "revised", "removed", "promoted", "demoted"}
 
 
 @mcp.tool()
@@ -103,6 +108,14 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     pass back on any follow-up ``capture``. An empty/unlearned store returns empty lists — never an
     error. ``learnings_k`` caps the number of (MMR-diversified) learnings returned; leave it unset
     to use the configured default (``learnings_k`` in config / ``WHETSTONE_LEARNINGS_K``).
+
+    Each entry carries an ``origin``: ``"skill"`` (this skill's own learned store) or ``"global"``
+    (a preference that recurred across skills and was promoted to Whetstone's learned global layer,
+    §M5e). Prefer a more specific ``"skill"`` entry when it conflicts with a broader ``"global"``
+    one. The global layer can be disabled with ``consult_global=false`` in config.
+
+    When you apply a returned learning/issue to your output, briefly NAME it to the user (e.g.
+    "using your saved preference for muted palettes") so the learned layer is visible, not silent.
     """
     config = load_config()
     ensure_store(skill, config)
@@ -115,6 +128,25 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     # Append the per-run event (§5.2, §11): the ids returned are the only per-run denominator for
     # application-rate metrics, since a run the user simply accepts produces no follow-up capture.
     emit_recall(loc, run_id, intent, [x.id for x in learnings], [x.id for x in issues])
+
+    # M5e — the learned global layer. Orchestration ONLY: run the SAME per-store retrieval over the
+    # reserved `__global__` store and union the (origin-tagged) results. Retrieval logic is
+    # untouched — global entries default to origin "skill" from `retrieve()`, re-stamped here.
+    # `consult_global=false` (or recalling the global store itself) skips this, so the payload is
+    # byte-identical to per-skill-only recall. recall never *creates* the global store — it only
+    # consults it when a writer (promote / compact --all) has already populated it.
+    g_loc = global_store_location(config)
+    if config.consult_global and loc.slug != GLOBAL_SLUG and is_store(g_loc.path):
+        index.ensure_index(g_loc, backend)
+        g_learnings, g_issues = retrieve(g_loc, intent, backend, config, learnings_k)
+        if g_learnings or g_issues:
+            # Give the global store its own usage telemetry (its stale/harden mining reasons over
+            # its own log), keyed to the same run_id so a follow-up capture can still be correlated.
+            emit_recall(
+                g_loc, run_id, intent, [x.id for x in g_learnings], [x.id for x in g_issues]
+            )
+        learnings = learnings + [replace(x, origin="global") for x in g_learnings]
+        issues = issues + [replace(x, origin="global") for x in g_issues]
     return {
         "skill": skill,
         "run_id": run_id,
@@ -156,6 +188,10 @@ def capture(
     pushes a learning to the promotion threshold (§6) the reinforcement is committed and
     ``needs_confirmation`` is returned; resolve the promotion via ``revise`` (the returned prompt
     tells you how) — ``capture`` never promotes.
+
+    On a committed/reinforced result the payload carries a ``confirmation`` string (e.g. "Captured:
+    <scope> — …. Re-applies on future <skill> runs."). RELAY it to the user so they can see the
+    correction was recorded and will stick — the learned layer is otherwise invisible to them.
     """
     if polarity not in ("learning", "issue"):
         raise ValueError(f"polarity must be 'learning' or 'issue', got {polarity!r}")
@@ -210,8 +246,13 @@ def capture(
             record_id(loc, entry_id)
             index.rebuild_index(loc, backend)
             commit_store(loc, f"capture: add {entry_id} ({scope})")
-            emit_capture(loc, run_id, entry_id, polarity, "committed")
-            return {"status": "committed", "entry_id": entry_id, "recurrence": 1}
+            emit_capture(loc, run_id, entry_id, polarity, "committed", scope=scope)
+            return {
+                "status": "committed",
+                "entry_id": entry_id,
+                "recurrence": 1,
+                "confirmation": _capture_confirmation(loc, scope, body, "committed"),
+            }
 
         # polarity == "issue"
         # Cross-polarity conflict is checked BEFORE same-polarity dedup: a new prohibiting "Never X"
@@ -229,8 +270,12 @@ def capture(
         if conflict is not None:
             return _conflict_result(loc, run_id, "issue", conflict)
         if duplicate is not None:
-            emit_capture(loc, run_id, duplicate.id, polarity, "noop")
-            return {"status": "noop", "entry_id": duplicate.id}
+            emit_capture(loc, run_id, duplicate.id, polarity, "noop", scope=duplicate.scope)
+            return {
+                "status": "noop",
+                "entry_id": duplicate.id,
+                "confirmation": _capture_confirmation(loc, duplicate.scope, duplicate.body, "noop"),
+            }
         if _supervised_hold(config, confirm):
             return _needs_confirmation(
                 None,
@@ -251,8 +296,13 @@ def capture(
         record_id(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"capture: add {entry_id} ({scope})")
-        emit_capture(loc, run_id, entry_id, polarity, "committed")
-        return {"status": "committed", "entry_id": entry_id, "recurrence": None}
+        emit_capture(loc, run_id, entry_id, polarity, "committed", scope=scope)
+        return {
+            "status": "committed",
+            "entry_id": entry_id,
+            "recurrence": None,
+            "confirmation": _capture_confirmation(loc, scope, body, "committed"),
+        }
 
 
 def _capture_reinforce(
@@ -281,7 +331,7 @@ def _capture_reinforce(
     updated = reinforce_learning(loc, duplicate.id, when=_today())
     index.rebuild_index(loc, backend)
     commit_store(loc, f"capture: reinforce {updated.id} (recurrence {updated.recurrence})")
-    emit_capture(loc, run_id, updated.id, "learning", "reinforced")
+    emit_capture(loc, run_id, updated.id, "learning", "reinforced", scope=updated.scope)
     if updated.recurrence >= config.promotion_threshold:
         return {
             "status": "needs_confirmation",
@@ -289,7 +339,12 @@ def _capture_reinforce(
             "recurrence": updated.recurrence,
             "prompt": _capture_promote_prompt(updated.id, updated.recurrence),
         }
-    return {"status": "reinforced", "entry_id": updated.id, "recurrence": updated.recurrence}
+    return {
+        "status": "reinforced",
+        "entry_id": updated.id,
+        "recurrence": updated.recurrence,
+        "confirmation": _capture_confirmation(loc, updated.scope, updated.body, "reinforced"),
+    }
 
 
 @mcp.tool()
@@ -319,6 +374,9 @@ def revise(
     - ``weaken``/``remove`` on an *issue* is a 3-way hard-rule prompt → ``confirm:"remove"``,
       ``"demote"``, or ``"cancel"``.
     - In supervised mode every routine mutation asks first → re-call with ``confirm:true``.
+
+    On a committed change the payload carries a ``confirmation`` string — RELAY it to the user so
+    the (otherwise invisible) update to the learned layer is visible.
     """
     if action not in ("reinforce", "weaken", "remove", "promote", "demote"):
         raise ValueError(
@@ -337,14 +395,23 @@ def revise(
     with store_write_lock(loc):
         index.rebuild_index_if_stale(loc, backend)
         if action == "reinforce":
-            return _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, config)
-        if action == "weaken":
-            return _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
-        if action == "remove":
-            return _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config)
-        if action == "promote":
-            return _revise_promote(loc, backend, entry_id, body, scope, run_id, confirm, config)
-        return _revise_demote(loc, backend, entry_id, body, scope, run_id, confirm, config)
+            result = _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        elif action == "weaken":
+            result = _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        elif action == "remove":
+            result = _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        elif action == "promote":
+            result = _revise_promote(loc, backend, entry_id, body, scope, run_id, confirm, config)
+        else:
+            result = _revise_demote(loc, backend, entry_id, body, scope, run_id, confirm, config)
+    # Attach a human-facing confirmation on a terminal change so the agent can relay it (§M5d).
+    # A `needs_confirmation`/`unchanged` result gets none — nothing was committed to announce.
+    if result.get("status") in _REVISE_TERMINAL and result.get("entry_id"):
+        result = {
+            **result,
+            "confirmation": _revise_confirmation(loc, result["entry_id"], action, result["status"]),
+        }
+    return result
 
 
 def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
@@ -394,7 +461,7 @@ def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, conf
         updated = update_learning_prose(loc, entry_id, **prose)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: reinforce {updated.id} (recurrence {updated.recurrence})")
-    emit_revise(loc, run_id, updated.id, "reinforce", "reinforced")
+    emit_revise(loc, run_id, updated.id, "reinforce", "reinforced", scope=updated.scope)
     if updated.recurrence >= config.promotion_threshold:
         return {
             "status": "needs_confirmation",
@@ -431,13 +498,13 @@ def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
             update_learning_prose(loc, entry_id, **prose)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: keep {entry_id} (recurrence 1)")
-        emit_revise(loc, run_id, entry_id, "weaken", "revised")
+        emit_revise(loc, run_id, entry_id, "weaken", "revised", scope=learning.scope)
         return {"status": "revised", "entry_id": entry_id, "recurrence": 1}
     if confirm == "remove":
         remove_entry(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: remove {entry_id}")
-        emit_revise(loc, run_id, entry_id, "weaken", "removed")
+        emit_revise(loc, run_id, entry_id, "weaken", "removed", scope=learning.scope)
         return {"status": "removed", "entry_id": entry_id}
 
     new_recurrence = learning.recurrence - 1
@@ -466,14 +533,15 @@ def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
         update_learning_prose(loc, entry_id, **prose)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: weaken {entry_id} (recurrence {new_recurrence})")
-    emit_revise(loc, run_id, entry_id, "weaken", "revised")
+    emit_revise(loc, run_id, entry_id, "weaken", "revised", scope=learning.scope)
     return {"status": "revised", "entry_id": entry_id, "recurrence": new_recurrence}
 
 
 def _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
     """``remove``: delete a learning (dial-governed) or route an issue through the hard-rule
     3-way prompt."""
-    if find_learning(loc, entry_id) is not None:
+    learning = find_learning(loc, entry_id)
+    if learning is not None:
         if _supervised_hold(config, confirm):
             return _needs_confirmation(
                 entry_id,
@@ -482,7 +550,7 @@ def _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config)
         remove_entry(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: remove {entry_id}")
-        emit_revise(loc, run_id, entry_id, "remove", "removed")
+        emit_revise(loc, run_id, entry_id, "remove", "removed", scope=learning.scope)
         return {"status": "removed", "entry_id": entry_id}
     if find_issue(loc, entry_id) is not None:
         return _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, config)
@@ -530,10 +598,18 @@ def _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, c
     """The 3-way hard-rule prompt for ``weaken``/``remove`` on an issue — ALWAYS asks (§6),
     regardless of supervision mode: remove it, demote it to a preference, or cancel."""
     if confirm == "remove":
+        removed_issue = find_issue(loc, entry_id)
         remove_entry(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: remove issue {entry_id}")
-        emit_revise(loc, run_id, entry_id, "remove", "removed")
+        emit_revise(
+            loc,
+            run_id,
+            entry_id,
+            "remove",
+            "removed",
+            scope=removed_issue.scope if removed_issue else None,
+        )
         return {"status": "removed", "entry_id": entry_id}
     if confirm == "demote":
         return _do_demote(loc, backend, entry_id, body, scope, run_id, config)
@@ -565,7 +641,7 @@ def _do_demote(loc, backend, entry_id, body, scope, run_id, config) -> dict:
     record_id(loc, learning.id)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: demote issue {entry_id} -> {learning.id}")
-    emit_revise(loc, run_id, learning.id, "demote", "demoted")
+    emit_revise(loc, run_id, learning.id, "demote", "demoted", scope=learning.scope)
     return {"status": "demoted", "entry_id": learning.id, "recurrence": learning.recurrence}
 
 
@@ -583,7 +659,7 @@ def _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id) -> dict:
     record_id(loc, issue.id)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: promote {entry_id} -> {issue.id}")
-    emit_revise(loc, run_id, issue.id, "promote", "promoted")
+    emit_revise(loc, run_id, issue.id, "promote", "promoted", scope=issue.scope)
     return {"status": "promoted", "entry_id": issue.id}
 
 
@@ -678,6 +754,31 @@ def _needs_confirmation(entry_id: str | None, prompt: str) -> dict:
     return {"status": "needs_confirmation", "entry_id": entry_id, "prompt": prompt}
 
 
+def _one_line(body: str, limit: int = 80) -> str:
+    """A single-line, length-bounded gist of ``body`` for a human-facing confirmation string."""
+    collapsed = " ".join(body.split())
+    return collapsed if len(collapsed) <= limit else collapsed[: limit - 1].rstrip() + "…"
+
+
+def _capture_confirmation(loc: StoreLocation, scope: str, body: str, status: str) -> str:
+    """The concise, human-facing line ``capture`` returns so the agent can relay what it recorded
+    (§M5d — visibility without a query tool)."""
+    verb = {"committed": "Captured", "reinforced": "Reinforced", "noop": "Already knew"}[status]
+    return f"{verb}: {scope} — {_one_line(body)}. Re-applies on future {loc.skill} runs."
+
+
+def _revise_confirmation(loc: StoreLocation, entry_id: str, action: str, status: str) -> str:
+    """The concise, human-facing line ``revise`` returns so the agent can relay it (§M5d)."""
+    verb = {
+        "reinforced": "Reinforced",
+        "revised": "Updated",
+        "removed": "Removed",
+        "promoted": "Promoted to a mandatory issue",
+        "demoted": "Softened to a preference",
+    }.get(status, status.capitalize())
+    return f"{verb} {entry_id} in {loc.skill}'s learned layer."
+
+
 def _promote_prompt(recurrence: int) -> str:
     return (
         f"This has come up ~{recurrence} times — promote it to a guaranteed always/never rule? "
@@ -710,7 +811,7 @@ def _conflict_result(
 ) -> dict:
     with_entry, explanation = conflict
     # Log the surfaced conflict against the entry it clashed with; nothing was committed.
-    emit_capture(loc, run_id, with_entry.id, polarity, "conflict")
+    emit_capture(loc, run_id, with_entry.id, polarity, "conflict", scope=with_entry.scope)
     return {
         "status": "conflict",
         "entry_id": None,
@@ -873,25 +974,89 @@ def _find_duplicate(
     return best
 
 
-_USAGE = "usage: whetstone [serve | compact <skill>]"
+_USAGE = (
+    "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id> | "
+    "export <skill> [--out <path>] | import <skill> <pack> [--merge|--replace] | doctor <skill>]"
+)
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Console entry point. No args (or ``serve``) runs the stdio MCP server as usual; ``compact
-    <skill>`` runs the out-of-band compaction pass (§7) and prints its summary. Compaction is
-    deliberately NOT one of the five MCP tools — it is maintenance, invoked out of band."""
+    """Console entry point. No args (or ``serve``) runs the stdio MCP server as usual.
+
+    Out-of-band maintenance subcommands (deliberately NOT part of the five-tool MCP surface — they
+    are periodic/deliberate operator actions, never fired mid-task by the model):
+
+    - ``compact <skill>`` — the maintenance pass (§7) + the M5a advisory behavioral report.
+    - ``compact --all`` — compact every registered skill, then promote cross-skill preference
+      clusters into the learned global layer (§M5e).
+    - ``promote <skill> <id>`` — lift one learning/issue into the learned global layer by hand
+      (§M5e).
+    - ``export <skill> [--out <path>]`` — write a shareable preference pack (§M5c).
+    - ``import <skill> <pack> [--merge|--replace]`` — import a preference pack, dedup-aware (§M5c).
+    - ``doctor <skill>`` — read-only health check for the learned loop (§M5d); never edits anything.
+    """
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] == "serve":
         mcp.run()
         return
     if args[0] == "compact":
-        if len(args) != 2:
-            print(_USAGE, file=sys.stderr)
-            raise SystemExit(2)
         # Imported lazily so the hot ``serve`` path doesn't pull the compaction module.
         from .compaction import compact
 
-        print(json.dumps(compact(args[1]), indent=2))
+        rest = args[1:]
+        all_skills = "--all" in rest
+        positional = [a for a in rest if a != "--all"]
+        if all_skills and not positional:
+            print(json.dumps(compact(all_skills=True), indent=2))
+            return
+        if not all_skills and len(positional) == 1:
+            print(json.dumps(compact(positional[0]), indent=2))
+            return
+        print(_USAGE, file=sys.stderr)
+        raise SystemExit(2)
+    if args[0] == "promote":
+        if len(args) != 3:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        from .promotion import promote_to_global
+
+        print(json.dumps(promote_to_global(args[1], args[2]), indent=2))
+        return
+    if args[0] == "export":
+        rest = args[1:]
+        out = None
+        if "--out" in rest:
+            i = rest.index("--out")
+            if i + 1 >= len(rest):
+                print(_USAGE, file=sys.stderr)
+                raise SystemExit(2)
+            out = rest[i + 1]
+            rest = rest[:i] + rest[i + 2 :]
+        if len(rest) != 1:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        from .packs import export_pack
+
+        print(json.dumps(export_pack(rest[0], out), indent=2))
+        return
+    if args[0] == "import":
+        rest = args[1:]
+        mode = "replace" if "--replace" in rest else "merge"
+        positional = [a for a in rest if a not in ("--merge", "--replace")]
+        if len(positional) != 2:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        from .packs import import_pack
+
+        print(json.dumps(import_pack(positional[0], positional[1], mode), indent=2))
+        return
+    if args[0] == "doctor":
+        if len(args) != 2:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        from .doctor import doctor
+
+        print(json.dumps(doctor(args[1]), indent=2))
         return
     print(_USAGE, file=sys.stderr)
     raise SystemExit(2)

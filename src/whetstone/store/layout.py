@@ -30,9 +30,15 @@ except ImportError:  # pragma: no cover - non-POSIX
     fcntl = None
 
 _REGISTRY_NAME = "registry.json"
+# The reserved slug for the M5e learned global layer. It is used verbatim as both the "skill" name
+# and the store directory, bypassing `skill_slug`/`safe_component` (which ALWAYS append a `-<hash>`
+# suffix, so no real skill name can ever derive this bare literal — the collision the M5e plan calls
+# out is structurally impossible). The global store is deliberately kept OUT of the registry so it
+# is never reported as an attached skill by `metrics`; `recall` consults it by orchestration only.
+GLOBAL_SLUG = "__global__"
 # Only the markdown is source of truth. The sqlite index is derived/rebuildable and events.jsonl is
 # local telemetry (§5.1), so a per-store .gitignore keeps both out of the committed history.
-_STORE_GITIGNORE = "index.sqlite\nindex.sqlite-*\nevents.jsonl\n"
+_STORE_GITIGNORE = "index.sqlite\nindex.sqlite-*\nevents.jsonl\ncompact-report.md\n"
 # Applied per-command so a store commit never depends on (or mutates) the user's global git config:
 # a fixed identity, no GPG signing, and no user hooks (a global core.hooksPath / template hook must
 # not be able to fail Whetstone's internal bookkeeping commits). This disables hooks via config
@@ -82,10 +88,19 @@ def skill_slug(skill: str) -> str:
 
 
 def store_location(skill: str, config: Config | None = None) -> StoreLocation:
-    """Resolve where ``skill``'s store lives without creating anything."""
+    """Resolve where ``skill``'s store lives without creating anything.
+
+    The reserved :data:`GLOBAL_SLUG` maps to itself (not through ``skill_slug``) so the M5e global
+    layer gets a stable, un-hashed directory that no real skill's slug can collide with.
+    """
     root = resolve_store_root(config)
-    slug = skill_slug(skill)
+    slug = GLOBAL_SLUG if skill == GLOBAL_SLUG else skill_slug(skill)
     return StoreLocation(skill=skill, slug=slug, path=root / slug)
+
+
+def global_store_location(config: Config | None = None) -> StoreLocation:
+    """The reserved global-layer store (§M5e). Same machinery as any per-skill store."""
+    return store_location(GLOBAL_SLUG, config)
 
 
 def _git(args: list[str], cwd: Path) -> None:
@@ -237,7 +252,8 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
             # dirty for the next operation.
             if _ensure_store_gitignore(loc):
                 commit_paths(loc, [".gitignore"], "Add derived-artifact .gitignore")
-            _register(loc, config)
+            if loc.slug != GLOBAL_SLUG:  # the global layer is never a registered skill (§M5e)
+                _register(loc, config)
             return EnsureResult(location=loc, created=False)
 
         loc.learnings_dir.mkdir(parents=True, exist_ok=True)
@@ -251,7 +267,8 @@ def ensure_store(skill: str, config: Config | None = None) -> EnsureResult:
         _git(["add", "-A"], cwd=loc.path)
         _git(["commit", "-q", "-m", f"Initialize Whetstone store for '{skill}'"], cwd=loc.path)
 
-        _register(loc, config)
+        if loc.slug != GLOBAL_SLUG:  # the global layer is never a registered skill (§M5e)
+            _register(loc, config)
         return EnsureResult(location=loc, created=True)
 
 
@@ -298,6 +315,11 @@ def attach_skill(
 
     Returns a JSON-friendly summary describing the store and whether it was newly created.
     """
+    if skill == GLOBAL_SLUG:
+        raise ValueError(
+            f"{GLOBAL_SLUG!r} is reserved for the Whetstone global layer and cannot be attached "
+            "as a skill."
+        )
     result = ensure_store(skill, config)
     _register(result.location, config, skill_path=skill_path)
     return {

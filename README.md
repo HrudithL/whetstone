@@ -115,12 +115,23 @@ Whetstone exposes five MCP tools:
   confirmation-gated.
 - **`metrics`** — reporting only: per-skill KPIs drawn from each store's event log.
 
-Store compaction (retiring stale learnings, merging near-duplicate scopes) is deliberate out-of-band
-maintenance, run from the command line rather than exposed as a tool:
+Some operations are deliberate out-of-band maintenance — periodic or human-initiated, never fired
+mid-task by the model — so they are command-line subcommands rather than tools:
 
 ```sh
-whetstone compact <skill>
+whetstone compact <skill>          # retire stale learnings, merge near-dup scopes; report
+                                   #   advisory behavioral findings (harden/stale/churn/conflict)
+whetstone compact --all            # compact every skill, then promote cross-skill preference
+                                   #   clusters into the learned global layer
+whetstone promote <skill> <id>     # lift one learning/issue into the learned global layer by hand
+whetstone export <skill>           # write a shareable preference pack (.tar.gz)
+whetstone import <skill> <pack>    # import a pack, dedup-aware (--merge default | --replace)
+whetstone doctor <skill>           # read-only health check for the learned loop (never edits)
 ```
+
+**Learned global layer.** A preference that recurs across skills can live in a reserved `__global__`
+store; `recall` runs the same retrieval over it too and unions the (origin-tagged) results, so a
+correction taught once applies everywhere. Disable with `consult_global = false` in config.
 
 ## How it works, end to end
 

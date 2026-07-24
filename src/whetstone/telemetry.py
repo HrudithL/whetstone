@@ -97,9 +97,15 @@ def emit_capture(
     entry_id: str,
     polarity: str,
     status: str,
+    scope: str | None = None,
 ) -> None:
     """Record a ``capture``: the entry it touched, its polarity, and the outcome ``status``
-    (``committed`` | ``reinforced`` | ``noop``)."""
+    (``committed`` | ``reinforced`` | ``noop`` | ``conflict``).
+
+    ``scope`` is recorded so the M5a behavioral miner can attribute capture churn to a scope without
+    reconstructing it from markdown (removed entries leave no markdown). Optional for back-compat:
+    events written before M5a simply lack the key and the miner treats their scope as unknown.
+    """
     append_event(
         loc,
         {
@@ -108,6 +114,7 @@ def emit_capture(
             "entry_id": entry_id,
             "polarity": polarity,
             "status": status,
+            "scope": scope,
         },
     )
 
@@ -118,11 +125,12 @@ def emit_revise(
     entry_id: str,
     action: str,
     status: str,
+    scope: str | None = None,
 ) -> None:
     """Record a ``revise``: the entry it touched, the ``action`` applied, and the outcome ``status``
     (``revised`` | ``removed`` | ``promoted`` | ``demoted`` | ``reinforced``). Only emitted when a
     mutation actually commits — a bare ``needs_confirmation`` prompt changes nothing and logs
-    nothing."""
+    nothing. ``scope`` is recorded for the M5a miner (see :func:`emit_capture`)."""
     append_event(
         loc,
         {
@@ -131,6 +139,7 @@ def emit_revise(
             "entry_id": entry_id,
             "action": action,
             "status": status,
+            "scope": scope,
         },
     )
 
@@ -153,6 +162,53 @@ def emit_compaction(
             "retired": retired,
             "merged_scopes": merged_scopes,
             "deduped": deduped,
+        },
+    )
+
+
+def emit_promote(
+    loc: StoreLocation,
+    *,
+    source_skill: str,
+    source_id: str,
+    global_id: str,
+    polarity: str,
+) -> None:
+    """Record a promotion into the learned global layer (§M5e): the source skill + entry it came
+    from and the new ``__global__`` id it now lives under. Emitted to the global store's log."""
+    append_event(
+        loc,
+        {
+            "type": "promote",
+            "source_skill": source_skill,
+            "source_id": source_id,
+            "global_id": global_id,
+            "polarity": polarity,
+        },
+    )
+
+
+def emit_import(
+    loc: StoreLocation,
+    *,
+    pack: str,
+    mode: str,
+    committed: int,
+    merged: int,
+    conflicts: int,
+) -> None:
+    """Record a preference-pack import (§M5c): the pack name, the mode (``merge``/``replace``), and
+    how many incoming entries were newly committed, folded into an existing entry, or surfaced as an
+    unresolved conflict (merge only). Emitted once per import that changed the store."""
+    append_event(
+        loc,
+        {
+            "type": "import",
+            "pack": pack,
+            "mode": mode,
+            "committed": committed,
+            "merged": merged,
+            "conflicts": conflicts,
         },
     )
 
