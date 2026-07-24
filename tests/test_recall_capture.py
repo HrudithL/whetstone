@@ -91,6 +91,7 @@ def test_capture_commits_a_new_learning(env):
         "currency columns",
         "2026-07-16 — 'make revenue right-aligned'",
     )
+    result.pop("confirmation", None)
     assert result == {"status": "committed", "entry_id": "L1", "recurrence": 1}
 
     slug = store_location("gt").slug
@@ -134,6 +135,7 @@ def test_capture_noops_a_duplicate_issue(env, monkeypatch):
     monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
     body = "Never apply heavy row banding to tables under ten rows."
     first = capture("gt", "issue", body, "small tables", "prov-1")
+    first.pop("confirmation", None)
     assert first == {"status": "committed", "entry_id": "I1", "recurrence": None}
 
     dup = capture(
@@ -143,6 +145,7 @@ def test_capture_noops_a_duplicate_issue(env, monkeypatch):
         "small tables",
         "prov-2",
     )
+    dup.pop("confirmation", None)
     assert dup == {"status": "noop", "entry_id": "I1"}
 
 
