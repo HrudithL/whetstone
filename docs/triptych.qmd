@@ -13,13 +13,14 @@ Each scenario runs **one skill** three ways. **Before** and **After** are shown 
    Whetstone from the recalled learnings and issues, with their ids, scopes, and weights). This is
    verbatim what the model was told — not a paraphrase.
 
-The scenarios span three skills — **Great Tables**, **frontend design**, and **PowerPoint decks** —
-each carrying its own arbitrary house-style preference. The substrate is the same for all three;
-only the skill and the taught preference change.
+The scenarios span four skills — **Great Tables**, **frontend design**, **plotnine**, and
+**PowerPoint decks** — each carrying its own arbitrary house-style preference. The substrate is the
+same for all four; only the skill and the taught preference change.
 
 *The panels render each skill's output natively from the committed artifacts under `harness/out/`:
-Great Tables tables inline, self-contained web pages sandboxed in an iframe, and — for binary
-formats like pptx — the generated build script (the `.pptx` itself is committed alongside it).*
+Great Tables tables inline, self-contained web pages sandboxed in an iframe, plotnine plots as
+rendered images, and — for binary formats like pptx — the generated build script (the `.pptx` itself
+is committed alongside it).*
 
 ```{python}
 # | echo: false
@@ -35,6 +36,7 @@ from IPython.display import HTML, Markdown, display  # noqa: E402
 SKILLS = [
     ("great-tables", "Great Tables", "Native HTML tables — real tables, not screenshots."),
     ("frontend-design", "Frontend design", "Self-contained pages, sandboxed in an iframe."),
+    ("plotnine", "plotnine", "Grammar-of-graphics plots, rendered as images."),
     ("pptx", "PowerPoint decks", "The generated python-pptx build script (the deck is a binary)."),
 ]
 any_shown = False
