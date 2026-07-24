@@ -22,6 +22,14 @@ website:
         text: Metrics
       - href: methodology.qmd
         text: Methodology
+      - text: Docs
+        menu:
+          - href: install.qmd
+            text: Install & quickstart
+          - href: tools.qmd
+            text: Tools
+          - href: concepts.qmd
+            text: Concepts
     right:
       - icon: github
         href: https://github.com/HrudithL/whetstone
