@@ -1,0 +1,91 @@
+---
+title: "Concepts"
+subtitle: "Learnings and issues, weights, scopes, and the git-native store."
+---
+
+## The base skill is the architecture; Whetstone is the weights
+
+> A skill is the **architecture** — shared, tested, canonical, the same for everyone. Whetstone is
+> the **weights** — everything learned about *your* preferences, layered on at runtime and never
+> baked into the skill.
+
+Whetstone never modifies the skill. It keeps a separate, per-skill memory and applies it at the
+start of each run, so your taste can evolve — and even run against the skill's defaults — without
+mutating something everyone shares.
+
+## Learnings vs. issues
+
+Every entry Whetstone stores has a **polarity**:
+
+```{=html}
+<div class="ws-cards" style="margin-top:1.25rem;">
+  <div class="ws-card">
+    <div class="ws-card-icon">≈</div>
+    <h3 class="ws-card-title">Learning</h3>
+    <p class="ws-card-body">A soft, weighted, decaying <strong>preference</strong> — what you like.
+      "Negatives in parentheses", "warm palette, not green", "square corners." Retrieved by
+      relevance and applied as taste.</p>
+  </div>
+  <div class="ws-card">
+    <div class="ws-card-icon">!</div>
+    <h3 class="ws-card-title">Issue</h3>
+    <p class="ws-card-body">A hard, mandatory <strong>rule</strong> the skill must never repeat — an
+      explicit "always / never." Not subject to decay; treated as a constraint, not a suggestion.</p>
+  </div>
+</div>
+```
+
+A correction becomes a *learning* when it's taste, and an *issue* when it's an "always/never" or a
+mistake to never repeat. `capture` classifies and words it; `revise` can `promote` a preference into
+a rule or `demote` a rule back to a preference later.
+
+## Weight, decay, and recurrence
+
+Learnings carry a **weight** that captures how strongly a preference is held. Repeating a correction
+(`revise … reinforce`) raises it; contradicting one (`weaken`) lowers it; unused learnings **decay**
+over time so stale taste fades instead of accumulating forever. This trajectory is exactly what the
+**[Metrics → value-over-time](metrics.qmd)** view plots. Issues are mandatory and don't decay.
+
+## Scopes
+
+Entries are grouped by **scope** — a short slug describing *what* the preference is about (e.g.
+`currency-formatting`, `color-palette`). Scoping is what makes retrieval precise: `recall` matches
+your elaborated intent against scopes, so a table-styling task surfaces table-styling preferences and
+nothing else. It's also why passing a rich, elaborated `intent` to `recall` matters so much.
+
+## Storage & config {#storage-config}
+
+Each skill's learned layer is its **own git repository** under the XDG data dir (default
+`~/.local/share/whetstone/<skill-slug>/`; override with `WHETSTONE_STORE_ROOT` or `store_root` in
+config):
+
+```default
+<store-root>/<skill-slug>/
+  learnings/<scope-slug>.md   your preferences, grouped by scope (source of truth)
+  issues/<scope-slug>.md      hard rules, grouped by scope (source of truth)
+  next_ids.json               per-store id counters (git-tracked; prevents id reuse)
+  index.sqlite                derived embedding cache (rebuildable, git-ignored)
+  events.jsonl                per-run telemetry for metrics (git-ignored)
+  .git/                       full version history of the markdown
+```
+
+The markdown is the **source of truth** — read it, edit it, `git revert` it. The SQLite index and
+the event log are derived and git-ignored. Nothing leaves your machine.
+
+Configuration is read from `~/.config/whetstone/config.toml`, and every key also has a
+`WHETSTONE_*` environment override. The most common one is the recall backend:
+
+```toml
+# ~/.config/whetstone/config.toml
+embedding_backend = "sentence-transformers"   # default: "hashing" (deterministic, dependency-free)
+```
+
+The default `hashing` backend needs no extra dependencies and no network. The
+`sentence-transformers` backend (install the `embeddings` extra — see **[Install](install.qmd)**)
+gives higher-quality, intent-aware retrieval; it's the backend this site's showcase runs on.
+
+::: {.callout-note}
+For the full design rationale, see
+[`LEARNING_SKILLS_DESIGN.md`](https://github.com/HrudithL/whetstone/blob/main/LEARNING_SKILLS_DESIGN.md)
+in the repository.
+:::

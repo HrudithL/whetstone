@@ -118,12 +118,18 @@ def _panel_body(scenario: str, phase: str) -> str:
         native = read_text(scenario, phase, name)
         if native and native.strip():
             return _embed_html(native, is_primary=(name == primary))
-    # 2) a rendered raster (great-tables)
+    # 2) a rendered raster: the primary output's sibling PNG (``plot.png`` for plotnine,
+    #    ``table.png`` for great-tables), embedded as a self-contained data URI since the committed
+    #    images live outside ``docs/_site``.
     d = _scenario_dir(scenario)
-    png = d / phase / "table.png" if d else None
-    if png and png.is_file():
-        b64 = base64.b64encode(png.read_bytes()).decode("ascii")
-        return f'<img alt="{phase}" style="max-width:100%" src="data:image/png;base64,{b64}">'
+    if d is not None:
+        stem_png = f"{primary.rsplit('.', 1)[0]}.png" if "." in primary else None
+        for name in (stem_png, "plot.png", "table.png"):
+            png = d / phase / name if name else None
+            if png and png.is_file():
+                b64 = base64.b64encode(png.read_bytes()).decode("ascii")
+                return (f'<img alt="{phase}" style="max-width:100%;border-radius:8px" '
+                        f'src="data:image/png;base64,{b64}">')
     # 3) the skill's primary output as code (e.g. deck.py for pptx, or table.py if HTML is missing)
     code = read_text(scenario, phase, primary)
     if code:
