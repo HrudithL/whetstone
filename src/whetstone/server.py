@@ -908,7 +908,10 @@ def _find_duplicate(
     return best
 
 
-_USAGE = "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id>]"
+_USAGE = (
+    "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id> | "
+    "export <skill> [--out <path>] | import <skill> <pack> [--merge|--replace]]"
+)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -922,6 +925,8 @@ def main(argv: list[str] | None = None) -> None:
       clusters into the learned global layer (§M5e).
     - ``promote <skill> <id>`` — lift one learning/issue into the learned global layer by hand
       (§M5e).
+    - ``export <skill> [--out <path>]`` — write a shareable preference pack (§M5c).
+    - ``import <skill> <pack> [--merge|--replace]`` — import a preference pack, dedup-aware (§M5c).
     """
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] == "serve":
@@ -949,6 +954,34 @@ def main(argv: list[str] | None = None) -> None:
         from .promotion import promote_to_global
 
         print(json.dumps(promote_to_global(args[1], args[2]), indent=2))
+        return
+    if args[0] == "export":
+        rest = args[1:]
+        out = None
+        if "--out" in rest:
+            i = rest.index("--out")
+            if i + 1 >= len(rest):
+                print(_USAGE, file=sys.stderr)
+                raise SystemExit(2)
+            out = rest[i + 1]
+            rest = rest[:i] + rest[i + 2 :]
+        if len(rest) != 1:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        from .packs import export_pack
+
+        print(json.dumps(export_pack(rest[0], out), indent=2))
+        return
+    if args[0] == "import":
+        rest = args[1:]
+        mode = "replace" if "--replace" in rest else "merge"
+        positional = [a for a in rest if a not in ("--merge", "--replace")]
+        if len(positional) != 2:
+            print(_USAGE, file=sys.stderr)
+            raise SystemExit(2)
+        from .packs import import_pack
+
+        print(json.dumps(import_pack(positional[0], positional[1], mode), indent=2))
         return
     print(_USAGE, file=sys.stderr)
     raise SystemExit(2)

@@ -188,6 +188,31 @@ def emit_promote(
     )
 
 
+def emit_import(
+    loc: StoreLocation,
+    *,
+    pack: str,
+    mode: str,
+    committed: int,
+    merged: int,
+    conflicts: int,
+) -> None:
+    """Record a preference-pack import (§M5c): the pack name, the mode (``merge``/``replace``), and
+    how many incoming entries were newly committed, folded into an existing entry, or surfaced as an
+    unresolved conflict (merge only). Emitted once per import that changed the store."""
+    append_event(
+        loc,
+        {
+            "type": "import",
+            "pack": pack,
+            "mode": mode,
+            "committed": committed,
+            "merged": merged,
+            "conflicts": conflicts,
+        },
+    )
+
+
 def read_events(loc: StoreLocation) -> list[dict]:
     """Read every event line, skipping blank lines. Missing log -> empty list.
 
