@@ -76,6 +76,27 @@ artifacts. (`--stub` routes its output + store to throwaway temp dirs, so it nev
   HTML** in Quarto (the whole point — real tables, not screenshots), so the `table.png` artifacts in
   `out/` are an optional convenience; set `CHROME_PATH` if a run cannot find a browser.
 
+## Calibration KPIs (M5b)
+
+The scenario pass above measures *runs-to-stick* and *value-over-time*. It cannot honestly compute
+the three §11 **labeled** KPIs the product `metrics` tool leaves `null` — `capture_rate`,
+`regressions_prevented`, `retrieval_precision` — because ordinary runs have no ground truth. The
+**calibration harness** supplies exactly that: a small hand-labeled set it scores against real
+Whetstone.
+
+```sh
+python -m harness.calibrate [--kpi retrieval|capture|regressions|all]
+```
+
+- Labels live in [`calibration/labels.yaml`](calibration/labels.yaml) — a human vouches for each case.
+- `retrieval_precision` and `capture_rate` are **key-free** (pure recall / capture over seeded
+  stores). `regressions_prevented` uses a **key-free proxy** (the in-scope issue is recalled for a
+  violating intent); a live `--agent` cold-vs-warm variant is the published number.
+- Writes `out/calibration.json`; `metrics.py` folds it into `out/metrics.json`'s
+  `showcase_only_kpis`, and the site shows real figures. **Hard boundary:** the runtime `metrics`
+  tool STILL returns null for these — only the published showcase (linked to the labeled set) shows
+  them. When `calibration.json` is absent the site falls back to the honest null-with-note.
+
 ## Layout
 
 ```
@@ -86,8 +107,11 @@ harness/
   skill/<name>/     one vendored Claude skill per dir, mounted by the --agent runner
   scenarios/        one *.yaml per scenario (each names its `skill:`)
   data/             input files scenarios reference (CSVs, design briefs)
+  calibration/      labels.yaml — hand-labeled ground truth for the three §11 labeled KPIs (M5b)
   generate.py       stub + live Agent-SDK generators (both skill-driven)
+  calibrate.py      computes capture_rate / regressions_prevented / retrieval_precision (M5b)
   out/<skill>/<scenario>/   generated, committed artifacts the site reads
+  out/calibration.json      calibrated labeled-KPI numbers (M5b), read by metrics.py + the site
   run.py            cold/seed/warm runner
   metrics.py        aggregates out/**/summary.json -> out/metrics.json (per-skill + overall)
 ```
