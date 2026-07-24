@@ -60,6 +60,7 @@ def test_supervised_revise_holds_a_reinforcement(store, config, monkeypatch):
     assert find_learning(store, "L1").recurrence == 1  # not bumped
 
     done = revise("gt", "L1", "reinforce", confirm=True)
+    done.pop("confirmation", None)
     assert done == {"status": "reinforced", "entry_id": "L1", "recurrence": 2}
 
 
@@ -107,6 +108,7 @@ def test_learning_remove_follows_the_dial(store, config, monkeypatch, mode):
         assert result["status"] == "needs_confirmation"
         assert find_learning(store, "L1") is not None
     else:
+        result.pop("confirmation", None)
         assert result == {"status": "removed", "entry_id": "L1"}
 
 

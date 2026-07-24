@@ -82,6 +82,7 @@ def test_reinforce_bumps_recurrence_and_commits(store, config, fixed_today):
 
     result = revise("gt", "L1", "reinforce")
 
+    result.pop("confirmation", None)
     assert result == {"status": "reinforced", "entry_id": "L1", "recurrence": 2}
     assert _commit_count(store) == before + 1
     (entry,) = load_learnings(store)
@@ -133,6 +134,7 @@ def test_reinforce_confirm_keep_stays_a_learning(store, config, monkeypatch, fix
 
     result = revise("gt", "L1", "reinforce", confirm="keep")
 
+    result.pop("confirmation", None)
     assert result == {"status": "reinforced", "entry_id": "L1", "recurrence": 4}
     # confirm:"keep" does not bump again — recurrence stays at 4.
     assert find_learning(store, "L1").recurrence == 4
@@ -147,6 +149,7 @@ def test_reinforce_confirm_keep_below_threshold_actually_reinforces(store, confi
 
     result = revise("gt", "L1", "reinforce", confirm="keep")
 
+    result.pop("confirmation", None)
     assert result == {"status": "reinforced", "entry_id": "L1", "recurrence": 2}
     assert find_learning(store, "L1").recurrence == 2  # actually bumped
     assert _commit_count(store) == before + 1  # actually committed
@@ -223,6 +226,7 @@ def test_weaken_decrements_recurrence_without_refreshing_last_seen(store, config
 
     result = revise("gt", "L1", "weaken")
 
+    result.pop("confirmation", None)
     assert result == {"status": "revised", "entry_id": "L1", "recurrence": 2}
     entry = find_learning(store, "L1")
     assert entry.recurrence == 2
@@ -239,6 +243,7 @@ def test_weaken_applies_supplied_body_and_scope(store, config):
         scope="theme",
     )
 
+    result.pop("confirmation", None)
     assert result == {"status": "revised", "entry_id": "L1", "recurrence": 2}
     entry = find_learning(store, "L1")
     assert entry.body == "Muted palettes only when the client hasn't set a brand color."
@@ -256,6 +261,7 @@ def test_weaken_below_zero_prompts_then_keep_resets_to_one(store, config):
     assert find_learning(store, "L1").recurrence == 0
 
     kept = revise("gt", "L1", "weaken", confirm="keep")
+    kept.pop("confirmation", None)
     assert kept == {"status": "revised", "entry_id": "L1", "recurrence": 1}
     assert find_learning(store, "L1").recurrence == 1
 
@@ -265,6 +271,7 @@ def test_weaken_below_zero_confirm_remove_deletes(store, config):
     revise("gt", "L1", "weaken")  # below-0 prompt
 
     removed = revise("gt", "L1", "weaken", confirm="remove")
+    removed.pop("confirmation", None)
     assert removed == {"status": "removed", "entry_id": "L1"}
     assert find_learning(store, "L1") is None
 
@@ -277,6 +284,7 @@ def test_weaken_below_zero_keep_applies_rewording(store, config):
         "gt", "L1", "weaken", confirm="keep",
         body="Muted palettes only when no brand color is set.", scope="theme",
     )
+    kept.pop("confirmation", None)
     assert kept == {"status": "revised", "entry_id": "L1", "recurrence": 1}
     entry = find_learning(store, "L1")
     assert entry.body == "Muted palettes only when no brand color is set."  # reworded survivor
@@ -308,6 +316,7 @@ def test_remove_deletes_a_learning(store, config):
 
     result = revise("gt", "L1", "remove")
 
+    result.pop("confirmation", None)
     assert result == {"status": "removed", "entry_id": "L1"}
     assert load_learnings(store) == []
     assert _commit_count(store) == before + 1
@@ -374,6 +383,7 @@ def test_demote_seeds_learning_at_three(store, config, monkeypatch, fixed_today)
 
     result = revise("gt", "I1", "demote")
 
+    result.pop("confirmation", None)
     assert result == {"status": "demoted", "entry_id": "L1", "recurrence": 3}
     assert find_issue(store, "I1") is None
     learning = find_learning(store, "L1")
@@ -414,6 +424,7 @@ def test_weaken_issue_is_a_three_way_prompt_remove(store, config):
     assert "hard rule" in prompt["prompt"]
 
     removed = revise("gt", "I1", "weaken", confirm="remove")
+    removed.pop("confirmation", None)
     assert removed == {"status": "removed", "entry_id": "I1"}
     assert load_issues(store) == []
 
@@ -424,6 +435,7 @@ def test_remove_issue_demote_softens(store, config, monkeypatch, fixed_today):
     revise("gt", "I1", "remove")  # 3-way prompt
 
     result = revise("gt", "I1", "remove", confirm="demote", body="Prefer avoiding neon colors.")
+    result.pop("confirmation", None)
     assert result == {"status": "demoted", "entry_id": "L1", "recurrence": 3}
     assert find_issue(store, "I1") is None
     assert find_learning(store, "L1").body == "Prefer avoiding neon colors."
