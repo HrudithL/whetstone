@@ -157,6 +157,28 @@ def emit_compaction(
     )
 
 
+def emit_promote(
+    loc: StoreLocation,
+    *,
+    source_skill: str,
+    source_id: str,
+    global_id: str,
+    polarity: str,
+) -> None:
+    """Record a promotion into the learned global layer (§M5e): the source skill + entry it came
+    from and the new ``__global__`` id it now lives under. Emitted to the global store's log."""
+    append_event(
+        loc,
+        {
+            "type": "promote",
+            "source_skill": source_skill,
+            "source_id": source_id,
+            "global_id": global_id,
+            "polarity": polarity,
+        },
+    )
+
+
 def read_events(loc: StoreLocation) -> list[dict]:
     """Read every event line, skipping blank lines. Missing log -> empty list.
 
