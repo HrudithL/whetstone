@@ -48,6 +48,23 @@ Once registered, a skill (or your agent) uses Whetstone around each task:
 remove an entry by id. See **[Tools](tools.qmd)** for the full surface, and **[Concepts](concepts.qmd)**
 for how learnings, issues, weights, and scopes fit together.
 
+## Maintenance & sharing (CLI)
+
+Beyond the in-loop tools, a few things are deliberate, out-of-band commands you run yourself (never
+mid-task):
+
+```sh
+whetstone compact <skill>          # tidy the store + advisory health report
+whetstone compact --all            # tidy every store, then promote cross-skill preferences
+whetstone export <skill>           # write a shareable preference pack (.tar.gz)
+whetstone import <skill> <pack>    # import a teammate's pack, dedup-aware
+whetstone doctor <skill>           # is the learn loop actually wired? (read-only check)
+```
+
+New to a project and unsure the loop is running? `whetstone doctor <skill>` tells you whether
+recalls and captures are landing, and prints setup instructions if they aren't. See
+**[Tools → the out-of-band CLI](tools.qmd#the-out-of-band-cli-not-tools)** for the details.
+
 ## Optional — higher-quality recall
 
 The default `hashing` backend is deterministic and dependency-free (no torch, no network). For

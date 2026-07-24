@@ -199,6 +199,49 @@ display(HTML(f"""
 ```
 
 ```{=html}
+<section class="ws-section">
+  <div class="ws-wrap">
+    <div class="ws-reveal">
+      <span class="ws-eyebrow">beyond the loop</span>
+      <h2 class="ws-section-title">Grows with how you work</h2>
+      <p class="ws-section-lead">The recall / capture loop is the core. Around it, a small set of
+        out-of-band commands keep your taste healthy, portable, and shared.</p>
+    </div>
+    <div class="ws-cards ws-reveal">
+      <a class="ws-card" href="concepts.html#global-layer">
+        <div class="ws-card-icon">◇</div>
+        <h3 class="ws-card-title">A learned global layer</h3>
+        <p class="ws-card-body">A preference you hold across skills — &ldquo;muted palettes, never
+          neon&rdquo; — is promoted once and recalled everywhere, origin-tagged so the specific still
+          wins.</p>
+        <span class="ws-card-more">Concept &rarr;</span>
+      </a>
+      <a class="ws-card" href="concepts.html#packs">
+        <div class="ws-card-icon">⤓</div>
+        <h3 class="ws-card-title">Preference packs</h3>
+        <p class="ws-card-body">Because a store is just markdown, <code>export</code> a house style and
+          <code>import</code> it on another machine or a teammate&rsquo;s — dedup-aware, ids re-minted.</p>
+        <span class="ws-card-more">Concept &rarr;</span>
+      </a>
+      <a class="ws-card" href="concepts.html#maintenance">
+        <div class="ws-card-icon">⟳</div>
+        <h3 class="ws-card-title">Compaction &amp; mining</h3>
+        <p class="ws-card-body"><code>compact</code> tidies the store and mines its telemetry for
+          health signals — what to harden, what&rsquo;s gone stale — as advice you enact, never
+          silently.</p>
+        <span class="ws-card-more">Concept &rarr;</span>
+      </a>
+      <a class="ws-card" href="tools.html#the-out-of-band-cli-not-tools">
+        <div class="ws-card-icon">✓</div>
+        <h3 class="ws-card-title">A health check</h3>
+        <p class="ws-card-body"><code>whetstone doctor</code> tells you whether the learn loop is
+          actually wired — and prints setup instructions if it isn&rsquo;t.</p>
+        <span class="ws-card-more">Tools &rarr;</span>
+      </a>
+    </div>
+  </div>
+</section>
+
 <section id="get-started" class="ws-section ws-section--alt">
   <div class="ws-wrap ws-reveal" style="max-width:52rem;">
     <span class="ws-eyebrow">get started</span>

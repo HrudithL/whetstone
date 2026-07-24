@@ -129,9 +129,30 @@ whetstone import <skill> <pack>    # import a pack, dedup-aware (--merge default
 whetstone doctor <skill>           # read-only health check for the learned loop (never edits)
 ```
 
+What each of those does:
+
+- **`compact`** — the periodic tidy-up. A **structural** pass (auto-applied) dedupes entries, merges
+  overlapping scopes, and retires decayed learnings; a **behavioral mining** pass reads the event log
+  and *reports* — advisory only, never auto-applied — learnings worth hardening, scopes with capture
+  churn, stale learnings, and unresolved conflicts (printed + written to a git-ignored
+  `compact-report.md`). You enact a finding with `revise`.
+- **`promote` / `compact --all`** — feed the **learned global layer** below (by hand, or automatically
+  once a preference recurs across enough skills).
+- **`export` / `import`** — **preference packs**: a `.tar.gz` of your `learnings/` + `issues/` markdown
+  plus a `pack.toml` manifest (telemetry, the derived index, and git history are excluded). Import is
+  dedup- and conflict-aware and **re-mints ids**, so a teammate's pack never collides with yours.
+- **`doctor`** — a read-only check that the learn loop is actually wired (are recalls/captures
+  landing?); if it looks dead it prints host setup instructions. It never edits your skill or store.
+
 **Learned global layer.** A preference that recurs across skills can live in a reserved `__global__`
 store; `recall` runs the same retrieval over it too and unions the (origin-tagged) results, so a
 correction taught once applies everywhere. Disable with `consult_global = false` in config.
+
+**Visibility.** On a committed change, `capture` and `revise` return a short `confirmation` string
+the agent relays to you, so the learned layer isn't silent. And the three labeled KPIs the `metrics`
+tool returns as `null` by design (capture-rate, regressions-prevented, retrieval-precision) are
+computed for the published showcase by a small internal calibration harness against a hand-labeled
+set — the runtime tool still returns null; only the showcase shows the numbers.
 
 ## How it works, end to end
 

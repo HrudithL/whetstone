@@ -1,6 +1,6 @@
 ---
 title: "Tools"
-subtitle: "The five MCP tools Whetstone exposes, plus out-of-band compaction."
+subtitle: "The five MCP tools Whetstone exposes, plus the out-of-band maintenance & sharing CLI."
 ---
 
 Whetstone is a stdio MCP server. A skill (or your agent) calls these tools around each task — you
@@ -51,7 +51,9 @@ named *"currency formatting"*.
 
 Returns the weighted **learnings** (soft preferences) and **issues** (mandatory constraints) that
 match the intent, ready for the skill to apply. `learnings_k` optionally caps how many learnings
-come back.
+come back. Each entry is tagged with its `origin` — `"skill"` (this skill's own store) or
+`"global"` (a preference promoted to the cross-skill **[learned global layer](concepts.qmd#global-layer)**);
+prefer the more specific `"skill"` entry when the two disagree.
 
 ## `capture` {#capture}
 
@@ -67,6 +69,11 @@ Classify it: taste / preference → `polarity:"learning"`; a mistake to never re
 "always/never" rule → `polarity:"issue"` (word the body objectively). Generalize the feedback into a
 scoped rule of a few short sentences that capture the user's *why*. `capture` dedupes and
 conflict-checks against existing entries before writing.
+
+On a committed change `capture` (and `revise`) return a short human-facing **`confirmation`** string
+— *"Captured: currency columns — …. Re-applies on future great-tables runs."* — so the agent can
+tell you what it recorded and that it will stick. The learned layer is otherwise invisible; the
+tool descriptions instruct the model to relay it.
 
 ## `revise` {#revise}
 
@@ -101,11 +108,68 @@ need a labeled/calibration set — capture-rate, regressions-prevented, retrieva
 returned as `{"value": null, "note": …}` rather than guessed. See the **[Metrics](metrics.qmd)** page
 for the live numbers and **[Methodology](methodology.qmd)** for how they're produced.
 
-## Compaction (CLI, not a tool)
+## The out-of-band CLI (not tools)
 
-Retiring stale learnings and merging near-duplicate scopes is deliberate, out-of-band maintenance —
-run from the command line rather than exposed as a tool an agent might call mid-task:
+Some operations are deliberate, human- or schedule-initiated maintenance — they rewrite the whole
+store, commit, and can change what the *next* `recall` returns, so they are **command-line
+subcommands, never MCP tools** an agent might fire mid-task. They are all safe to run at a session
+boundary.
 
 ```sh
-whetstone compact <skill>
+whetstone compact <skill>          # tidy one store + report advisory behavioral findings
+whetstone compact --all            # tidy every store, then promote cross-skill preferences
+whetstone promote <skill> <id>     # lift one learning/issue into the learned global layer
+whetstone export <skill>           # write a shareable preference pack (.tar.gz)
+whetstone import <skill> <pack>    # import a pack (dedup-aware: --merge default | --replace)
+whetstone doctor <skill>           # read-only health check for the learned loop
 ```
+
+### `compact` — tidy, and mine for health
+
+`compact` runs two passes. The **structural** pass is auto-applied and always has been: it dedupes
+near-duplicate entries, merges overlapping scopes, and retires learnings whose weight has decayed
+below threshold (issues are never auto-retired). On top of that, a **behavioral mining** pass reads
+the store's `events.jsonl` and reports — **advisory only, never auto-applied** — four health signals:
+
+| finding | meaning |
+| --- | --- |
+| `harden` | a learning you keep reinforcing and never contradict → consider promoting it to an issue |
+| `bad_capture` | a scope with repeated captures *and* corrections → the original capture was likely too broad |
+| `stale` | a learning `recall` keeps surfacing but you never reinforce, or never surfaces at all → a retire nudge |
+| `conflict_residue` | a flagged conflict you never resolved |
+
+Findings are printed and written to a git-ignored `compact-report.md`; enacting one is a manual
+`revise`. Only the safe structural pass ever mutates automatically — the same conservatism `compact`
+has always had. See **[Concepts → Maintenance](concepts.qmd#maintenance)**.
+
+### `compact --all` — promote cross-skill preferences
+
+With `--all`, `compact` runs over every attached skill and then looks for a preference you have
+taught in several skills. When the same learning recurs across enough distinct skills, it is
+**promoted into the learned global layer** and the per-skill copies are retired, so a broad taste is
+stored once and applied everywhere. This is the automatic writer for the global layer.
+
+### `promote` — lift one preference by hand
+
+`whetstone promote <skill> <id>` moves a single learning or issue into the
+**[learned global layer](concepts.qmd#global-layer)** deliberately, re-minting its id there. Use it
+when you already know a preference is cross-cutting and don't want to wait for `--all` to notice.
+
+### `export` / `import` — preference packs
+
+Sharing your taste is a deliberate human act (never something an agent should do on its own), so it
+lives on the CLI. `export` writes a **preference pack** — a `.tar.gz` of your `learnings/` + `issues/`
+markdown plus a `pack.toml` manifest (telemetry, the derived index, and git history are excluded).
+`import` folds a pack into a store: `--merge` (default) reuses the same dedup + conflict checks
+`capture` does — near-duplicates fold in, opposite-polarity clashes are surfaced rather than silently
+applied — while `--replace` swaps the store's contents wholesale. Either way **ids are re-minted**, so
+a teammate's pack can never collide with yours. See **[Concepts → Preference packs](concepts.qmd#packs)**.
+
+### `doctor` — is the loop actually wired?
+
+The one failure mode Whetstone can hit quietly is a **silent no-op**: a store is attached but the
+host never calls `recall`/`capture`, so nothing is learned and nothing looks wrong. `whetstone doctor
+<skill>` is a **read-only** diagnostic — it reports whether the store exists, whether recall/capture
+events are landing (counts + last timestamp), the backend in use, and the entry counts. If the loop
+looks dead (attached but zero recalls) it prints a host-agnostic snippet of operating instructions to
+paste into your host. It never edits anything.
