@@ -38,7 +38,7 @@ _REGISTRY_NAME = "registry.json"
 GLOBAL_SLUG = "__global__"
 # Only the markdown is source of truth. The sqlite index is derived/rebuildable and events.jsonl is
 # local telemetry (§5.1), so a per-store .gitignore keeps both out of the committed history.
-_STORE_GITIGNORE = "index.sqlite\nindex.sqlite-*\nevents.jsonl\n"
+_STORE_GITIGNORE = "index.sqlite\nindex.sqlite-*\nevents.jsonl\ncompact-report.md\n"
 # Applied per-command so a store commit never depends on (or mutates) the user's global git config:
 # a fixed identity, no GPG signing, and no user hooks (a global core.hooksPath / template hook must
 # not be able to fail Whetstone's internal bookkeeping commits). This disables hooks via config
