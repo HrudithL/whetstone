@@ -11,10 +11,13 @@ import json
 
 import pytest
 
+# The calibration harness is internal/command-only and lives under `harness/` (not the installed
+# package), so it imports only when tests run from the repo root with its `pyyaml` dep present.
+# importorskip keeps this module collectable everywhere — in CI's ST job (which imports every test
+# module to collect, then runs only `-m embeddings`) it skips cleanly instead of erroring.
 pytest.importorskip("yaml")
-
-from harness import calibrate  # noqa: E402
-from harness import metrics as hmetrics  # noqa: E402
+calibrate = pytest.importorskip("harness.calibrate")
+hmetrics = pytest.importorskip("harness.metrics")
 
 
 @pytest.fixture
