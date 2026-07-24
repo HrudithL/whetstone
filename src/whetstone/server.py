@@ -236,7 +236,7 @@ def capture(
             record_id(loc, entry_id)
             index.rebuild_index(loc, backend)
             commit_store(loc, f"capture: add {entry_id} ({scope})")
-            emit_capture(loc, run_id, entry_id, polarity, "committed")
+            emit_capture(loc, run_id, entry_id, polarity, "committed", scope=scope)
             return {"status": "committed", "entry_id": entry_id, "recurrence": 1}
 
         # polarity == "issue"
@@ -255,7 +255,7 @@ def capture(
         if conflict is not None:
             return _conflict_result(loc, run_id, "issue", conflict)
         if duplicate is not None:
-            emit_capture(loc, run_id, duplicate.id, polarity, "noop")
+            emit_capture(loc, run_id, duplicate.id, polarity, "noop", scope=duplicate.scope)
             return {"status": "noop", "entry_id": duplicate.id}
         if _supervised_hold(config, confirm):
             return _needs_confirmation(
@@ -277,7 +277,7 @@ def capture(
         record_id(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"capture: add {entry_id} ({scope})")
-        emit_capture(loc, run_id, entry_id, polarity, "committed")
+        emit_capture(loc, run_id, entry_id, polarity, "committed", scope=scope)
         return {"status": "committed", "entry_id": entry_id, "recurrence": None}
 
 
@@ -307,7 +307,7 @@ def _capture_reinforce(
     updated = reinforce_learning(loc, duplicate.id, when=_today())
     index.rebuild_index(loc, backend)
     commit_store(loc, f"capture: reinforce {updated.id} (recurrence {updated.recurrence})")
-    emit_capture(loc, run_id, updated.id, "learning", "reinforced")
+    emit_capture(loc, run_id, updated.id, "learning", "reinforced", scope=updated.scope)
     if updated.recurrence >= config.promotion_threshold:
         return {
             "status": "needs_confirmation",
@@ -420,7 +420,7 @@ def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, conf
         updated = update_learning_prose(loc, entry_id, **prose)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: reinforce {updated.id} (recurrence {updated.recurrence})")
-    emit_revise(loc, run_id, updated.id, "reinforce", "reinforced")
+    emit_revise(loc, run_id, updated.id, "reinforce", "reinforced", scope=updated.scope)
     if updated.recurrence >= config.promotion_threshold:
         return {
             "status": "needs_confirmation",
@@ -457,13 +457,13 @@ def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
             update_learning_prose(loc, entry_id, **prose)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: keep {entry_id} (recurrence 1)")
-        emit_revise(loc, run_id, entry_id, "weaken", "revised")
+        emit_revise(loc, run_id, entry_id, "weaken", "revised", scope=learning.scope)
         return {"status": "revised", "entry_id": entry_id, "recurrence": 1}
     if confirm == "remove":
         remove_entry(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: remove {entry_id}")
-        emit_revise(loc, run_id, entry_id, "weaken", "removed")
+        emit_revise(loc, run_id, entry_id, "weaken", "removed", scope=learning.scope)
         return {"status": "removed", "entry_id": entry_id}
 
     new_recurrence = learning.recurrence - 1
@@ -492,14 +492,15 @@ def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
         update_learning_prose(loc, entry_id, **prose)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: weaken {entry_id} (recurrence {new_recurrence})")
-    emit_revise(loc, run_id, entry_id, "weaken", "revised")
+    emit_revise(loc, run_id, entry_id, "weaken", "revised", scope=learning.scope)
     return {"status": "revised", "entry_id": entry_id, "recurrence": new_recurrence}
 
 
 def _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
     """``remove``: delete a learning (dial-governed) or route an issue through the hard-rule
     3-way prompt."""
-    if find_learning(loc, entry_id) is not None:
+    learning = find_learning(loc, entry_id)
+    if learning is not None:
         if _supervised_hold(config, confirm):
             return _needs_confirmation(
                 entry_id,
@@ -508,7 +509,7 @@ def _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config)
         remove_entry(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: remove {entry_id}")
-        emit_revise(loc, run_id, entry_id, "remove", "removed")
+        emit_revise(loc, run_id, entry_id, "remove", "removed", scope=learning.scope)
         return {"status": "removed", "entry_id": entry_id}
     if find_issue(loc, entry_id) is not None:
         return _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, config)
@@ -556,10 +557,18 @@ def _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, c
     """The 3-way hard-rule prompt for ``weaken``/``remove`` on an issue — ALWAYS asks (§6),
     regardless of supervision mode: remove it, demote it to a preference, or cancel."""
     if confirm == "remove":
+        removed_issue = find_issue(loc, entry_id)
         remove_entry(loc, entry_id)
         index.rebuild_index(loc, backend)
         commit_store(loc, f"revise: remove issue {entry_id}")
-        emit_revise(loc, run_id, entry_id, "remove", "removed")
+        emit_revise(
+            loc,
+            run_id,
+            entry_id,
+            "remove",
+            "removed",
+            scope=removed_issue.scope if removed_issue else None,
+        )
         return {"status": "removed", "entry_id": entry_id}
     if confirm == "demote":
         return _do_demote(loc, backend, entry_id, body, scope, run_id, config)
@@ -591,7 +600,7 @@ def _do_demote(loc, backend, entry_id, body, scope, run_id, config) -> dict:
     record_id(loc, learning.id)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: demote issue {entry_id} -> {learning.id}")
-    emit_revise(loc, run_id, learning.id, "demote", "demoted")
+    emit_revise(loc, run_id, learning.id, "demote", "demoted", scope=learning.scope)
     return {"status": "demoted", "entry_id": learning.id, "recurrence": learning.recurrence}
 
 
@@ -609,7 +618,7 @@ def _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id) -> dict:
     record_id(loc, issue.id)
     index.rebuild_index(loc, backend)
     commit_store(loc, f"revise: promote {entry_id} -> {issue.id}")
-    emit_revise(loc, run_id, issue.id, "promote", "promoted")
+    emit_revise(loc, run_id, issue.id, "promote", "promoted", scope=issue.scope)
     return {"status": "promoted", "entry_id": issue.id}
 
 
@@ -736,7 +745,7 @@ def _conflict_result(
 ) -> dict:
     with_entry, explanation = conflict
     # Log the surfaced conflict against the entry it clashed with; nothing was committed.
-    emit_capture(loc, run_id, with_entry.id, polarity, "conflict")
+    emit_capture(loc, run_id, with_entry.id, polarity, "conflict", scope=with_entry.scope)
     return {
         "status": "conflict",
         "entry_id": None,
@@ -899,7 +908,7 @@ def _find_duplicate(
     return best
 
 
-_USAGE = "usage: whetstone [serve | compact <skill> | promote <skill> <id>]"
+_USAGE = "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id>]"
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -908,7 +917,9 @@ def main(argv: list[str] | None = None) -> None:
     Out-of-band maintenance subcommands (deliberately NOT part of the five-tool MCP surface — they
     are periodic/deliberate operator actions, never fired mid-task by the model):
 
-    - ``compact <skill>`` — the maintenance pass (§7).
+    - ``compact <skill>`` — the maintenance pass (§7) + the M5a advisory behavioral report.
+    - ``compact --all`` — compact every registered skill, then promote cross-skill preference
+      clusters into the learned global layer (§M5e).
     - ``promote <skill> <id>`` — lift one learning/issue into the learned global layer by hand
       (§M5e).
     """
@@ -917,14 +928,20 @@ def main(argv: list[str] | None = None) -> None:
         mcp.run()
         return
     if args[0] == "compact":
-        if len(args) != 2:
-            print(_USAGE, file=sys.stderr)
-            raise SystemExit(2)
         # Imported lazily so the hot ``serve`` path doesn't pull the compaction module.
         from .compaction import compact
 
-        print(json.dumps(compact(args[1]), indent=2))
-        return
+        rest = args[1:]
+        all_skills = "--all" in rest
+        positional = [a for a in rest if a != "--all"]
+        if all_skills and not positional:
+            print(json.dumps(compact(all_skills=True), indent=2))
+            return
+        if not all_skills and len(positional) == 1:
+            print(json.dumps(compact(positional[0]), indent=2))
+            return
+        print(_USAGE, file=sys.stderr)
+        raise SystemExit(2)
     if args[0] == "promote":
         if len(args) != 3:
             print(_USAGE, file=sys.stderr)

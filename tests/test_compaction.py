@@ -154,6 +154,8 @@ def test_noop_compaction_makes_no_commit(store, config):
         "merged_scopes": 0,
         "retired": 0,
         "committed": False,
+        "findings": [],
+        "report_path": None,
     }
     assert _commit_count(store) == before  # nothing changed -> no commit
     assert [e for e in read_events(store) if e["type"] == "compaction"] == []
