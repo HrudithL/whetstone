@@ -51,10 +51,13 @@ stat_tiles = f"""
 display(HTML(f"""
 <section class="ws-hero">
   <span class="ws-eyebrow">local · open source · MCP</span>
-  <h1 class="ws-hero-title">Any skill that <span class="ws-grad">learns from use</span></h1>
-  <p class="ws-hero-sub">Whetstone is a local <a href="https://modelcontextprotocol.io">MCP</a> server
-    that attaches to a skill you already have. Correct it once; it <em>captures</em> the correction and
-    <em>recalls</em> it on every later run — no separate review step, all committed to git.</p>
+  <h1 class="ws-hero-title">Stop correcting the same thing <span class="ws-grad">every session</span></h1>
+  <p class="ws-hero-sub">&ldquo;No, not like that &mdash; do it this way.&rdquo; You already said it once.
+    By next session your AI coding agent has forgotten, and you're repeating yourself again. Whetstone
+    makes a correction <em>stick</em>: it attaches to a skill you already use as a local
+    <a href="https://modelcontextprotocol.io">MCP</a> server, <em>captures</em> the correction the first
+    time you give it, and <em>recalls</em> it on every later run — no separate review step, all
+    committed to git.</p>
   <div class="ws-hero-actions">
     <a class="ws-btn ws-btn-primary" href="#get-started">Get started &rarr;</a>
     <a class="ws-btn ws-btn-ghost" href="https://github.com/HrudithL/whetstone">View on GitHub</a>
@@ -87,30 +90,33 @@ display(HTML(f"""
   </div>
 </section>
 
-<section class="ws-section">
+<section id="how-it-works" class="ws-section">
   <div class="ws-wrap">
     <div class="ws-reveal">
       <span class="ws-eyebrow">how it works</span>
-      <h2 class="ws-section-title">Cold, corrected, then warm</h2>
-      <p class="ws-section-lead">Whetstone turns an ordinary correction into a durable, weighted
-        memory the skill reads back on its next run.</p>
+      <h2 class="ws-section-title">Cold, captured, then warm</h2>
+      <p class="ws-section-lead">Three stages turn a one-off correction into a durable, weighted
+        memory the skill reads back on every later run — so you say it once, not every session.</p>
     </div>
     <div class="ws-steps ws-reveal">
       <div class="ws-step">
         <div class="ws-step-title">Cold</div>
-        <p class="ws-step-body">The skill runs with an empty store. The house-style preference you
-          care about is usually <em>not</em> honored — that&rsquo;s the baseline.</p>
+        <p class="ws-step-body">The skill runs with an empty store, no memory of past corrections. The
+          house-style preference you care about is usually <em>not</em> honored — that&rsquo;s the
+          baseline, and where you are today without Whetstone.</p>
       </div>
       <div class="ws-step">
         <div class="ws-step-title">Capture</div>
-        <p class="ws-step-body">You correct the skill. <code>capture</code> records it as a weighted
-          <strong>learning</strong> (soft taste) or a mandatory <strong>issue</strong> (hard rule),
-          committed to git.</p>
+        <p class="ws-step-body">You correct the skill, same as always. <code>capture</code> is the
+          Whetstone tool that records it — as a weighted <strong>learning</strong> (a soft taste, e.g.
+          "prefer muted colors") or a mandatory <strong>issue</strong> (a hard "always/never" rule) —
+          committed to git so it's never lost.</p>
       </div>
       <div class="ws-step">
         <div class="ws-step-title">Warm</div>
-        <p class="ws-step-body"><code>recall</code> injects the relevant learned layer at the start of
-          the next run. The preference is honored — and stays honored.</p>
+        <p class="ws-step-body"><code>recall</code> is the Whetstone tool that injects the relevant
+          learned layer at the start of the next run, automatically. The preference is honored — and
+          stays honored, in every session after this one.</p>
       </div>
     </div>
   </div>
@@ -212,8 +218,9 @@ display(HTML(f"""
         <div class="ws-card-icon">◇</div>
         <h3 class="ws-card-title">A learned global layer</h3>
         <p class="ws-card-body">A preference you hold across skills — &ldquo;muted palettes, never
-          neon&rdquo; — is promoted once and recalled everywhere, origin-tagged so the specific still
-          wins.</p>
+          neon&rdquo; — is lifted once into a shared cross-skill store and recalled everywhere. Each
+          entry still remembers where it came from, so a skill-specific correction wins over the
+          general one when they disagree.</p>
         <span class="ws-card-more">Concept &rarr;</span>
       </a>
       <a class="ws-card" href="concepts.html#packs">
@@ -226,9 +233,9 @@ display(HTML(f"""
       <a class="ws-card" href="concepts.html#maintenance">
         <div class="ws-card-icon">⟳</div>
         <h3 class="ws-card-title">Compaction &amp; mining</h3>
-        <p class="ws-card-body"><code>compact</code> tidies the store and mines its telemetry for
-          health signals — what to harden, what&rsquo;s gone stale — as advice you enact, never
-          silently.</p>
+        <p class="ws-card-body"><code>compact</code> tidies the store and scans its usage history for
+          health signals — a preference worth turning into a hard rule, one that&rsquo;s gone unused —
+          surfaced as advice you choose to act on, never applied silently.</p>
         <span class="ws-card-more">Concept &rarr;</span>
       </a>
       <a class="ws-card" href="tools.html#the-out-of-band-cli-not-tools">
