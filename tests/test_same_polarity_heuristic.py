@@ -158,6 +158,65 @@ def test_negation_on_both_sides_is_not_a_false_positive(env, monkeypatch):
     assert result["status"] == "reinforced"
 
 
+def test_negation_cancels_an_antonym_flip_into_agreement(env, monkeypatch):
+    # A negation on only ONE side of an antonym pair often means the two AGREE ("avoid dark" ~
+    # "use light"), not that they contradict -- round-2 Codex review finding. Must reinforce, not
+    # flag, when the negation is in the SAME sentence as the matched antonym word.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt", "learning", "Avoid a dark background for the table.", "background tone", "prov-1"
+    )
+
+    result = capture(
+        "gt", "learning", "Use a light background for the table.", "background tone", "prov-2"
+    )
+
+    assert result["status"] == "reinforced"
+
+
+def test_unrelated_negation_elsewhere_does_not_mask_a_real_flip(env, monkeypatch):
+    # The negation-cancellation above must be scoped to the SENTENCE containing the matched antonym
+    # word -- an unrelated negation in another sentence of a multi-sentence body must not cancel a
+    # genuine flip it has nothing to do with (round-2 Codex review finding).
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt",
+        "learning",
+        "Use a light background for the table. Keep the cell padding tight.",
+        "background and padding",
+        "prov-1",
+    )
+
+    result = capture(
+        "gt",
+        "learning",
+        "Use a dark background for the table. Avoid extra cell padding.",
+        "background and padding",
+        "prov-2",
+    )
+
+    assert result["status"] == "possible_contradiction"
+
+
+def test_relational_antonym_pairs_are_not_in_the_lexicon(env, monkeypatch):
+    # before/after and above/below were dropped from _ANTONYM_PAIRS (round-2 Codex review finding):
+    # a genuine paraphrase can reverse both the relation and its arguments ("totals above the
+    # notes" == "notes below the totals"), which a bare word-presence check can't tell apart from a
+    # real flip. Must reinforce normally, not flag.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt", "learning", "Put the totals above the notes in the summary table.",
+        "totals placement", "prov-1",
+    )
+
+    result = capture(
+        "gt", "learning", "Put the notes below the totals in the summary table.",
+        "totals placement", "prov-2",
+    )
+
+    assert result["status"] == "reinforced"
+
+
 # --------------------------------------------------------------------------- config gate
 
 
