@@ -58,6 +58,8 @@ prefer the more specific `"skill"` entry when the two disagree.
 The payload also carries `conflicts` — an always-present list (`[]` when clean) flagging pairs,
 within the entries just returned, where a learning affirms what a co-returned issue forbids. It's a
 read-only annotation over the finalized set (never a retrieval decision): the issue always wins.
+Each item tags an `origin` alongside each id (`a_origin`/`b_origin`), since the skill store and the
+global store mint ids independently and can collide.
 
 ## `capture` {#capture}
 

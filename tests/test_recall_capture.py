@@ -6,12 +6,12 @@ import subprocess
 
 import pytest
 
-from conftest import make_learning, seed
+from conftest import make_issue, make_learning, seed
 from whetstone.config import load_config
 from whetstone.embeddings import get_backend
 from whetstone.server import capture, recall
 from whetstone.store import index
-from whetstone.store.layout import store_location
+from whetstone.store.layout import GLOBAL_SLUG, ensure_store, global_store_location, store_location
 
 
 @pytest.fixture
@@ -111,7 +111,15 @@ def test_recall_surfaces_a_conflict_between_co_returned_learning_and_issue(env):
     assert "L1" in learning_ids, "the conflicting learning should be in the returned set"
     assert "I1" in issue_ids, "the conflicting issue should be in the returned set"
 
-    assert result["conflicts"] == [{"a": "L1", "b": "I1", "note": result["conflicts"][0]["note"]}]
+    assert result["conflicts"] == [
+        {
+            "a": "L1",
+            "a_origin": "skill",
+            "b": "I1",
+            "b_origin": "skill",
+            "note": result["conflicts"][0]["note"],
+        }
+    ]
     assert result["conflicts"][0]["note"]  # a non-empty human-readable explanation
 
 
@@ -125,6 +133,74 @@ def test_recall_conflicts_is_empty_for_a_clean_returned_set(env):
     assert result["learnings"]
     assert result["issues"]
     assert result["conflicts"] == []
+
+
+def test_recall_does_not_flag_similarly_worded_entries_in_unrelated_scopes(env, monkeypatch):
+    # Lower the cutoff so body-vector similarity ALONE would trigger a false conflict without the
+    # scope-overlap gate (§7's `_find_conflict` requires it too) -- e.g. a "green checkmark for
+    # successful transactions" learning and a "never green checkmark for error banners" issue read
+    # as similar text, but apply to genuinely different, unrelated contexts.
+    monkeypatch.setenv("WHETSTONE_CONFLICT_SIMILARITY", "0.1")
+    capture(
+        "gt",
+        "learning",
+        "Show a green checkmark icon for successful transactions.",
+        "successful transactions",
+        "prov",
+    )
+    loc = store_location("gt")
+    config = load_config()
+    seed(
+        loc,
+        issues=[
+            make_issue(
+                "I1",
+                "Never show a green checkmark icon for error banners.",
+                "error banners",
+            )
+        ],
+    )
+    index.rebuild_index(loc, get_backend(config))
+
+    result = recall("gt", "green checkmark icon for successful transactions and error banners")
+
+    assert "L1" in {x["id"] for x in result["learnings"]}
+    assert "I1" in {x["id"] for x in result["issues"]}
+    assert result["conflicts"] == []
+
+
+def test_recall_conflict_ids_disambiguate_skill_and_global_origin(env):
+    # The skill store and the global store mint ids from independent counters, so a skill-origin
+    # L1/I1 conflict pair and a global-origin L1/I1 conflict pair can coexist with identical bare
+    # ids -- `a_origin`/`b_origin` must disambiguate which physical entries each conflict names.
+    capture("gt", "issue", "Never right-align the currency columns.", "currency columns", "prov")
+    loc = store_location("gt")
+    config = load_config()
+    backend = get_backend(config)
+    skill_learning = make_learning("L1", "Right-align the currency columns.", "currency columns")
+    seed(loc, learnings=[skill_learning])
+    index.rebuild_index(loc, backend)
+
+    g_config = load_config()
+    ensure_store(GLOBAL_SLUG, g_config)
+    g_loc = global_store_location(g_config)
+    seed(
+        g_loc,
+        learnings=[make_learning("L1", "Use bold section headers.", "section headers")],
+        issues=[make_issue("I1", "Never use bold section headers.", "section headers")],
+    )
+    index.rebuild_index(g_loc, backend)
+
+    result = recall(
+        "gt", "right-align the currency columns and bold section headers styling"
+    )
+
+    pairs = {
+        (c["a"], c["a_origin"], c["b"], c["b_origin"]) for c in result["conflicts"]
+    }
+    assert ("L1", "skill", "I1", "skill") in pairs
+    assert ("L1", "global", "I1", "global") in pairs
+    assert len(result["conflicts"]) == 2  # the two pairs are distinguishable, not deduped away
 
 
 # --------------------------------------------------------------------------- capture
