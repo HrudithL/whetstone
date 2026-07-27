@@ -18,9 +18,19 @@ aes(x=None, y=None, **kwargs)            # color=, fill=, group=, shape=, size=,
 ## Geoms (all take `mapping=`, `data=`, plus `**kwargs` for constants/params)
 
 ```python
-geom_point(alpha=, size=, color=)                 # scatter
-geom_jitter(width=, height=, alpha=)              # jittered points (discrete/rounded x)
-geom_line(size=, color=)                          # trend; pair with geom_point()
+geom_point(alpha=, size=, color=)                 # scatter; ALWAYS pass size=HOUSE_STYLE["point_size"]
+                                                   # explicitly -- plotnine has no size of its own
+                                                   # worth trusting, and omitting size= silently falls
+                                                   # back to plotnine's own (unpinned) default, not this one
+geom_jitter(width=, height=, alpha=, size=, random_state=)  # jittered points (discrete/rounded x);
+                                                      # renders the same point marks as geom_point, so
+                                                      # ALWAYS pass size=HOUSE_STYLE["point_size"] too --
+                                                      # random_state is MANDATORY -- ALWAYS pass
+                                                      # random_state=HOUSE_STYLE["jitter_random_state"]
+                                                      # explicitly, never unseeded
+geom_line(size=, color=)                          # trend; pair with geom_point(); ALWAYS pass
+                                                   # size=HOUSE_STYLE["line_size"] explicitly -- same
+                                                   # reasoning as geom_point above
 geom_col()                                        # bars from a y value (stat="identity")
 geom_bar()                                        # bars as counts of rows (stat="count")
 geom_histogram(bins=30)                           # ALWAYS pass bins
@@ -48,8 +58,28 @@ scale_y_continuous(name=None, breaks=True, limits=None, labels=label_comma(), tr
 scale_x_continuous(..., trans="log10")            # log axis
 scale_y_continuous(labels=label_currency(prefix="$", precision=0))
 scale_y_continuous(labels=label_percent())        # expects 0–1 fractions
-scale_x_date(date_breaks="1 year", date_labels="%Y")   # x must be real datetimes
+scale_x_date(date_breaks=..., date_labels=...)         # x must be real datetimes -- pick the
+                                                        # pair from the span table below, never eyeball it
 ```
+
+### Date-axis defaults (pinned by span — never a freehand "readable ticks" guess)
+
+Compute the span (`max(date) - min(date)`) from the already-parsed datetime column
+(`data.md`), then pick the matching row — this is a data-driven branch, not a
+free choice:
+
+| Data span | `date_breaks` | `date_labels` |
+|---|---|---|
+| ≤ 90 days | `"2 weeks"` | `"%b %d, %Y"` |
+| > 90 days and ≤ 2 years | `"2 months"` | `"%b %Y"` |
+| > 2 years | `"1 year"` | `"%Y"` |
+
+Boundaries are non-overlapping by construction (`≤`/`>` on each edge) — a span of
+exactly 90 days always falls in the first row, never both. The short-span format
+always includes the year (`%Y`) even though the tick spacing is tight — the
+mandated trend title (`geoms.md`, `"{Y} over time"`) carries no date range of its
+own, so omitting the year from the ticks would make a plot's period genuinely
+ambiguous across a year boundary, not just visually redundant.
 
 ## Labels, facets, coords
 

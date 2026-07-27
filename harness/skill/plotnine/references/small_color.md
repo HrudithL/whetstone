@@ -36,14 +36,16 @@ all of it is `apply_house_style(p)` + `save_plot(p, "plot.png")` from
    legend is a single row. A constant-color (un-mapped) plot has **no** legend — see
    `big_color.md`.
 7. **Axis number/date formatting.** Big numbers get thousands separators, money a `$`,
-   shares a `%`; dates get readable ticks. Use the `scale_*` calls in `api.md` — never ship
-   `1e6` or `2024-01-01T00:00:00` tick labels.
+   shares a `%`; dates get the **pinned** `date_breaks`/`date_labels` pair for their span
+   (`references/api.md` — Date-axis defaults table) — never eyeball "readable" ticks. Use
+   the `scale_*` calls in `api.md` — never ship `1e6` or `2024-01-01T00:00:00` tick labels.
 
 ## Frame / save
 
-- **Figure size:** `(8, 5)` inches (landscape) for most plots; `(6, 7)` for a tall
-  horizontal-bar ranking. This is `figure_size` in `theme(...)` and/or `width`/`height` in
-  `save()`.
+- **Figure size:** `(8, 5)` inches (landscape) is the default for most plots. **`(6, 7)`
+  is mandatory, not optional, for a tall horizontal-bar ranking** — SKILL.md's Global
+  constants section states this as a hard branch checked at Step 2/5, not just here. This
+  is `figure_size` in `theme(...)` and/or `width`/`height` in `save()`.
 - **dpi:** `200` — crisp without being huge.
 - **Save call (the only renderer):**
   ```python
