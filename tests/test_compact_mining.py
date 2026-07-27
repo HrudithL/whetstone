@@ -133,6 +133,45 @@ def test_conflict_residue_cleared_after_revise(env):
     assert "conflict_residue" not in _rules(compact("gt"))
 
 
+def test_conflict_residue_ignores_a_revise_that_happened_before_it(env):
+    # §round-5 Codex review finding: a revise BEFORE a later, still-unresolved conflict must NOT be
+    # treated as having resolved it -- only a revise AFTER a conflict/contradiction event counts.
+    capture("gt", "learning", "Prefer bright neon palettes.", "palette", "prov")
+    revise("gt", "L1", "reinforce")  # resolves nothing yet -- there's no pending conflict
+    _emit_conflict(store_location("gt"), "L1")  # NOW a conflict arrives, unresolved since
+
+    residue = [f for f in compact("gt")["findings"] if f["rule"] == "conflict_residue"]
+    assert len(residue) == 1
+    assert residue[0]["id"] == "L1"
+
+
+def test_possible_contradiction_residue_flagged(env, monkeypatch):
+    # §M7c: an unresolved `possible_contradiction` (same-polarity, signal-only) must also surface as
+    # residue -- it writes nothing, just like `conflict`, so without this a real, still-blocking
+    # contradiction would never show up in a compact report.
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt", "learning", "Right-align currency columns for a cleaner ledger look.", "palette",
+        "prov",
+    )
+    capture(
+        "gt", "learning", "Left-align currency columns for a cleaner ledger look.", "palette",
+        "prov",
+    )
+
+    residue = [f for f in compact("gt")["findings"] if f["rule"] == "conflict_residue"]
+    assert len(residue) == 1
+    assert residue[0]["id"] == "L1"
+    # §round-6 Codex review finding: the persisted candidate_body/note must be surfaced in the
+    # finding's evidence, not just live on the underlying event -- otherwise an operator viewing the
+    # report still can't see what actually opposed the flagged entry.
+    assert residue[0]["evidence"]["candidate_body"] == (
+        "Left-align currency columns for a cleaner ledger look."
+    )
+    assert residue[0]["evidence"]["note"]
+
+
 # --------------------------------------------------------------------------- report file + advisory
 
 

@@ -219,6 +219,28 @@ def capture(
     ``needs_confirmation`` is returned; resolve the promotion via ``revise`` (the returned prompt
     tells you how) — ``capture`` never promotes.
 
+    §M7c (experimental, config-gated via ``same_polarity_contradiction_check``, OFF by default):
+    when a near-duplicate **learning** pair's
+    combined text shows a narrow antonym/negation asymmetry (e.g. "left" vs "right", a negation word
+    on only one side) — the same-similarity-but-opposite-meaning case an embedding alone can't
+    separate from a genuine paraphrase — ``capture`` returns ``possible_contradiction`` (with the
+    existing entry's id, its current wording as ``existing_body``, the new ``candidate_body``, and
+    a short ``note``) instead of silently reinforcing. Nothing is written; this check is
+    deterministic, so re-calling ``capture`` with the same body flags again rather than resolving
+    anything. Resolve it via ``revise`` on the flagged ``entry_id`` instead: `action`
+    ``"reinforce"`` (with no ``body``) if it genuinely was a duplicate — this bumps recurrence
+    without re-running this check. If it truly was a contradiction, do NOT ``"reinforce"`` with a
+    reworded ``body`` — that would keep the old entry's accrued recurrence and could push a single
+    opposite observation straight to the promotion threshold. Instead ``"remove"`` the flagged
+    entry (NOT ``"weaken"`` — weaken only lowers recurrence and typically leaves the entry indexed,
+    so a fresh ``capture`` of the corrected wording would flag again) and THEN ``capture`` the
+    corrected preference fresh, so it starts at its own honest recurrence. CONFIRM with the user
+    before calling ``"remove"`` — a ``possible_contradiction`` is a HEURISTIC signal, not a
+    user decision, and ``revise(action="remove")`` on a learning deletes immediately outside
+    supervised mode (it is dial-governed like any routine learning removal, unlike an issue
+    contradiction, which always confirms regardless of mode) — do not delete the user's accrued
+    preference on this signal alone.
+
     On a committed/reinforced result the payload carries a ``confirmation`` string (e.g. "Captured:
     <scope> — …. Re-applies on future <skill> runs."). RELAY it to the user so they can see the
     correction was recorded and will stick — the learned layer is otherwise invisible to them.
@@ -246,6 +268,37 @@ def capture(
 
         if polarity == "learning":
             if duplicate is not None:
+                if config.same_polarity_contradiction_check:
+                    note = _same_polarity_asymmetry(
+                        entry_text(title, body), entry_text(duplicate.title, duplicate.body)
+                    )
+                    if note is not None:
+                        # A MANDATORY issue conflict always wins over a same-polarity heuristic
+                        # signal (§5.2) -- check it before returning possible_contradiction, not
+                        # after. Otherwise a candidate that both opposes a near-duplicate learning
+                        # AND violates an existing issue would surface only the soft signal; a
+                        # caller following this status's own resolution guidance (remove the
+                        # flagged learning, then re-capture) could delete a compatible, correct
+                        # entry only to discover the mandatory conflict on the very next call
+                        # (round-5 Codex review finding — a real data-loss risk via this PR's own
+                        # documented resolution path).
+                        #
+                        # KNOWN LIMITATION (round-6 finding): this checks the LOCAL skill store
+                        # only, matching every other `_find_conflict` call in `capture` — `capture`
+                        # has never consulted the `__global__` store for cross-polarity conflicts
+                        # (unlike `recall`, which was purpose-built for that in M5e/M7b). A
+                        # candidate conflicting with a GLOBAL-origin mandatory issue is missed here
+                        # exactly as it already was before this fix, for the ordinary (non-M7c)
+                        # conflict path too — giving `capture` global-store conflict awareness
+                        # would be a materially larger, cross-cutting change to its architecture,
+                        # not a narrow M7c fix, so it's left as a pre-existing, documented boundary
+                        # rather than solved here.
+                        mandatory_conflict = _find_conflict(
+                            loc, "learning", scope, title, body, candidate_vec, scope_vec, config
+                        )
+                        if mandatory_conflict is not None:
+                            return _conflict_result(loc, run_id, "learning", mandatory_conflict)
+                        return _possible_contradiction_result(loc, run_id, duplicate, body, note)
                 return _capture_reinforce(loc, backend, duplicate, run_id, confirm, config)
             conflict = _find_conflict(
                 loc, "learning", scope, title, body, candidate_vec, scope_vec, config
@@ -849,6 +902,46 @@ def _conflict_result(
     }
 
 
+def _possible_contradiction_result(
+    loc: StoreLocation,
+    run_id: str | None,
+    duplicate: IndexedEntry,
+    candidate_body: str,
+    note: str,
+) -> dict:
+    """The §M7c same-polarity heuristic's result: a signal only, the sibling of
+    :func:`_conflict_result` for a same-polarity (learning-vs-learning) asymmetry rather than a
+    cross-polarity one. Nothing is written to the store — ``duplicate`` is left exactly as it was,
+    unreinforced, so the caller (or the user, via `revise`) decides what to do.
+
+    Includes the existing entry's own wording (``existing_body``), not just its id: the five-tool
+    surface has no get-by-id lookup, so without it a caller that doesn't already have this entry's
+    text cached from a prior `recall` could not actually compare the two sides to decide (round-3
+    Codex review finding).
+
+    Also persists ``candidate_body``/``note`` onto the emitted event (not just the return value), so
+    a later `compact` residue-mining pass can still show what opposed this entry after the calling
+    conversation has ended (round-5 Codex review finding).
+    """
+    emit_capture(
+        loc,
+        run_id,
+        duplicate.id,
+        "learning",
+        "possible_contradiction",
+        scope=duplicate.scope,
+        candidate_body=candidate_body.strip(),
+        note=note,
+    )
+    return {
+        "status": "possible_contradiction",
+        "entry_id": duplicate.id,
+        "existing_body": duplicate.body,
+        "candidate_body": candidate_body.strip(),
+        "note": note,
+    }
+
+
 # Words that mark an issue as a *prohibition* ("Never right-align …") rather than a mandate
 # ("Always right-align …"). Only a prohibition can conflict with a learning that wants the same
 # thing. This is a deliberate HEURISTIC: an embedding cannot separate "Always X" from "Never X"
@@ -1120,6 +1213,195 @@ def _find_duplicate(
             best_sim = sim
             best = entry
     return best
+
+
+# §M7c — SPIKE. A small, hand-picked, DELIBERATELY NON-EXHAUSTIVE lexicon of antonym pairs relevant
+# to the styling/table-preference vocabulary this project's scenarios and tests already use (see
+# harness/scenarios/, tests/test_capture_conflict.py): alignment, color temperature/tone, spacing,
+# magnitude, orientation, width. This is explicitly NOT a general antonym/NLP subsystem — it exists
+# only to catch the clearest, most literal cases where a near-duplicate learning pair (already
+# flagged by cosine similarity, same/close scope) actually says the opposite thing rather than
+# restating the same thing. Anything not in this list is a false negative by design — a genuine gap
+# left to the user noticing via `revise`, exactly like the existing learning<->learning limitation
+# this heuristic narrows but does not remove (§7).
+#
+# DELIBERATELY EXCLUDES relational/directional/comparative pairs whose meaning depends on argument
+# order — "before"/"after" and "above"/"below" were dropped in round-2, "larger"/"smaller" in
+# round-4, and "more"/"less" in round-5 (Codex review findings): "Make headings larger than body
+# text." and "Make body text smaller than headings." mean the SAME thing (the comparison AND its
+# arguments both reversed), and so do "Use no more than two decimal places." and "Use two decimal
+# places or less." — but this word-presence check can't tell that apart from a genuine flip
+# without argument-aware parsing, which is out of scope for a narrow lexical heuristic. The
+# remaining pairs below are used as monadic attributes in this project's vocabulary ("increase
+# padding", "right-align columns" — an instruction, not "X more than Y" restated as "Y or less"),
+# so they don't share this specific failure mode — EXCEPT "left"/"right", also a relational
+# preposition
+# ("put the legend left of the plot" / "put the plot right of the legend"). Rather than drop
+# "left"/"right" outright — it's the spec's own worked example ("right-align"/"left-align") —
+# :func:`_alignment_clause_with` restricts it to TIGHT alignment-compound wording only (see there).
+_ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
+    ("left", "right"),
+    ("warm", "cool"),
+    ("light", "dark"),
+    ("horizontal", "vertical"),
+    ("increase", "decrease"),
+    ("wide", "narrow"),
+)
+
+
+# A DELIBERATELY NARROWER negation-marker set than §7's `_PROHIBITION` — this is the "reuse only
+# what's genuinely reusable" part of the M7c spec: `_PROHIBITION` includes bare "no"/"not"/
+# "without", which are common ordinary sentence filler ("no need for extra padding", "not with a
+# leading minus sign", "no more than one line") and, empirically (manual adversarial spot-checks
+# against realistic paraphrase pairs during this slice's build — not the hand-picked calibration
+# set, which by construction can't surface this), fire false asymmetries on genuine duplicates far
+# more often than the words below. Restricting to stronger, less-ambiguous negation words trades
+# some recall (an oddly-worded contradiction using bare "not" is missed) for materially fewer false
+# positives on ordinary phrasing — the right trade for a signal-only, narrow heuristic.
+_NEGATION_ASYMMETRY = re.compile(r"\b(never|avoid|don'?t|do not|refrain)\b", re.IGNORECASE)
+
+# A naive CLAUSE splitter — good enough for the short, few-clause bodies `capture` asks for (§5.2),
+# not a real tokenizer. Splits on sentence boundaries AND on a comma before a contrastive
+# conjunction / a semicolon, so negation-cancellation (below) is scoped to the CLAUSE containing the
+# matched antonym word, not the whole entry or even the whole sentence: an unrelated negation in a
+# different clause of the SAME sentence ("Avoid a dark background, but use wide margins." vs. "Use
+# a light background, but use narrow margins.") must not cancel a real, unrelated antonym flip
+# (round-4 Codex review finding) any more than one in a different sentence can (round-2 finding).
+_CLAUSE_SPLIT = re.compile(r"(?<=[.!?])\s+|;\s*|,\s*(?=(?:but|however|while|yet)\b)", re.IGNORECASE)
+
+# "left"/"right" restricted to TIGHT alignment-compound wording (round-3 finding, tightened again in
+# round-4): bare "left"/"right" is also common as a relational preposition ("put the legend left of
+# the plot"), which has the same argument-order ambiguity as the excluded above/below and
+# larger/smaller pairs. An earlier version required only an "align"/"justify" cue ANYWHERE in the
+# same sentence, which was still too loose — "Put the legend left of the plot and center-align the
+# title" shares a sentence with an unrelated alignment instruction and matched anyway (round-4
+# finding). Restricting to "left-align"/"align ... left" as an immediate compound/two-word phrase
+# (not a same-sentence co-occurrence) trades some recall (a spelled-out "align the columns to the
+# left" is missed) for eliminating that whole false-positive class — the spec's own worked example
+# ("right-align"/"left-align") is a tight compound and stays covered.
+_ALIGNMENT_SIDE: dict[str, re.Pattern] = {
+    "left": re.compile(r"\bleft[\s-]?align\w*\b|\balign\w*\s+left\b", re.IGNORECASE),
+    "right": re.compile(r"\bright[\s-]?align\w*\b|\balign\w*\s+right\b", re.IGNORECASE),
+}
+_LEFT_RIGHT = {"left", "right"}
+
+
+def _word_in(word: str, text: str) -> bool:
+    return re.search(rf"\b{re.escape(word)}\b", text) is not None
+
+
+def _clause_with(word: str, text: str) -> str | None:
+    """The clause (see :data:`_CLAUSE_SPLIT`) containing ``word``'s first occurrence, or ``None``
+    if no clause contains it."""
+    for clause in _CLAUSE_SPLIT.split(text):
+        if _word_in(word, clause):
+            return clause
+    return None
+
+
+def _alignment_clause_with(side: str, text: str) -> str | None:
+    """The clause (see :data:`_CLAUSE_SPLIT`) containing a TIGHT alignment-compound match for
+    ``side`` ("left"/"right"), or ``None``. See :data:`_ALIGNMENT_SIDE`."""
+    pattern = _ALIGNMENT_SIDE[side]
+    for clause in _CLAUSE_SPLIT.split(text):
+        if pattern.search(clause):
+            return clause
+    return None
+
+
+def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | None:
+    """§M7c: a narrow, deterministic lexical check for a same-polarity (learning-vs-learning)
+    asymmetry between two texts ALREADY known to be a same/close-scope near-duplicate by cosine
+    similarity (§7's ``_find_duplicate``) — a materially different question from the existing
+    cross-polarity conflict check (:func:`_find_conflict`/:func:`_find_issue_conflict`), which
+    compares OPPOSITE-polarity entries and is left untouched. This only reuses the general
+    "asymmetric marker word" shape of that code, not its cross-polarity semantics or word list —
+    see :data:`_NEGATION_ASYMMETRY`'s docstring-comment for why it's deliberately narrower than
+    :data:`_PROHIBITION`.
+
+    Two independent signals, either sufficient to flag:
+
+    1. **Antonym asymmetry** — one text contains ONE side of an :data:`_ANTONYM_PAIRS` pair and NOT
+       the other, while the other text contains the OPPOSITE side and not the first ("left" vs.
+       "right", restricted to tight alignment-compound wording for that specific pair — see
+       :func:`_alignment_clause_with`). A pair mentioned on BOTH sides (e.g. two duplicates both
+       discussing "left and right padding") is symmetric, not asymmetric, and is deliberately NOT
+       flagged — the point is a flip, not shared vocabulary. This is gated by LOCAL negation, scoped
+       to the SPECIFIC CLAUSE that matched each side (not just "somewhere in the text" — a
+       different clause's negation must not apply to an unrelated pair, round-4 finding): when
+       EITHER side's matched clause is negated, the flip is treated as an explained cancellation and
+       does NOT fire on its own — this covers both a differing-negation cancellation ("Avoid a dark
+       background." ~ "Use a light background.") and a both-negated case that can also agree ("avoid
+       wide tables; keep a medium width" ~ "avoid narrow tables; keep a medium width" both funnel to
+       the same explicit target); only a flip where NEITHER matched clause is negated fires. The
+       loop still checks every remaining pair after a cancellation, so a genuine flip in a different
+       clause of the same text is still caught.
+    2. **Negation asymmetry** — one text carries a :data:`_NEGATION_ASYMMETRY` marker and the other
+       does not, OUTSIDE of any clause already explained by an antonym cancellation above (e.g.
+       "Never right-align currency columns" vs. "Right-align currency columns" — the same content,
+       negated on only one side, is still a real flip; and a SEPARATE, unrelated negation difference
+       in a different clause of a body that also contains an explained antonym cancellation is
+       still caught, not masked by it). Two duplicates that are BOTH negated (with no antonym
+       content) are symmetric and NOT flagged either way.
+
+    Returns a short human-readable note describing the detected asymmetry, or ``None`` when neither
+    signal fires (the ordinary case — treat it as a genuine duplicate and reinforce). Conservative
+    by design: an ambiguous antonym-plus-negation combination is resolved toward NOT flagging, since
+    this heuristic would rather miss a real contradiction than wrongly block a genuine duplicate.
+
+    KNOWN LIMITATION (round-6 finding): each side of a pair is looked up via its FIRST matching
+    clause only (:func:`_clause_with`/:func:`_alignment_clause_with`), so if the SAME antonym word
+    appears in more than one clause of the same text — some cancelled by negation, some not — an
+    earlier cancelled occurrence stops the pair from being checked again against a LATER, genuinely
+    uncancelled occurrence elsewhere in the same body (e.g. two mentions of "dark"/"light" across
+    different topics, one of which is negated and one of which isn't). Fully handling this would
+    mean evaluating every occurrence of every pair as an independent candidate flip rather than one
+    per pair, which is a larger, more NLP-shaped undertaking than this narrow heuristic's scope —
+    documented as a known gap rather than attempted here.
+    """
+    c, d = candidate_text.lower(), duplicate_text.lower()
+    cancelled_c_clauses: set[str] = set()
+    cancelled_d_clauses: set[str] = set()
+    for a, b in _ANTONYM_PAIRS:
+        if {a, b} == _LEFT_RIGHT:
+            c_clause_a, c_clause_b = _alignment_clause_with(a, c), _alignment_clause_with(b, c)
+            d_clause_a, d_clause_b = _alignment_clause_with(a, d), _alignment_clause_with(b, d)
+        else:
+            c_clause_a, c_clause_b = _clause_with(a, c), _clause_with(b, c)
+            d_clause_a, d_clause_b = _clause_with(a, d), _clause_with(b, d)
+        c_a, c_b = c_clause_a is not None, c_clause_b is not None
+        d_a, d_b = d_clause_a is not None, d_clause_b is not None
+        flipped_ab = c_a and not c_b and d_b and not d_a
+        flipped_ba = c_b and not c_a and d_a and not d_b
+        if not (flipped_ab or flipped_ba):
+            continue
+        if flipped_ab:
+            word_c, word_d, c_clause, d_clause = a, b, c_clause_a, d_clause_b
+        else:
+            word_c, word_d, c_clause, d_clause = b, a, c_clause_b, d_clause_a
+        c_local_negated = bool(_NEGATION_ASYMMETRY.search(c_clause))
+        d_local_negated = bool(_NEGATION_ASYMMETRY.search(d_clause))
+        if c_local_negated or d_local_negated:
+            cancelled_c_clauses.add(c_clause)
+            cancelled_d_clauses.add(d_clause)
+            continue
+        return (
+            f"one entry says {word_c!r}, the other says {word_d!r} — likely opposite, not "
+            "duplicate."
+        )
+    # Fallback: a plain negation asymmetry over whatever text ISN'T already explained by an antonym
+    # cancellation above, so an unrelated real flip elsewhere in the same body still surfaces.
+    remaining_c = " ".join(cl for cl in _CLAUSE_SPLIT.split(c) if cl not in cancelled_c_clauses)
+    remaining_d = " ".join(cl for cl in _CLAUSE_SPLIT.split(d) if cl not in cancelled_d_clauses)
+    remaining_negation_differs = bool(_NEGATION_ASYMMETRY.search(remaining_c)) != bool(
+        _NEGATION_ASYMMETRY.search(remaining_d)
+    )
+    if remaining_negation_differs:
+        return (
+            "one entry uses a negation word (never/avoid/don't/refrain) the other doesn't — likely "
+            "opposite, not duplicate."
+        )
+    return None
 
 
 _USAGE = (

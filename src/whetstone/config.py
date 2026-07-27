@@ -82,6 +82,21 @@ class Config:
     # `compact --all` clusters near-duplicate learnings appearing in at least this many distinct
     # skills and promotes the cluster into the `__global__` layer (M5e). PROVISIONAL / UNCALIBRATED.
     global_skill_count: int = 3
+    # M7c — SPIKE, OFF by default (experimental/opt-in). When a new learning near-dups an existing
+    # one (already above `dedup_similarity`, same/close scope), also run a small, hand-picked,
+    # explicitly non-exhaustive antonym/negation lexicon check over the two bodies before silently
+    # reinforcing. If it detects an asymmetry (e.g. "left" on one side, "right" on the other; a
+    # negation word on only one side), `capture` returns `possible_contradiction` instead of
+    # reinforcing -- a signal only, nothing is written.
+    # This scores 1.0 precision / 1.0 recall on `harness/calibration/labels.yaml`'s
+    # `same_polarity_contradiction` set (both embedding backends) -- but that labeled set is, by
+    # construction, matched against the lexicon it tests, so it is NOT strong evidence on its own.
+    # Five rounds of independent (Codex) code review each found a real, distinct precision or
+    # correctness gap the labeled set didn't surface (see LEARNING_SKILLS_DESIGN.md §7 and the PR
+    # for the full story) -- every one was fixed, but that pattern itself is evidence about how much
+    # a lexical heuristic like this can be trusted without a much larger/independent evaluation.
+    # Defaulting OFF is the honest call given that pattern; flip to `True` to opt in.
+    same_polarity_contradiction_check: bool = False
     store_root: Path = field(default_factory=default_store_root)
 
     def __post_init__(self) -> None:
@@ -135,6 +150,7 @@ _FIELD_TYPES: dict[str, type] = {
     "harden_reinforcements": int,
     "stale_runs": int,
     "global_skill_count": int,
+    "same_polarity_contradiction_check": bool,
     "store_root": Path,
 }
 

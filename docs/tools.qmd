@@ -78,6 +78,25 @@ Classify it: taste / preference → `polarity:"learning"`; a mistake to never re
 scoped rule of a few short sentences that capture the user's *why*. `capture` dedupes and
 conflict-checks against existing entries before writing.
 
+**`possible_contradiction`** (§M7c, experimental — gated by `same_polarity_contradiction_check`,
+**off by default**, opt-in): a near-duplicate **learning** whose wording actually flips against the existing one —
+a small, hand-picked antonym/negation lexicon catches the clearest cases ("left" vs. "right", a
+negation word on only one side) — returns this status (the existing entry's id and its current
+wording as `existing_body`, the new `candidate_body`, and a short `note`) instead of silently
+reinforcing. Nothing is written. This check is deterministic, so re-calling `capture` with the same
+body flags again rather than resolving anything — resolve it via `revise` on the flagged `entry_id`
+instead: `action:"reinforce"` with no `body` if it genuinely was a duplicate (bumps recurrence
+without re-running this check). If it truly was a contradiction, don't `"reinforce"` with a
+reworded `body` — that keeps the old recurrence and could push a single opposite observation
+straight to promotion; `"remove"` the entry instead (not `"weaken"`, which only lowers recurrence
+and typically leaves it indexed, so a fresh `capture` would flag again) and THEN `capture` the
+corrected preference fresh, at its own honest recurrence. **Confirm with the user before calling
+`"remove"`** — this is a heuristic signal, not a user decision, and removing a learning is
+dial-governed (it deletes immediately outside supervised mode, unlike an issue contradiction, which
+always confirms). This narrows, but does not remove, the general limitation that embeddings alone
+can't separate a same-polarity contradiction from a paraphrase — see [Concepts](concepts.qmd) and
+`LEARNING_SKILLS_DESIGN.md` §7.
+
 On a committed change `capture` (and `revise`) return a short human-facing **`confirmation`** string
 — *"Captured: currency columns — …. Re-applies on future great-tables runs."* — so the agent can
 tell you what it recorded and that it will stick. The learned layer is otherwise invisible; the

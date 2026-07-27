@@ -476,35 +476,62 @@ def _mine_stale(events: list[dict], learnings: dict, config: Config) -> list[dic
     return findings
 
 
+_RESIDUE_STATUSES = ("conflict", "possible_contradiction")
+
+
 def _mine_conflict_residue(events: list[dict], learnings: dict, issues: dict) -> list[dict]:
-    """A capture that surfaced a ``conflict`` against a still-present entry which was never later
-    revised → an unresolved contradiction to decide on."""
-    revised = {e.get("entry_id") for e in events if e.get("type") == "revise"}
-    findings = []
-    seen: set[str] = set()
+    """A capture that surfaced a ``conflict`` (cross-polarity) OR a ``possible_contradiction``
+    (§M7c, same-polarity) against a still-present entry which was never LATER revised → an
+    unresolved contradiction to decide on. Both are signal-only outcomes that write nothing, so
+    without this they'd otherwise sit invisible forever — a `compact` report with no residue would
+    wrongly look clean while one keeps blocking every recapture of the same wording.
+
+    Order-sensitive by construction (``events`` is the append-ordered event log, §telemetry): a
+    ``revise`` only resolves a residue finding it comes AFTER, not one that arrives later. An
+    earlier version built a single flat "ever revised" id set irrespective of ordering, so a revise
+    that happened BEFORE a later, still-unresolved conflict/contradiction on the same entry wrongly
+    counted as having resolved it (round-5 Codex review finding). Walking the log in order and
+    clearing/re-adding a pending finding on each relevant event fixes this precisely.
+    """
+    pending: dict[str, dict] = {}  # entry id -> the finding data, present only while unresolved
     for e in events:
-        if e.get("type") != "capture" or e.get("status") != "conflict":
+        etype = e.get("type")
+        if etype == "revise":
+            pending.pop(e.get("entry_id"), None)  # any revise since resolves what was pending
+            continue
+        if etype != "capture" or e.get("status") not in _RESIDUE_STATUSES:
             continue
         wid = e.get("entry_id")
-        if wid in seen or wid in revised:
-            continue
         if wid in learnings:
             scope = learnings[wid].scope
         elif wid in issues:
             scope = issues[wid].scope
         else:
             continue  # the entry it clashed with is gone — nothing left to resolve
-        seen.add(wid)
-        findings.append(
-            {
-                "rule": "conflict_residue",
-                "id": wid,
-                "scope": scope,
-                "evidence": {"run_id": e.get("run_id")},
-                "enact": f"resolve the unresolved conflict on {wid!r} via revise(...)",
-            }
-        )
-    return findings
+        # §M7c round-6: carry the event's own persisted candidate_body/note (present only for
+        # possible_contradiction) into the finding's evidence too -- emit_capture already writes
+        # them onto the event (round-5), but this function was still only reading run_id/scope,
+        # so an operator viewing the report couldn't see what actually opposed the entry.
+        pending[wid] = {
+            "run_id": e.get("run_id"),
+            "scope": scope,
+            "candidate_body": e.get("candidate_body"),
+            "note": e.get("note"),
+        }
+    return [
+        {
+            "rule": "conflict_residue",
+            "id": wid,
+            "scope": data["scope"],
+            "evidence": {
+                "run_id": data["run_id"],
+                "candidate_body": data["candidate_body"],
+                "note": data["note"],
+            },
+            "enact": f"resolve the unresolved conflict on {wid!r} via revise(...)",
+        }
+        for wid, data in pending.items()
+    ]
 
 
 def _write_report(loc: StoreLocation, skill: str, findings: list[dict]) -> str | None:
