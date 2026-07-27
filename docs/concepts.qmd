@@ -66,12 +66,15 @@ global store, and returns the union. Every entry is tagged with an `origin` — 
 what it needs to prefer the specific one. Turn the layer off entirely with `consult_global = false`
 in config, and `recall` returns a byte-identical per-skill result.
 
-Preferences reach the global layer two ways, both deliberate: `whetstone promote <skill> <id>` lifts
-one by hand, and `whetstone compact --all` promotes a preference automatically once it recurs across
-enough distinct skills (retiring the per-skill copies). Whetstone **cannot** write your host's memory
-(CLAUDE.md, Cursor rules, …) — it is host-agnostic — so this learned, weighted, relevance-retrieved
-layer is its honest home for cross-skill taste. It coexists with authored host memory rather than
-replacing it.
+Preferences reach the global layer only by an explicit, human-enacted step — promotion always asks,
+regardless of supervision mode: `whetstone promote <skill> <id>` lifts one entry by hand, and
+`whetstone promote <skill> <id> --cluster` enacts a whole cross-skill cluster. `whetstone compact
+--all` never writes to the global store itself; it only *detects* preferences that recur across
+enough distinct skills and reports each as an advisory candidate (naming the exact `--cluster`
+command to run), leaving the per-skill copies untouched until a human enacts it. Whetstone **cannot**
+write your host's memory (CLAUDE.md, Cursor rules, …) — it is host-agnostic — so this learned,
+weighted, relevance-retrieved layer is its honest home for cross-skill taste. It coexists with
+authored host memory rather than replacing it.
 
 ## Maintenance: compaction & behavioral mining {#maintenance}
 

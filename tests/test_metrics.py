@@ -47,7 +47,13 @@ def test_feasible_kpis_on_a_fixture_log(store, config):
     m = compute_metrics(store)
     assert m["runs"] == 2
     assert m["avg_learnings_applied_per_run"] == 3.0  # mean of 2 and 4
-    assert m["captures_by_status"] == {"committed": 2, "reinforced": 1, "noop": 1, "conflict": 0}
+    assert m["captures_by_status"] == {
+        "committed": 2,
+        "reinforced": 1,
+        "noop": 1,
+        "conflict": 0,
+        "possible_contradiction": 0,
+    }
     # reinforcement_rate = reinforced / (learning_committed + reinforced) = 1 / (1 + 1) = 0.5
     assert m["repeat_correction_proxy"]["reinforcement_rate"] == 0.5
     assert m["repeat_correction_proxy"]["reinforcements"] == 1
@@ -67,7 +73,13 @@ def test_empty_store_metrics(store):
     m = compute_metrics(store)
     assert m["runs"] == 0
     assert m["avg_learnings_applied_per_run"] is None
-    assert m["captures_by_status"] == {"committed": 0, "reinforced": 0, "noop": 0, "conflict": 0}
+    assert m["captures_by_status"] == {
+        "committed": 0,
+        "reinforced": 0,
+        "noop": 0,
+        "conflict": 0,
+        "possible_contradiction": 0,
+    }
     assert m["repeat_correction_proxy"]["reinforcement_rate"] is None
     assert m["learnings_survived_pct"]["value"] is None
 
@@ -154,6 +166,22 @@ def test_conflict_captures_are_counted_by_status(store, config):
     )
     m = compute_metrics(store)
     assert m["captures_by_status"]["conflict"] == 2
+
+
+def test_possible_contradiction_captures_are_counted_by_status(store, config):
+    # §M7c: capture's new same-polarity signal-only status must be tallied like `conflict`, not
+    # silently dropped from captures_by_status (a prior gap: the dict didn't have this key at all).
+    _seed_events(
+        store,
+        [
+            {"type": "capture", "run_id": "r1", "entry_id": "L1",
+             "polarity": "learning", "status": "committed"},
+            {"type": "capture", "run_id": "r2", "entry_id": "L1",
+             "polarity": "learning", "status": "possible_contradiction"},
+        ],
+    )
+    m = compute_metrics(store)
+    assert m["captures_by_status"]["possible_contradiction"] == 1
 
 
 def test_demoted_learning_counts_as_a_creation_for_survival(store, config):

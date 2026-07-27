@@ -98,25 +98,36 @@ def emit_capture(
     polarity: str,
     status: str,
     scope: str | None = None,
+    candidate_body: str | None = None,
+    note: str | None = None,
 ) -> None:
     """Record a ``capture``: the entry it touched, its polarity, and the outcome ``status``
-    (``committed`` | ``reinforced`` | ``noop`` | ``conflict``).
+    (``committed`` | ``reinforced`` | ``noop`` | ``conflict`` | ``possible_contradiction``).
 
     ``scope`` is recorded so the M5a behavioral miner can attribute capture churn to a scope without
     reconstructing it from markdown (removed entries leave no markdown). Optional for back-compat:
     events written before M5a simply lack the key and the miner treats their scope as unknown.
+
+    ``candidate_body``/``note`` (§M7c, ``possible_contradiction`` only) persist the uncommitted
+    candidate wording and the detected asymmetry, so a LATER ``compact`` residue-mining pass can
+    show what actually opposed the flagged entry — without this, that information only ever existed
+    in the transient tool-call return value and was lost the moment the calling conversation ended
+    (round-5 Codex review finding). Omitted from the event (not written as ``null``) for every other
+    status, keeping the common case's event line exactly as compact as before this change.
     """
-    append_event(
-        loc,
-        {
-            "type": "capture",
-            "run_id": run_id,
-            "entry_id": entry_id,
-            "polarity": polarity,
-            "status": status,
-            "scope": scope,
-        },
-    )
+    event: dict = {
+        "type": "capture",
+        "run_id": run_id,
+        "entry_id": entry_id,
+        "polarity": polarity,
+        "status": status,
+        "scope": scope,
+    }
+    if candidate_body is not None:
+        event["candidate_body"] = candidate_body
+    if note is not None:
+        event["note"] = note
+    append_event(loc, event)
 
 
 def emit_revise(

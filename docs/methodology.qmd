@@ -66,6 +66,15 @@ against a small **hand-labeled set** ([`harness/calibration/labels.yaml`](https:
   intent that would violate it (so the model is warned before it can regress); a live `--agent`
   cold-vs-warm generation is the published figure.
 
+The same command also scores a fourth, **experimental** entry in `calibration.json` that is not one
+of the §11 product KPIs: **`same_polarity_contradiction`** (§M7c) — precision/recall of the narrow
+antonym/negation heuristic in `capture`'s dedup path (see [Tools](tools.qmd#capture)'s
+`possible_contradiction` status), scored against its own labeled section in the same
+`labels.yaml`. This one is not shown on the [Metrics](metrics.qmd) page — it measures a spike-status
+heuristic, not a headline product number — but it is computed the same honest way: a small
+hand-labeled set of contradiction pairs (should fire) and genuine-duplicate pairs (should not),
+run through real `capture`.
+
 The boundary is deliberate and stays intact: the **runtime `metrics` tool still returns `null`** for
 these three — only this published showcase, linked to the labeled set and the runner that produced it,
 shows the numbers. When `calibration.json` is absent the Metrics page falls back to the same

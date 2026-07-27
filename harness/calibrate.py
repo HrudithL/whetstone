@@ -179,10 +179,118 @@ def calibrate_regressions(labels: dict) -> dict:
     }
 
 
+def calibrate_same_polarity_contradiction(labels: dict) -> dict:
+    """same_polarity_contradiction (§M7c, experimental): precision/recall of the antonym/negation
+    same-polarity heuristic, scored against ``labels.yaml``'s hand-labeled contradiction/duplicate
+    pairs.
+
+    For each ``contradiction_pairs`` case, seed ``first`` then ``capture`` ``second`` in the same
+    scope -- the heuristic SHOULD return ``possible_contradiction`` (a true positive; a
+    ``reinforced`` here is a false negative, a miss). For each ``duplicate_pairs`` case (including
+    the deliberately tricky near-misses that mention the same antonym/negation words on both sides),
+    the same drive SHOULD reinforce normally (``reinforced``, a true negative) -- a
+    ``possible_contradiction`` here is a false positive.
+
+    A case whose SECOND ``capture`` lands as neither ``possible_contradiction`` nor ``reinforced``
+    (e.g. ``committed`` -- ``_find_duplicate`` never matched the pair as a near-duplicate in the
+    first place, so the heuristic under test never ran) is counted as ``not_reached``, NOT as a true
+    negative/false negative -- scoring it as correct-by-default would let a broken/misconfigured
+    dedup threshold silently inflate precision/recall for a heuristic that was never actually
+    exercised.
+
+    Forces ``same_polarity_contradiction_check`` on and lowers ``dedup_similarity`` for the duration
+    of this measurement, regardless of the shipped config default or which embedding backend is
+    active: the heuristic only ever runs once ``_find_duplicate`` has already flagged a pair as a
+    near-duplicate, and this KPI measures the heuristic ALONE, not whether ``dedup_similarity``
+    itself reliably catches these hand-written pairs on every backend (the hashing backend, in
+    particular, scores single-word-substituted antonym pairs anywhere from ~0.71 to ~0.94 -- see the
+    pairs in ``labels.yaml`` -- so a fixed, generous override keeps this KPI's set stable across the
+    fast hashing job and the sentence-transformers job alike). Even so, ``not_reached`` is tracked
+    rather than assumed away, in case a future label or threshold change breaks that assumption.
+    """
+    from whetstone.server import capture
+
+    spec = labels["same_polarity_contradiction"]
+    tp = fn = tn = fp = not_reached = 0
+    detail = []
+    keys = ("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "WHETSTONE_DEDUP_SIMILARITY")
+    saved = {k: os.environ.get(k) for k in keys}
+    os.environ["WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK"] = "true"
+    os.environ["WHETSTONE_DEDUP_SIMILARITY"] = "0.6"
+    try:
+        for case in spec.get("contradiction_pairs", []):
+            with _isolated_store():
+                capture(_SKILL, "learning", case["first"], case["scope"], "calibration")
+                res = capture(_SKILL, "learning", case["second"], case["scope"], "calibration")
+                status = res.get("status")
+                if status == "possible_contradiction":
+                    tp += 1
+                    correct = True
+                elif status == "reinforced":
+                    fn += 1
+                    correct = False
+                else:
+                    not_reached += 1
+                    correct = None
+                detail.append(
+                    {"scope": case["scope"], "kind": "contradiction", "status": status,
+                     "correct": correct}
+                )
+        for case in spec.get("duplicate_pairs", []):
+            with _isolated_store():
+                capture(_SKILL, "learning", case["first"], case["scope"], "calibration")
+                res = capture(_SKILL, "learning", case["second"], case["scope"], "calibration")
+                status = res.get("status")
+                if status == "possible_contradiction":
+                    fp += 1
+                    correct = False
+                elif status == "reinforced":
+                    tn += 1
+                    correct = True
+                else:
+                    not_reached += 1
+                    correct = None
+                detail.append(
+                    {"scope": case["scope"], "kind": "duplicate", "status": status,
+                     "correct": correct}
+                )
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    precision = tp / (tp + fp) if (tp + fp) else None
+    recall = tp / (tp + fn) if (tp + fn) else None
+    return {
+        "value": round(precision, 4) if precision is not None else None,
+        "recall": round(recall, 4) if recall is not None else None,
+        "n_contradiction_pairs": len(spec.get("contradiction_pairs", [])),
+        "n_duplicate_pairs": len(spec.get("duplicate_pairs", [])),
+        "true_positives": tp,
+        "false_negatives": fn,
+        "true_negatives": tn,
+        "false_positives": fp,
+        "not_reached": not_reached,
+        "note": (
+            "Experimental (§M7c spike): a small, non-exhaustive antonym/negation lexicon flags a "
+            "same-scope near-duplicate learning pair as `possible_contradiction` instead of "
+            "silently reinforcing. `value` is precision over fired flags; `recall` is the fraction "
+            "of labeled contradiction pairs caught, of the pairs the heuristic actually reached "
+            "(`not_reached` pairs, where the dedup match itself failed, are excluded from both "
+            "rather than counted as correct by default). Measured with the config flag forced ON "
+            "regardless of its shipped default -- see config.py's "
+            "`same_polarity_contradiction_check`."
+        ),
+        "detail": detail,
+    }
+
+
 _KPIS = {
     "retrieval": ("retrieval_precision", calibrate_retrieval),
     "capture": ("capture_rate", calibrate_capture),
     "regressions": ("regressions_prevented", calibrate_regressions),
+    "same_polarity": ("same_polarity_contradiction", calibrate_same_polarity_contradiction),
 }
 
 

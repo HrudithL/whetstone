@@ -23,7 +23,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import Config, load_config
 from .embeddings import cosine, get_backend
 from .metrics import compute_metrics
-from .retrieval import retrieve
+from .retrieval import RecalledIssue, RecalledLearning, RetrievalSnapshot, retrieve
 from .store import index
 from .store.access import (
     demote_issue_to_learning,
@@ -116,6 +116,17 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
 
     When you apply a returned learning/issue to your output, briefly NAME it to the user (e.g.
     "using your saved preference for muted palettes") so the learned layer is visible, not silent.
+
+    ``conflicts`` (§M7b) flags pairs, within the entries just returned, where a learning affirms
+    what a co-returned issue forbids — e.g. a "right-align currency" learning alongside a "never
+    right-align currency" issue. Each item is ``{"a": <learning id>, "a_origin": ..., "a_skill":
+    ..., "b": <issue id>, "b_origin": ..., "b_skill": ..., "note": ..}``. ``*_origin`` disambiguates
+    ids since the skill and global stores mint ids independently and can collide; ``*_skill`` is the
+    literal ``skill`` argument to pass to `revise` for that side — for a ``"global"``-origin entry
+    this is the reserved global slug, NOT this call's own ``skill``, since `revise` always resolves
+    ``entry_id`` against the store named by its ``skill`` argument. Always present (``[]`` when
+    nothing conflicts). The issue always wins (§5.2) — resolve the tension in your output, and
+    consider `revise`-ing the losing side: ``revise(skill=<its *_skill>, entry_id=<its id>, ...)``.
     """
     config = load_config()
     ensure_store(skill, config)
@@ -123,7 +134,11 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     backend = get_backend(config)
     index.ensure_index(loc, backend)
 
-    learnings, issues = retrieve(loc, intent, backend, config, learnings_k)
+    # §M7b: `snapshot_out` captures the raw entries/scope vectors THIS retrieve() call reads, from
+    # the same connection/snapshot, for the conflict pass below — never a separate whole-store scan
+    # and never at risk of racing a concurrent capture/revise index rebuild after this call returns.
+    snapshot = RetrievalSnapshot()
+    learnings, issues = retrieve(loc, intent, backend, config, learnings_k, snapshot_out=snapshot)
     run_id = _new_run_id()
     # Append the per-run event (§5.2, §11): the ids returned are the only per-run denominator for
     # application-rate metrics, since a run the user simply accepts produces no follow-up capture.
@@ -136,9 +151,12 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     # byte-identical to per-skill-only recall. recall never *creates* the global store — it only
     # consults it when a writer (promote / compact --all) has already populated it.
     g_loc = global_store_location(config)
+    g_snapshot = RetrievalSnapshot()
     if config.consult_global and loc.slug != GLOBAL_SLUG and is_store(g_loc.path):
         index.ensure_index(g_loc, backend)
-        g_learnings, g_issues = retrieve(g_loc, intent, backend, config, learnings_k)
+        g_learnings, g_issues = retrieve(
+            g_loc, intent, backend, config, learnings_k, snapshot_out=g_snapshot
+        )
         if g_learnings or g_issues:
             # Give the global store its own usage telemetry (its stale/harden mining reasons over
             # its own log), keyed to the same run_id so a follow-up capture can still be correlated.
@@ -147,6 +165,17 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
             )
         learnings = learnings + [replace(x, origin="global") for x in g_learnings]
         issues = issues + [replace(x, origin="global") for x in g_issues]
+
+    # M7b — conflict visibility. Purely additive, read-only OBSERVER pass over the finalized
+    # learnings/issues (after the skill/global union above): it never changes what was retrieved,
+    # how it was ranked/capped (MMR), or the fallback floor (see the M5e comment above — retrieval
+    # logic itself is never touched here either). It only annotates the payload already decided.
+    conflicts = (
+        _recall_conflicts(skill, snapshot, g_snapshot, learnings, issues, config)
+        if learnings and issues
+        else []
+    )
+
     return {
         "skill": skill,
         "run_id": run_id,
@@ -154,6 +183,7 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
         "issues": [asdict(x) for x in issues],
         "how_to_use": _HOW_TO_USE,
         "capture_contract": _CAPTURE_CONTRACT,
+        "conflicts": conflicts,
     }
 
 
@@ -189,6 +219,28 @@ def capture(
     ``needs_confirmation`` is returned; resolve the promotion via ``revise`` (the returned prompt
     tells you how) — ``capture`` never promotes.
 
+    §M7c (experimental, config-gated via ``same_polarity_contradiction_check``, OFF by default):
+    when a near-duplicate **learning** pair's
+    combined text shows a narrow antonym/negation asymmetry (e.g. "left" vs "right", a negation word
+    on only one side) — the same-similarity-but-opposite-meaning case an embedding alone can't
+    separate from a genuine paraphrase — ``capture`` returns ``possible_contradiction`` (with the
+    existing entry's id, its current wording as ``existing_body``, the new ``candidate_body``, and
+    a short ``note``) instead of silently reinforcing. Nothing is written; this check is
+    deterministic, so re-calling ``capture`` with the same body flags again rather than resolving
+    anything. Resolve it via ``revise`` on the flagged ``entry_id`` instead: `action`
+    ``"reinforce"`` (with no ``body``) if it genuinely was a duplicate — this bumps recurrence
+    without re-running this check. If it truly was a contradiction, do NOT ``"reinforce"`` with a
+    reworded ``body`` — that would keep the old entry's accrued recurrence and could push a single
+    opposite observation straight to the promotion threshold. Instead ``"remove"`` the flagged
+    entry (NOT ``"weaken"`` — weaken only lowers recurrence and typically leaves the entry indexed,
+    so a fresh ``capture`` of the corrected wording would flag again) and THEN ``capture`` the
+    corrected preference fresh, so it starts at its own honest recurrence. CONFIRM with the user
+    before calling ``"remove"`` — a ``possible_contradiction`` is a HEURISTIC signal, not a
+    user decision, and ``revise(action="remove")`` on a learning deletes immediately outside
+    supervised mode (it is dial-governed like any routine learning removal, unlike an issue
+    contradiction, which always confirms regardless of mode) — do not delete the user's accrued
+    preference on this signal alone.
+
     On a committed/reinforced result the payload carries a ``confirmation`` string (e.g. "Captured:
     <scope> — …. Re-applies on future <skill> runs."). RELAY it to the user so they can see the
     correction was recorded and will stick — the learned layer is otherwise invisible to them.
@@ -216,6 +268,39 @@ def capture(
 
         if polarity == "learning":
             if duplicate is not None:
+                if config.same_polarity_contradiction_check:
+                    note = _same_polarity_asymmetry(
+                        entry_text(title, body), entry_text(duplicate.title, duplicate.body)
+                    )
+                    if note is not None:
+                        # A MANDATORY issue conflict always wins over a same-polarity heuristic
+                        # signal (§5.2) -- check it before returning possible_contradiction, not
+                        # after. Otherwise a candidate that both opposes a near-duplicate learning
+                        # AND violates an existing issue would surface only the soft signal; a
+                        # caller following this status's own resolution guidance (remove the
+                        # flagged learning, then re-capture) could delete a compatible, correct
+                        # entry only to discover the mandatory conflict on the very next call
+                        # (round-5 Codex review finding — a real data-loss risk via this PR's own
+                        # documented resolution path).
+                        #
+                        # KNOWN LIMITATION (round-6 finding): this checks the LOCAL skill store
+                        # only, matching every other `_find_conflict` call in `capture` — `capture`
+                        # has never consulted the `__global__` store for cross-polarity conflicts
+                        # (unlike `recall`, which was purpose-built for that in M5e/M7b). A
+                        # candidate conflicting with a GLOBAL-origin mandatory issue is missed here
+                        # exactly as it already was before this fix, for the ordinary (non-M7c)
+                        # conflict path too — giving `capture` global-store conflict awareness
+                        # would be a materially larger, cross-cutting change to its architecture,
+                        # not a narrow M7c fix, so it's left as a pre-existing, documented boundary
+                        # rather than solved here.
+                        mandatory_conflict = _find_conflict(
+                            loc, "learning", scope, title, body, candidate_vec, scope_vec, config
+                        )
+                        if mandatory_conflict is not None:
+                            return _conflict_result(loc, run_id, "learning", mandatory_conflict)
+                        return _possible_contradiction_result(
+                            loc, run_id, duplicate, entry_text(title, body), note
+                        )
                 return _capture_reinforce(loc, backend, duplicate, run_id, confirm, config)
             conflict = _find_conflict(
                 loc, "learning", scope, title, body, candidate_vec, scope_vec, config
@@ -819,6 +904,56 @@ def _conflict_result(
     }
 
 
+def _possible_contradiction_result(
+    loc: StoreLocation,
+    run_id: str | None,
+    duplicate: IndexedEntry,
+    candidate_body: str,
+    note: str,
+) -> dict:
+    """The §M7c same-polarity heuristic's result: a signal only, the sibling of
+    :func:`_conflict_result` for a same-polarity (learning-vs-learning) asymmetry rather than a
+    cross-polarity one. Nothing is written to the store — ``duplicate`` is left exactly as it was,
+    unreinforced, so the caller (or the user, via `revise`) decides what to do.
+
+    Includes the existing entry's own wording (``existing_body``), not just its id: the five-tool
+    surface has no get-by-id lookup, so without it a caller that doesn't already have this entry's
+    text cached from a prior `recall` could not actually compare the two sides to decide (round-3
+    Codex review finding).
+
+    ``existing_body``/``candidate_body`` are each the entry's full compared text — title AND body
+    (:func:`entry_text`'s ``"{title}\\n{body}"``), not body alone. The heuristic itself compares
+    title+body for both sides (title can diverge from a fresh `_title_from_body(body)` derivation
+    when a learning's markdown is hand-edited — the store's whole design lets a human edit the
+    heading line directly, per the project's "markdown is the source of truth" philosophy — so a
+    trigger word can live in the title alone). Exposing only ``duplicate.body`` would let a
+    hand-edited title silently drive a flag the caller can't see or account for (M7 root-PR review
+    finding).
+
+    Also persists ``candidate_body``/``note`` onto the emitted event (not just the return value), so
+    a later `compact` residue-mining pass can still show what opposed this entry after the calling
+    conversation has ended (round-5 Codex review finding).
+    """
+    existing_text = entry_text(duplicate.title, duplicate.body)
+    emit_capture(
+        loc,
+        run_id,
+        duplicate.id,
+        "learning",
+        "possible_contradiction",
+        scope=duplicate.scope,
+        candidate_body=candidate_body.strip(),
+        note=note,
+    )
+    return {
+        "status": "possible_contradiction",
+        "entry_id": duplicate.id,
+        "existing_body": existing_text,
+        "candidate_body": candidate_body.strip(),
+        "note": note,
+    }
+
+
 # Words that mark an issue as a *prohibition* ("Never right-align …") rather than a mandate
 # ("Always right-align …"). Only a prohibition can conflict with a learning that wants the same
 # thing. This is a deliberate HEURISTIC: an embedding cannot separate "Always X" from "Never X"
@@ -833,6 +968,124 @@ _PROHIBITION = re.compile(
 
 def _is_prohibition(title: str, body: str) -> bool:
     return bool(_PROHIBITION.search(f"{title} {body}"))
+
+
+def _revise_skill_arg(skill: str, origin: str) -> str:
+    """The literal ``skill`` argument a caller must pass to `revise` to reach an entry with this
+    origin (§M7b, round-2 finding — routing global conflicts back through `revise` correctly).
+
+    A ``"skill"``-origin entry lives in the store for the ``skill`` `recall` was called with, so
+    that same string is the right target. A ``"global"``-origin entry lives in the reserved global
+    store instead — `revise(skill, entry_id, ...)` always resolves ``entry_id`` against the store
+    named by its ``skill`` argument, and the global store's ids are independently numbered from
+    every per-skill store's (§M5e), so passing the calling skill's own name for a global entry
+    would resolve the wrong local id (or miss entirely). ``GLOBAL_SLUG`` is the one string that
+    reaches it.
+    """
+    return GLOBAL_SLUG if origin == "global" else skill
+
+
+def _pairwise_conflict(
+    skill: str,
+    learning: RecalledLearning,
+    issue: RecalledIssue,
+    l_entry: IndexedEntry,
+    i_entry: IndexedEntry,
+    scope_phrase: dict[str, list[float]],
+    config: Config,
+) -> dict | None:
+    """The full write-time conflict test (§7's ``_find_conflict``), applied to ONE learning/issue
+    pair instead of one-candidate-vs-whole-store (§M7b): prohibition asymmetry, scope overlap, and
+    the cosine cutoff.
+
+    A conflict requires the ISSUE side to be a prohibition (``_is_prohibition`` on its title/body)
+    and the LEARNING side to NOT be one — an avoidance learning agrees with a prohibiting issue
+    rather than conflicting with it, mirroring ``_find_conflict``'s own asymmetry check. It also
+    requires overlapping scope, exactly as ``_find_conflict`` does: the same scope, or the two
+    scopes' phrase vectors clearing ``config.conflict_similarity`` — otherwise two similarly-worded
+    entries that apply to genuinely different contexts (e.g. a "green checkmark" learning for
+    successful transactions vs. an unrelated "never green checkmark" issue for error messages) would
+    be flagged. Finally the two entries' own vectors must clear ``config.conflict_similarity``.
+
+    ``skill`` is the skill name `recall` was called with — used only to compute each side's
+    ``*_skill`` (see :func:`_revise_skill_arg`); it plays no part in the conflict test itself.
+    """
+    if _is_prohibition(l_entry.title, l_entry.body):
+        return None
+    if not _is_prohibition(i_entry.title, i_entry.body):
+        return None
+    if l_entry.scope != i_entry.scope:
+        l_phrase = scope_phrase.get(l_entry.scope)
+        i_phrase = scope_phrase.get(i_entry.scope)
+        if (
+            l_phrase is None
+            or i_phrase is None
+            or cosine(l_phrase, i_phrase) < config.conflict_similarity
+        ):
+            return None
+    if cosine(l_entry.vector, i_entry.vector) < config.conflict_similarity:
+        return None
+    a_skill = _revise_skill_arg(skill, learning.origin)
+    b_skill = _revise_skill_arg(skill, issue.origin)
+    return {
+        "a": learning.id,
+        "a_origin": learning.origin,
+        "a_skill": a_skill,
+        "b": issue.id,
+        "b_origin": issue.origin,
+        "b_skill": b_skill,
+        "note": (
+            f"Learning {learning.id} ({learning.origin}) affirms what issue {issue.id} "
+            f"({issue.origin}) forbids — the issue is mandatory (§5.2) and wins. Resolve via "
+            f"`revise(skill={a_skill!r}, entry_id={learning.id!r}, ...)` or "
+            f"`revise(skill={b_skill!r}, entry_id={issue.id!r}, ...)`."
+        ),
+    }
+
+
+def _recall_conflicts(
+    skill: str,
+    snapshot: RetrievalSnapshot,
+    g_snapshot: RetrievalSnapshot,
+    learnings: list[RecalledLearning],
+    issues: list[RecalledIssue],
+    config: Config,
+) -> list[dict]:
+    """Many-vs-many conflict scan over ``recall``'s finalized returned set (§M7b).
+
+    An OBSERVER pass, not a retrieval decision: called only after the skill/global union has already
+    decided what to return, over that small already-selected list. Reads exclusively from
+    ``snapshot``/``g_snapshot`` — the exact index rows the two ``retrieve()`` calls already read for
+    THIS request (captured via their ``snapshot_out`` parameter) — so this never re-scans the store
+    and never risks racing a concurrent capture/revise index rebuild that lands between `retrieve()`
+    returning and this pass running. It never feeds back into ranking/MMR/the fallback floor. Only
+    learning-vs-issue pairs are checked, mirroring the worked example this slice targets (a learning
+    affirming what a co-returned issue forbids); issue-vs-issue and learning-vs-learning
+    contradictions are out of scope here (the latter is a later slice, §M7c).
+
+    ``skill`` is the skill name `recall` was called with (passed through to
+    :func:`_pairwise_conflict` to compute each conflict's ``a_skill``/``b_skill`` — the correct
+    `revise` target per side).
+
+    Every pair here is (one learning, one issue) from two disjoint lists, so no symmetric A-vs-B /
+    B-vs-A duplicate can arise structurally — nothing further to dedupe.
+    """
+    scope_phrase = {**g_snapshot.scope_phrase, **snapshot.scope_phrase}
+    conflicts: list[dict] = []
+    for learning in learnings:
+        l_snapshot = g_snapshot if learning.origin == "global" else snapshot
+        l_entry = l_snapshot.entries.get(learning.id)
+        if l_entry is None:
+            continue
+        for issue in issues:
+            i_snapshot = g_snapshot if issue.origin == "global" else snapshot
+            i_entry = i_snapshot.entries.get(issue.id)
+            if i_entry is None:
+                continue
+            hit = _pairwise_conflict(skill, learning, issue, l_entry, i_entry, scope_phrase, config)
+            if hit is not None:
+                conflicts.append(hit)
+    return conflicts
 
 
 def _find_conflict(
@@ -974,8 +1227,198 @@ def _find_duplicate(
     return best
 
 
+# §M7c — SPIKE. A small, hand-picked, DELIBERATELY NON-EXHAUSTIVE lexicon of antonym pairs relevant
+# to the styling/table-preference vocabulary this project's scenarios and tests already use (see
+# harness/scenarios/, tests/test_capture_conflict.py): alignment, color temperature/tone, magnitude,
+# orientation. This is explicitly NOT a general antonym/NLP subsystem — it exists
+# only to catch the clearest, most literal cases where a near-duplicate learning pair (already
+# flagged by cosine similarity, same/close scope) actually says the opposite thing rather than
+# restating the same thing. Anything not in this list is a false negative by design — a genuine gap
+# left to the user noticing via `revise`, exactly like the existing learning<->learning limitation
+# this heuristic narrows but does not remove (§7).
+#
+# DELIBERATELY EXCLUDES relational/directional/comparative pairs whose meaning depends on argument
+# order — "before"/"after" and "above"/"below" were dropped in round-2, "larger"/"smaller" in
+# round-4, "more"/"less" in round-5, and "wide"/"narrow" in the M7 root-PR review, all for the same
+# reason: "Make headings larger than body text." and "Make body text smaller than headings." mean
+# the SAME thing (the comparison AND its arguments both reversed), and so do "Use no more than two
+# decimal places." and "Use two decimal places or less.", and so do "Make the table wide compared
+# with the chart." and "Make the chart narrow compared with the table." — but this word-presence
+# check can't tell that apart from a genuine flip without argument-aware parsing, which is out of
+# scope for a narrow lexical heuristic. The remaining pairs below are used as monadic attributes in
+# this project's vocabulary ("increase padding", "right-align columns" — an instruction, not "X
+# more than Y" restated as "Y or less" or "X compared with Y" restated as "Y compared with X"), so
+# they don't share this specific failure mode — EXCEPT "left"/"right", also a relational
+# preposition
+# ("put the legend left of the plot" / "put the plot right of the legend"). Rather than drop
+# "left"/"right" outright — it's the spec's own worked example ("right-align"/"left-align") —
+# :func:`_alignment_clause_with` restricts it to TIGHT alignment-compound wording only (see there).
+_ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
+    ("left", "right"),
+    ("warm", "cool"),
+    ("light", "dark"),
+    ("horizontal", "vertical"),
+    ("increase", "decrease"),
+)
+
+
+# A DELIBERATELY NARROWER negation-marker set than §7's `_PROHIBITION` — this is the "reuse only
+# what's genuinely reusable" part of the M7c spec: `_PROHIBITION` includes bare "no"/"not"/
+# "without", which are common ordinary sentence filler ("no need for extra padding", "not with a
+# leading minus sign", "no more than one line") and, empirically (manual adversarial spot-checks
+# against realistic paraphrase pairs during this slice's build — not the hand-picked calibration
+# set, which by construction can't surface this), fire false asymmetries on genuine duplicates far
+# more often than the words below. Restricting to stronger, less-ambiguous negation words trades
+# some recall (an oddly-worded contradiction using bare "not" is missed) for materially fewer false
+# positives on ordinary phrasing — the right trade for a signal-only, narrow heuristic.
+_NEGATION_ASYMMETRY = re.compile(r"\b(never|avoid|don'?t|do not|refrain)\b", re.IGNORECASE)
+
+# A naive CLAUSE splitter — good enough for the short, few-clause bodies `capture` asks for (§5.2),
+# not a real tokenizer. Splits on sentence boundaries AND on a comma before a contrastive
+# conjunction / a semicolon, so negation-cancellation (below) is scoped to the CLAUSE containing the
+# matched antonym word, not the whole entry or even the whole sentence: an unrelated negation in a
+# different clause of the SAME sentence ("Avoid a dark background, but use wide margins." vs. "Use
+# a light background, but use narrow margins.") must not cancel a real, unrelated antonym flip
+# (round-4 Codex review finding) any more than one in a different sentence can (round-2 finding).
+_CLAUSE_SPLIT = re.compile(r"(?<=[.!?])\s+|;\s*|,\s*(?=(?:but|however|while|yet)\b)", re.IGNORECASE)
+
+# "left"/"right" restricted to TIGHT alignment-compound wording (round-3 finding, tightened again in
+# round-4): bare "left"/"right" is also common as a relational preposition ("put the legend left of
+# the plot"), which has the same argument-order ambiguity as the excluded above/below and
+# larger/smaller pairs. An earlier version required only an "align"/"justify" cue ANYWHERE in the
+# same sentence, which was still too loose — "Put the legend left of the plot and center-align the
+# title" shares a sentence with an unrelated alignment instruction and matched anyway (round-4
+# finding). Restricting to "left-align"/"align ... left" as an immediate compound/two-word phrase
+# (not a same-sentence co-occurrence) trades some recall (a spelled-out "align the columns to the
+# left" is missed) for eliminating that whole false-positive class — the spec's own worked example
+# ("right-align"/"left-align") is a tight compound and stays covered.
+_ALIGNMENT_SIDE: dict[str, re.Pattern] = {
+    "left": re.compile(r"\bleft[\s-]?align\w*\b|\balign\w*\s+left\b", re.IGNORECASE),
+    "right": re.compile(r"\bright[\s-]?align\w*\b|\balign\w*\s+right\b", re.IGNORECASE),
+}
+_LEFT_RIGHT = {"left", "right"}
+
+
+def _word_in(word: str, text: str) -> bool:
+    return re.search(rf"\b{re.escape(word)}\b", text) is not None
+
+
+def _clause_with(word: str, text: str) -> str | None:
+    """The clause (see :data:`_CLAUSE_SPLIT`) containing ``word``'s first occurrence, or ``None``
+    if no clause contains it."""
+    for clause in _CLAUSE_SPLIT.split(text):
+        if _word_in(word, clause):
+            return clause
+    return None
+
+
+def _alignment_clause_with(side: str, text: str) -> str | None:
+    """The clause (see :data:`_CLAUSE_SPLIT`) containing a TIGHT alignment-compound match for
+    ``side`` ("left"/"right"), or ``None``. See :data:`_ALIGNMENT_SIDE`."""
+    pattern = _ALIGNMENT_SIDE[side]
+    for clause in _CLAUSE_SPLIT.split(text):
+        if pattern.search(clause):
+            return clause
+    return None
+
+
+def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | None:
+    """§M7c: a narrow, deterministic lexical check for a same-polarity (learning-vs-learning)
+    asymmetry between two texts ALREADY known to be a same/close-scope near-duplicate by cosine
+    similarity (§7's ``_find_duplicate``) — a materially different question from the existing
+    cross-polarity conflict check (:func:`_find_conflict`/:func:`_find_issue_conflict`), which
+    compares OPPOSITE-polarity entries and is left untouched. This only reuses the general
+    "asymmetric marker word" shape of that code, not its cross-polarity semantics or word list —
+    see :data:`_NEGATION_ASYMMETRY`'s docstring-comment for why it's deliberately narrower than
+    :data:`_PROHIBITION`.
+
+    Two independent signals, either sufficient to flag:
+
+    1. **Antonym asymmetry** — one text contains ONE side of an :data:`_ANTONYM_PAIRS` pair and NOT
+       the other, while the other text contains the OPPOSITE side and not the first ("left" vs.
+       "right", restricted to tight alignment-compound wording for that specific pair — see
+       :func:`_alignment_clause_with`). A pair mentioned on BOTH sides (e.g. two duplicates both
+       discussing "left and right padding") is symmetric, not asymmetric, and is deliberately NOT
+       flagged — the point is a flip, not shared vocabulary. This is gated by LOCAL negation, scoped
+       to the SPECIFIC CLAUSE that matched each side (not just "somewhere in the text" — a
+       different clause's negation must not apply to an unrelated pair, round-4 finding): when
+       EITHER side's matched clause is negated, the flip is treated as an explained cancellation and
+       does NOT fire on its own — this covers both a differing-negation cancellation ("Avoid a dark
+       background." ~ "Use a light background.") and a both-negated case that can also agree ("avoid
+       warm accents; keep it neutral" ~ "avoid cool accents; keep it neutral" both funnel to the
+       same explicit target); only a flip where NEITHER matched clause is negated fires. The
+       loop still checks every remaining pair after a cancellation, so a genuine flip in a different
+       clause of the same text is still caught.
+    2. **Negation asymmetry** — one text carries a :data:`_NEGATION_ASYMMETRY` marker and the other
+       does not, OUTSIDE of any clause already explained by an antonym cancellation above (e.g.
+       "Never right-align currency columns" vs. "Right-align currency columns" — the same content,
+       negated on only one side, is still a real flip; and a SEPARATE, unrelated negation difference
+       in a different clause of a body that also contains an explained antonym cancellation is
+       still caught, not masked by it). Two duplicates that are BOTH negated (with no antonym
+       content) are symmetric and NOT flagged either way.
+
+    Returns a short human-readable note describing the detected asymmetry, or ``None`` when neither
+    signal fires (the ordinary case — treat it as a genuine duplicate and reinforce). Conservative
+    by design: an ambiguous antonym-plus-negation combination is resolved toward NOT flagging, since
+    this heuristic would rather miss a real contradiction than wrongly block a genuine duplicate.
+
+    KNOWN LIMITATION (round-6 finding): each side of a pair is looked up via its FIRST matching
+    clause only (:func:`_clause_with`/:func:`_alignment_clause_with`), so if the SAME antonym word
+    appears in more than one clause of the same text — some cancelled by negation, some not — an
+    earlier cancelled occurrence stops the pair from being checked again against a LATER, genuinely
+    uncancelled occurrence elsewhere in the same body (e.g. two mentions of "dark"/"light" across
+    different topics, one of which is negated and one of which isn't). Fully handling this would
+    mean evaluating every occurrence of every pair as an independent candidate flip rather than one
+    per pair, which is a larger, more NLP-shaped undertaking than this narrow heuristic's scope —
+    documented as a known gap rather than attempted here.
+    """
+    c, d = candidate_text.lower(), duplicate_text.lower()
+    cancelled_c_clauses: set[str] = set()
+    cancelled_d_clauses: set[str] = set()
+    for a, b in _ANTONYM_PAIRS:
+        if {a, b} == _LEFT_RIGHT:
+            c_clause_a, c_clause_b = _alignment_clause_with(a, c), _alignment_clause_with(b, c)
+            d_clause_a, d_clause_b = _alignment_clause_with(a, d), _alignment_clause_with(b, d)
+        else:
+            c_clause_a, c_clause_b = _clause_with(a, c), _clause_with(b, c)
+            d_clause_a, d_clause_b = _clause_with(a, d), _clause_with(b, d)
+        c_a, c_b = c_clause_a is not None, c_clause_b is not None
+        d_a, d_b = d_clause_a is not None, d_clause_b is not None
+        flipped_ab = c_a and not c_b and d_b and not d_a
+        flipped_ba = c_b and not c_a and d_a and not d_b
+        if not (flipped_ab or flipped_ba):
+            continue
+        if flipped_ab:
+            word_c, word_d, c_clause, d_clause = a, b, c_clause_a, d_clause_b
+        else:
+            word_c, word_d, c_clause, d_clause = b, a, c_clause_b, d_clause_a
+        c_local_negated = bool(_NEGATION_ASYMMETRY.search(c_clause))
+        d_local_negated = bool(_NEGATION_ASYMMETRY.search(d_clause))
+        if c_local_negated or d_local_negated:
+            cancelled_c_clauses.add(c_clause)
+            cancelled_d_clauses.add(d_clause)
+            continue
+        return (
+            f"one entry says {word_c!r}, the other says {word_d!r} — likely opposite, not "
+            "duplicate."
+        )
+    # Fallback: a plain negation asymmetry over whatever text ISN'T already explained by an antonym
+    # cancellation above, so an unrelated real flip elsewhere in the same body still surfaces.
+    remaining_c = " ".join(cl for cl in _CLAUSE_SPLIT.split(c) if cl not in cancelled_c_clauses)
+    remaining_d = " ".join(cl for cl in _CLAUSE_SPLIT.split(d) if cl not in cancelled_d_clauses)
+    remaining_negation_differs = bool(_NEGATION_ASYMMETRY.search(remaining_c)) != bool(
+        _NEGATION_ASYMMETRY.search(remaining_d)
+    )
+    if remaining_negation_differs:
+        return (
+            "one entry uses a negation word (never/avoid/don't/refrain) the other doesn't — likely "
+            "opposite, not duplicate."
+        )
+    return None
+
+
 _USAGE = (
-    "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id> | "
+    "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id> [--cluster] | "
     "export <skill> [--out <path>] | import <skill> <pack> [--merge|--replace] | doctor <skill>]"
 )
 
@@ -987,10 +1430,13 @@ def main(argv: list[str] | None = None) -> None:
     are periodic/deliberate operator actions, never fired mid-task by the model):
 
     - ``compact <skill>`` — the maintenance pass (§7) + the M5a advisory behavioral report.
-    - ``compact --all`` — compact every registered skill, then promote cross-skill preference
-      clusters into the learned global layer (§M5e).
+    - ``compact --all`` — compact every registered skill, then report cross-skill preference
+      clusters as advisory ``global_candidate`` findings (§M5e). It never writes to the global
+      store itself (§M7a) — promotion always asks a human; enact one with ``promote --cluster``.
     - ``promote <skill> <id>`` — lift one learning/issue into the learned global layer by hand
       (§M5e).
+    - ``promote <skill> <id> --cluster`` — enact one cross-skill cluster a ``compact --all``
+      ``global_candidate`` finding reported, naming its representative entry (§M7a).
     - ``export <skill> [--out <path>]`` — write a shareable preference pack (§M5c).
     - ``import <skill> <pack> [--merge|--replace]`` — import a preference pack, dedup-aware (§M5c).
     - ``doctor <skill>`` — read-only health check for the learned loop (§M5d); never edits anything.
@@ -1015,12 +1461,25 @@ def main(argv: list[str] | None = None) -> None:
         print(_USAGE, file=sys.stderr)
         raise SystemExit(2)
     if args[0] == "promote":
-        if len(args) != 3:
+        # `--cluster` is a flag in a FIXED trailing slot (`promote <skill> <id> [--cluster]`), not
+        # filtered out of the argument list wherever it appears — a skill name is otherwise
+        # unrestricted text, so a skill literally named "--cluster" must still parse as a normal
+        # positional `skill` when it's not in that trailing slot.
+        rest = args[1:]
+        cluster = len(rest) == 3 and rest[2] == "--cluster"
+        positional = rest[:2] if cluster else rest
+        if len(positional) != 2:
             print(_USAGE, file=sys.stderr)
             raise SystemExit(2)
-        from .promotion import promote_to_global
+        skill_arg, id_arg = positional
+        if cluster:
+            from .promotion import promote_cluster
 
-        print(json.dumps(promote_to_global(args[1], args[2]), indent=2))
+            print(json.dumps(promote_cluster(skill_arg, id_arg), indent=2))
+        else:
+            from .promotion import promote_to_global
+
+            print(json.dumps(promote_to_global(skill_arg, id_arg), indent=2))
         return
     if args[0] == "export":
         rest = args[1:]

@@ -55,7 +55,8 @@ mid-task):
 
 ```sh
 whetstone compact <skill>          # tidy the store + advisory health report
-whetstone compact --all            # tidy every store, then promote cross-skill preferences
+whetstone compact --all            # tidy every store, then *report* cross-skill candidates
+whetstone promote <skill> <id> --cluster  # enact one reported candidate, by hand
 whetstone export <skill>           # write a shareable preference pack (.tar.gz)
 whetstone import <skill> <pack>    # import a teammate's pack, dedup-aware
 whetstone doctor <skill>           # is the learn loop actually wired? (read-only check)
