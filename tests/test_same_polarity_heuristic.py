@@ -217,6 +217,72 @@ def test_relational_antonym_pairs_are_not_in_the_lexicon(env, monkeypatch):
     assert result["status"] == "reinforced"
 
 
+def test_left_right_restricted_to_alignment_wording(env, monkeypatch):
+    # Bare "left"/"right" is also a relational preposition ("put the legend left of the plot"),
+    # with the same argument-order ambiguity before/after and above/below have -- round-3 Codex
+    # review finding. Restricted to alignment wording (an "align"/"justify" cue in the same
+    # sentence), so this relational use must reinforce normally, not flag.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt", "learning", "Put the legend to the left of the plot.", "legend placement", "prov-1"
+    )
+
+    result = capture(
+        "gt", "learning", "Put the plot to the right of the legend.", "legend placement", "prov-2"
+    )
+
+    assert result["status"] == "reinforced"
+
+
+def test_both_sides_locally_negated_with_a_shared_target_is_not_a_false_positive(env, monkeypatch):
+    # Both antonym words locally negated can still agree when a shared explicit target reconciles
+    # them ("avoid wide"/"avoid narrow", both funneling to "keep a medium width") -- round-3 Codex
+    # review finding. Must reinforce normally, not flag.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt",
+        "learning",
+        "Avoid wide tables; keep the table at a medium width.",
+        "table width",
+        "prov-1",
+    )
+
+    result = capture(
+        "gt",
+        "learning",
+        "Avoid narrow tables; keep the table at a medium width.",
+        "table width",
+        "prov-2",
+    )
+
+    assert result["status"] == "reinforced"
+
+
+def test_possible_contradiction_includes_the_existing_entrys_body(env, monkeypatch):
+    # The five-tool surface has no get-by-id lookup, so the payload must carry the EXISTING entry's
+    # own wording, not just its id, for a caller to compare the two sides -- round-3 Codex review
+    # finding.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt",
+        "learning",
+        "Right-align currency columns for a cleaner ledger look.",
+        "currency columns",
+        "prov-1",
+    )
+
+    result = capture(
+        "gt",
+        "learning",
+        "Left-align currency columns for a cleaner ledger look.",
+        "currency columns",
+        "prov-2",
+    )
+
+    assert result["status"] == "possible_contradiction"
+    assert result["existing_body"] == "Right-align currency columns for a cleaner ledger look."
+
+
 # --------------------------------------------------------------------------- config gate
 
 

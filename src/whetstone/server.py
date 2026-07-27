@@ -224,15 +224,17 @@ def capture(
     combined text shows a narrow antonym/negation asymmetry (e.g. "left" vs "right", a negation word
     on only one side) — the same-similarity-but-opposite-meaning case an embedding alone can't
     separate from a genuine paraphrase — ``capture`` returns ``possible_contradiction`` (with the
-    existing entry's id and a short ``note``) instead of silently reinforcing. Nothing is written;
-    this check is deterministic, so re-calling ``capture`` with the same body flags again rather
-    than resolving anything. Resolve it via ``revise`` on the flagged ``entry_id`` instead: `action`
+    existing entry's id, its current wording as ``existing_body``, the new ``candidate_body``, and
+    a short ``note``) instead of silently reinforcing. Nothing is written; this check is
+    deterministic, so re-calling ``capture`` with the same body flags again rather than resolving
+    anything. Resolve it via ``revise`` on the flagged ``entry_id`` instead: `action`
     ``"reinforce"`` (with no ``body``) if it genuinely was a duplicate — this bumps recurrence
     without re-running this check. If it truly was a contradiction, do NOT ``"reinforce"`` with a
-    reworded ``body`` — that would keep the old entry's accrued recurrence and could push a
-    single opposite observation straight to the promotion threshold. Instead ``"remove"`` the
-    flagged entry (or ``"weaken"`` it toward removal) and ``capture`` the corrected preference
-    fresh, so it starts at its own honest recurrence.
+    reworded ``body`` — that would keep the old entry's accrued recurrence and could push a single
+    opposite observation straight to the promotion threshold. Instead ``"remove"`` the flagged
+    entry (NOT ``"weaken"`` — weaken only lowers recurrence and typically leaves the entry indexed,
+    so a fresh ``capture`` of the corrected wording would flag again) and THEN ``capture`` the
+    corrected preference fresh, so it starts at its own honest recurrence.
 
     On a committed/reinforced result the payload carries a ``confirmation`` string (e.g. "Captured:
     <scope> — …. Re-applies on future <skill> runs."). RELAY it to the user so they can see the
@@ -880,13 +882,20 @@ def _possible_contradiction_result(
     """The §M7c same-polarity heuristic's result: a signal only, the sibling of
     :func:`_conflict_result` for a same-polarity (learning-vs-learning) asymmetry rather than a
     cross-polarity one. Nothing is written to the store — ``duplicate`` is left exactly as it was,
-    unreinforced, so the caller (or the user, via `revise`) decides what to do."""
+    unreinforced, so the caller (or the user, via `revise`) decides what to do.
+
+    Includes the existing entry's own wording (``existing_body``), not just its id: the five-tool
+    surface has no get-by-id lookup, so without it a caller that doesn't already have this entry's
+    text cached from a prior `recall` could not actually compare the two sides to decide (round-3
+    Codex review finding).
+    """
     emit_capture(
         loc, run_id, duplicate.id, "learning", "possible_contradiction", scope=duplicate.scope
     )
     return {
         "status": "possible_contradiction",
         "entry_id": duplicate.id,
+        "existing_body": duplicate.body,
         "candidate_body": candidate_body.strip(),
         "note": note,
     }
@@ -1182,7 +1191,12 @@ def _find_duplicate(
 # that apart from a genuine flip without argument-aware parsing, which is out of scope for a narrow
 # lexical heuristic. The remaining pairs below are used as monadic attributes in this project's
 # vocabulary ("increase padding", "right-align columns" — an instruction, not "X above Y" restated
-# as "Y below X"), so they don't share this specific failure mode.
+# as "Y below X"), so they don't share this specific failure mode — EXCEPT "left"/"right", which is
+# also common as a relational preposition ("put the legend left of the plot" / "put the plot right
+# of the legend" — the same argument-order ambiguity as above/below, round-3 Codex review finding).
+# Rather than drop "left"/"right" outright — it's the spec's own worked example
+# ("right-align"/"left-align") — :func:`_alignment_side_in` restricts it to ALIGNMENT wording only
+# (see there).
 _ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
     ("left", "right"),
     ("warm", "cool"),
@@ -1207,16 +1221,33 @@ _ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
 _NEGATION_ASYMMETRY = re.compile(r"\b(never|avoid|don'?t|do not|refrain)\b", re.IGNORECASE)
 
 # A naive sentence splitter — good enough for the short, few-sentence bodies `capture` asks for
-# (§5.2), not a real tokenizer. Used only to scope negation-cancellation (below) to the SENTENCE
+# (§5.2), not a real tokenizer. Used to scope negation-cancellation (below) to the SENTENCE
 # containing the matched antonym word, rather than the whole entry: an unrelated negation elsewhere
 # in a multi-sentence body ("Use a light background. Keep padding restrained." vs. "Use a dark
 # background. Avoid excessive padding.") must not cancel a real antonym flip that has nothing to do
 # with it (round-2 Codex review finding).
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
+# "left"/"right" restricted to ALIGNMENT wording (round-3 Codex review finding): bare "left"/"right"
+# is also common as a relational preposition ("put the legend left of the plot"), which has the same
+# argument-order ambiguity as the already-excluded above/below pair. Requiring an "align"/"justify"
+# cue in the SAME sentence keeps the common "left-align"/"align ... to the left" case (the spec's
+# own worked example) while excluding bare relational placement text.
+_ALIGNMENT_CUE = re.compile(r"\balign\w*|\bjustif\w*", re.IGNORECASE)
+
 
 def _word_in(word: str, text: str) -> bool:
     return re.search(rf"\b{re.escape(word)}\b", text) is not None
+
+
+def _alignment_side_in(side: str, text: str) -> bool:
+    """Whether ``side`` ("left"/"right") appears in ``text`` in an ALIGNMENT sense — the same
+    sentence also names alignment/justification — rather than a relational-placement sense. See
+    :data:`_ALIGNMENT_CUE`."""
+    for sentence in _SENTENCE_SPLIT.split(text):
+        if _word_in(side, sentence) and _ALIGNMENT_CUE.search(sentence):
+            return True
+    return False
 
 
 def _sentence_with(word: str, text: str) -> str:
@@ -1226,6 +1257,9 @@ def _sentence_with(word: str, text: str) -> str:
         if _word_in(word, sentence):
             return sentence
     return text
+
+
+_LEFT_RIGHT = {"left", "right"}
 
 
 def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | None:
@@ -1242,25 +1276,27 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
 
     1. **Antonym asymmetry** — one text contains ONE side of an :data:`_ANTONYM_PAIRS` pair and NOT
        the other, while the other text contains the OPPOSITE side and not the first ("left" vs.
-       "right"). A pair mentioned on BOTH sides (e.g. two duplicates both discussing "left and
-       right padding") is symmetric, not asymmetric, and is deliberately NOT flagged — the point is
-       a flip, not shared vocabulary. This is gated by LOCAL negation parity: when the SENTENCE
-       containing one side's matched word is negated and the other's isn't, an antonym flip more
-       often reads as an agreement than a contradiction ("Avoid a dark background." ~ "Use a light
-       background." — negation cancels the flip), so that pair is treated as an explained
-       cancellation, not evidence of a flip, and does not fire on its own. This check is
+       "right", restricted to alignment wording for that specific pair — see
+       :func:`_alignment_side_in`). A pair mentioned on BOTH sides (e.g. two duplicates both
+       discussing "left and right padding") is symmetric, not asymmetric, and is deliberately NOT
+       flagged — the point is a flip, not shared vocabulary. This is gated by LOCAL negation:
+       when EITHER side's matched word is in a negated sentence, the flip is treated as an
+       explained cancellation and does NOT fire on its own — this covers both a differing-negation
+       cancellation ("Avoid a dark background." ~ "Use a light background.") and a both-negated
+       case that can also agree ("avoid wide tables; keep a medium width" ~ "avoid narrow tables;
+       keep a medium width" both funnel to the same explicit target — round-3 Codex review
+       finding); only a flip where NEITHER side is locally negated fires. This check is
        sentence-scoped (not whole-text) specifically so an UNRELATED negation elsewhere in a
-       multi-sentence body ("Use a light background. Keep padding restrained." vs. "Use a dark
-       background. Avoid excessive padding.") can't cancel a real flip it has nothing to do with
-       (round-2 Codex review finding) — the loop still checks every remaining pair after a
-       cancellation, so a genuine flip elsewhere in the same text is still caught.
-    2. **Negation asymmetry** — one text carries a :data:`_NEGATION_ASYMMETRY` marker ANYWHERE and
-       the other does not, with NO antonym pair present to explain that difference as a
-       cancellation (e.g. "Never right-align currency columns" vs. "Right-align currency columns" —
-       the same content, negated on only one side, is still a real flip). Two duplicates that are
-       BOTH negated ("avoid X" / "never X") are symmetric and NOT flagged either way. This signal is
-       whole-text (not sentence-scoped) since, unlike signal 1, it has no specific word to anchor a
-       sentence to — it only runs as a fallback when no antonym pair explains the difference.
+       multi-sentence body can't cancel a real flip it has nothing to do with (round-2 finding) —
+       the loop still checks every remaining pair after a cancellation, so a genuine flip elsewhere
+       in the same text is still caught.
+    2. **Negation asymmetry** — one text carries a :data:`_NEGATION_ASYMMETRY` marker and the other
+       does not, OUTSIDE of any sentence already explained by an antonym cancellation above (e.g.
+       "Never right-align currency columns" vs. "Right-align currency columns" — the same content,
+       negated on only one side, is still a real flip; and a SEPARATE, unrelated negation
+       difference elsewhere in a body that also contains an explained antonym cancellation is still
+       caught, not masked by it — round-3 Codex review finding). Two duplicates that are BOTH
+       negated (with no antonym content) are symmetric and NOT flagged either way.
 
     Returns a short human-readable note describing the detected asymmetry, or ``None`` when neither
     signal fires (the ordinary case — treat it as a genuine duplicate and reinforce). Conservative
@@ -1268,28 +1304,39 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
     this heuristic would rather miss a real contradiction than wrongly block a genuine duplicate.
     """
     c, d = candidate_text.lower(), duplicate_text.lower()
-    whole_text_negation_differs = bool(_NEGATION_ASYMMETRY.search(c)) != bool(
-        _NEGATION_ASYMMETRY.search(d)
-    )
-    explained_by_negation = False
+    cancelled_c_sentences: set[str] = set()
+    cancelled_d_sentences: set[str] = set()
     for a, b in _ANTONYM_PAIRS:
-        c_a, c_b = _word_in(a, c), _word_in(b, c)
-        d_a, d_b = _word_in(a, d), _word_in(b, d)
+        if {a, b} == _LEFT_RIGHT:
+            c_a, c_b = _alignment_side_in(a, c), _alignment_side_in(b, c)
+            d_a, d_b = _alignment_side_in(a, d), _alignment_side_in(b, d)
+        else:
+            c_a, c_b = _word_in(a, c), _word_in(b, c)
+            d_a, d_b = _word_in(a, d), _word_in(b, d)
         flipped_ab = c_a and not c_b and d_b and not d_a
         flipped_ba = c_b and not c_a and d_a and not d_b
         if not (flipped_ab or flipped_ba):
             continue
         word_c, word_d = (a, b) if flipped_ab else (b, a)
-        c_local_negated = bool(_NEGATION_ASYMMETRY.search(_sentence_with(word_c, c)))
-        d_local_negated = bool(_NEGATION_ASYMMETRY.search(_sentence_with(word_d, d)))
-        if c_local_negated != d_local_negated:
-            explained_by_negation = True
+        c_sentence, d_sentence = _sentence_with(word_c, c), _sentence_with(word_d, d)
+        c_local_negated = bool(_NEGATION_ASYMMETRY.search(c_sentence))
+        d_local_negated = bool(_NEGATION_ASYMMETRY.search(d_sentence))
+        if c_local_negated or d_local_negated:
+            cancelled_c_sentences.add(c_sentence)
+            cancelled_d_sentences.add(d_sentence)
             continue
         return (
             f"one entry says {word_c!r}, the other says {word_d!r} — likely opposite, not "
             "duplicate."
         )
-    if whole_text_negation_differs and not explained_by_negation:
+    # Fallback: a plain negation asymmetry over whatever text ISN'T already explained by an antonym
+    # cancellation above, so an unrelated real flip elsewhere in the same body still surfaces.
+    remaining_c = " ".join(s for s in _SENTENCE_SPLIT.split(c) if s not in cancelled_c_sentences)
+    remaining_d = " ".join(s for s in _SENTENCE_SPLIT.split(d) if s not in cancelled_d_sentences)
+    remaining_negation_differs = bool(_NEGATION_ASYMMETRY.search(remaining_c)) != bool(
+        _NEGATION_ASYMMETRY.search(remaining_d)
+    )
+    if remaining_negation_differs:
         return (
             "one entry uses a negation word (never/avoid/don't/refrain) the other doesn't — likely "
             "opposite, not duplicate."
