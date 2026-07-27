@@ -21,11 +21,14 @@ order = top.sort_values("size", ascending=True)["name"].tolist()
 top["name"] = pd.Categorical(top["name"], categories=order, ordered=True)
 
 lab = humanize_labels("size", overrides={"size": "Area (thousand sq mi)"})
+# title template (geoms.md): ranking, sliced to a top-N -> "Top {n} by {Y}"
 p = (
     ggplot(top, aes("name", "size"))
     + geom_col(fill=HOUSE_STYLE["accent"], width=0.75)
     + coord_flip()
-    + labs(title="The twelve largest landmasses", x="", y=lab["size"])
+    + labs(title=f"Top {len(top)} by {lab['size']}", x="", y=lab["size"])
 )
 p = apply_house_style(p, legend_position="none")
+# HARD BRANCH (SKILL.md Global constants): horizontal/coord_flip ranking -> (6, 7),
+# never the (8, 5) default.
 save_plot(p, str(Path(__file__).with_name("bar.png")), height=7, width=6)

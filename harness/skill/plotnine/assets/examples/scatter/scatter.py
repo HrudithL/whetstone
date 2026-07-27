@@ -11,7 +11,7 @@ import pandas as pd
 from plotnine import ggplot, aes, geom_point, geom_smooth, labs
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from pn_house_style import apply_house_style, house_palette, humanize_labels, save_plot
+from pn_house_style import HOUSE_STYLE, apply_house_style, house_palette, humanize_labels, save_plot
 
 df = pd.read_csv(Path(__file__).resolve().parents[6] / "data" / "gtcars.csv")
 df["msrp"] = pd.to_numeric(df["msrp"], errors="coerce")
@@ -23,10 +23,11 @@ lab = humanize_labels("hp", "msrp", "ctry_origin",
                                  "ctry_origin": "Origin"})
 p = (
     ggplot(df, aes("hp", "msrp", color="ctry_origin"))
-    + geom_point(size=2.5, alpha=0.8)
+    + geom_point(size=HOUSE_STYLE["point_size"], alpha=0.8)
     + geom_smooth(method="lm", se=False, color="#222222", size=0.6, linetype="dashed")
     + house_palette("qualitative", aes="color", name=lab["ctry_origin"])
-    + labs(title="Price rises with horsepower across origins",
+    # title template (geoms.md): relationship -> "{Y} vs {X}"
+    + labs(title=f"{lab['msrp']} vs {lab['hp']}",
            x=lab["hp"], y=lab["msrp"])
 )
 p = apply_house_style(p)
