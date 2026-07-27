@@ -9,9 +9,10 @@ Each scenario walks through **one skill** and one or more corrections, in three 
    subjective preferences we later teach are (typically) not honored.
 2. **Here's what wasn't good** — the scripted correction(s), quoted verbatim as the user would
    actually say them, plus the run each one started sticking on.
-3. **Here's what changed** — the same task, generated again once the learned layer was applied. The
-   preferences are honored — and the raw learned layer Whetstone injected is one click away if you
-   want the receipts.
+3. **Here's what changed** — the same task, generated again once the learned layer was applied. Most
+   preferences are honored; when one genuinely isn't (a miss in retrieval, or a correction that hasn't
+   stuck within the run budget yet), that's shown too, not hidden. The raw learned layer Whetstone
+   injected is one click away if you want the receipts.
 
 The scenarios span four skills — **Great Tables**, **frontend design**, **plotnine**, and
 **PowerPoint decks** — each carrying one or more arbitrary house-style preferences (most scenarios
