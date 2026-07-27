@@ -1,7 +1,12 @@
-"""M5a — behavioral mining folded into compact: the four advisory rules, the report, and --all."""
+"""M5a — behavioral mining folded into compact: the four advisory rules, the report, and --all.
+
+§M7a: ``compact --all``'s cross-skill promotion is advisory-only — it reports ``global_candidate``
+findings and never writes; enacting one is :func:`whetstone.promotion.promote_cluster` (also
+reachable via ``whetstone promote <skill> <id> --cluster``, see the CLI test near the bottom)."""
 
 from __future__ import annotations
 
+import json
 from datetime import date
 
 import pytest
@@ -9,7 +14,9 @@ import pytest
 from conftest import make_learning, seed
 from whetstone.compaction import compact
 from whetstone.config import Config
+from whetstone.promotion import promote_cluster
 from whetstone.server import capture, recall, revise
+from whetstone.server import main as cli_main
 from whetstone.store.access import load_learnings
 from whetstone.store.layout import (
     GLOBAL_SLUG,
@@ -161,10 +168,12 @@ def test_mining_is_advisory_only_no_mutation(env):
     assert [x.id for x in learnings] == [lid]  # still a learning, unchanged
 
 
-# ----------------------------------------------------------------------- compact --all promotion
+# ------------------------------------------------------ compact --all: advisory-only (§M7a)
 
 
-def test_compact_all_promotes_cross_skill_cluster(env):
+def test_compact_all_reports_candidate_without_writing(env):
+    """§M7a: `compact --all` only ever detects + reports a cross-skill cluster — it must never
+    write to the global store or retire any per-skill copy itself."""
     body = "Prefer muted, low-saturation color palettes."
     for skill in ("gt", "web", "ppt"):
         capture(skill, "learning", body, "palette", "prov")
@@ -172,15 +181,20 @@ def test_compact_all_promotes_cross_skill_cluster(env):
     result = compact(all_skills=True)
 
     assert result["all"] is True
-    promotions = result["promotions"]
-    assert len(promotions) == 1
-    assert set(promotions[0]["skills"]) == {"gt", "web", "ppt"}
-    # The per-skill copies are retired; the survivor lives in the global store.
+    candidates = result["global_candidates"]
+    assert len(candidates) == 1
+    finding = candidates[0]
+    assert finding["rule"] == "global_candidate"
+    assert set(finding["skills"]) == {"gt", "web", "ppt"}
+    rep = finding["representative"]
+    assert rep["skill"] in {"gt", "web", "ppt"}
+    assert finding["enact"] == f"whetstone promote {rep['skill']} {rep['id']} --cluster"
+
+    # Nothing was written or retired — every per-skill copy is untouched, and the global store was
+    # never even created.
     for skill in ("gt", "web", "ppt"):
-        assert load_learnings(store_location(skill)) == []
-    g_learnings = load_learnings(global_store_location(Config(store_root=env, embedding_dim=384)))
-    assert len(g_learnings) == 1
-    assert "muted" in g_learnings[0].body
+        assert len(load_learnings(store_location(skill))) == 1
+    assert not global_store_location(Config(store_root=env, embedding_dim=384)).path.exists()
 
 
 def test_compact_all_ignores_below_threshold_cluster(env):
@@ -189,7 +203,7 @@ def test_compact_all_ignores_below_threshold_cluster(env):
         capture(skill, "learning", body, "palette", "prov")
 
     result = compact(all_skills=True)
-    assert result["promotions"] == []
+    assert result["global_candidates"] == []
     for skill in ("gt", "web"):
         assert len(load_learnings(store_location(skill))) == 1
 
@@ -207,11 +221,63 @@ def test_no_findings_removes_stale_report(env):
 
 
 def test_global_store_excluded_from_compact_all_scan(env):
-    # Promote something so the global store exists, then ensure --all doesn't treat it as a skill.
+    # Enact a reported candidate by hand so the global store exists, then ensure a later --all
+    # doesn't treat it as a skill (and, with the source cluster now retired, has nothing left to
+    # re-report).
     for skill in ("gt", "web", "ppt"):
         capture(skill, "learning", "Prefer muted palettes.", "palette", "prov")
-    compact(all_skills=True)  # creates + fills global store
-    # A second --all must not re-scan/re-promote the global store's own entry.
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+    promote_cluster(rep["skill"], rep["id"])
+
     result = compact(all_skills=True)
     assert GLOBAL_SLUG not in result["skills"]
-    assert result["promotions"] == []
+    assert result["global_candidates"] == []
+
+
+# --------------------------------------------------------- promote_cluster: the enact path (§M7a)
+
+
+def test_promote_cluster_enacts_a_reported_candidate(env):
+    """`promote_cluster` performs exactly the write `compact --all` used to do automatically: the
+    representative lands in the global store under a re-minted id, and every cluster member across
+    all its skills is retired."""
+    body = "Prefer muted, low-saturation color palettes."
+    for skill in ("gt", "web", "ppt"):
+        capture(skill, "learning", body, "palette", "prov")
+
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+
+    out = promote_cluster(rep["skill"], rep["id"])
+
+    assert out["global_id"].startswith("L")
+    assert set(out["skills"]) == {"gt", "web", "ppt"}
+    assert {r["skill"] for r in out["retired"]} == {"gt", "web", "ppt"}
+    for skill in ("gt", "web", "ppt"):
+        assert load_learnings(store_location(skill)) == []
+    g_learnings = load_learnings(global_store_location(Config(store_root=env, embedding_dim=384)))
+    assert len(g_learnings) == 1
+    assert g_learnings[0].id == out["global_id"]
+    assert "muted" in g_learnings[0].body
+
+
+def test_promote_cluster_unknown_entry_raises(env):
+    with pytest.raises(ValueError, match="no cross-skill cluster"):
+        promote_cluster("gt", "L999")
+
+
+def test_cli_promote_cluster_flag_enacts_candidate(env, capsys):
+    """The exact CLI invocation a `global_candidate` finding's ``enact`` string names."""
+    body = "Prefer muted, low-saturation color palettes."
+    for skill in ("gt", "web", "ppt"):
+        capture(skill, "learning", body, "palette", "prov")
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+
+    cli_main(["promote", rep["skill"], rep["id"], "--cluster"])
+
+    out = json.loads(capsys.readouterr().out)
+    assert out["global_id"].startswith("L")
+    for skill in ("gt", "web", "ppt"):
+        assert load_learnings(store_location(skill)) == []
