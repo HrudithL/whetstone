@@ -13,7 +13,7 @@ The agent's north star: **ship small, reviewable, reversible slices; keep it sim
 3. [Phase 2 — The Branch Tree](#3-phase-2--the-branch-tree)
 4. [Phase 3 — Executing Slices (Subagents)](#4-phase-3--executing-slices-subagents)
 5. [Phase 4 — Pull Requests](#5-phase-4--pull-requests)
-6. [Phase 5 — Codex Auto-Review Loop](#6-phase-5--codex-auto-review-loop)
+6. [Phase 5 — Codex Review](#6-phase-5--codex-review)
 7. [Phase 6 — Merging Up the Tree](#7-phase-6--merging-up-the-tree)
 8. [Phase 7 — Merging to `main`](#8-phase-7--merging-to-main)
 9. [Phase 8 — Branch Cleanup](#9-phase-8--branch-cleanup)
@@ -31,7 +31,7 @@ The agent's north star: **ship small, reviewable, reversible slices; keep it sim
 - **One small feature per branch.** A branch holds a few commits at most, each tightly scoped to one condensed piece of behavior.
 - **Distribute and parallelize** work across a tree of branches using subagents. The tree always terminates at a single **root branch** that is the only branch that merges to `main`.
 - **The agent does not make *genuine-fork* calls alone.** Product/UX, public API shape, naming, dependencies, architecture, security posture — the categories in [§10](#10-subjective-vs-objective-decisions) — are escalated. Straightforward, obviously-right fixes are made at the agent's discretion, not escalated (see [§10.1](#101-when-to-decide-vs-ask)).
-- **Automated review must pass before merging up.** Wait for the Codex review, address every non-subjective comment, and get a clean review signal (§6 — a first-pass 👍 or a clean requested re-review) before proceeding.
+- **Automated review is triaged each round, not chased to zero.** Wait for the Codex review, decide which of its suggestions actually warrant a change (§10.1), make only those, and re-review if warranted. More than one review-fix round is normal — but each round must be earning its keep. Stop once a round's comments stop being substantive (§6); do not keep looping in pursuit of a perfectly silent report.
 - **`main` is sacred.** No direct pushes, no force pushes, no auto-merge, no shortcuts.
 
 ---
@@ -142,9 +142,9 @@ Every branch (sub → feature, feature → root) is integrated via a PR. No exce
 
 ---
 
-## 6. Phase 5 — Codex Auto-Review Loop
+## 6. Phase 5 — Codex Review
 
-The agent MUST wait for automated review before merging any PR up the tree.
+The agent MUST wait for automated review before merging any PR up the tree. More than one review-fix round is normal and expected for a PR with real findings — but the loop has a **stopping condition** (see "When to stop reviewing" below), and it isn't "keep re-reviewing until Codex has literally nothing left to say." Each round must justify itself with substantive findings; once it stops doing that, the PR is done.
 
 ### Wait for the complete signal before adjusting
 
@@ -209,9 +209,9 @@ A re-review is complete when the reviewed-commit SHA equals your latest HEAD in 
 Poll on a **modest cadence (~every 30s) within a bounded window (~15–20 min)**, ideally as a background loop that exits the moment the signal appears. Two distinct gates use different bars:
 
 - **To begin the FIX pass** — proceed once the **full CI run has completed (green OR red)** *and* the review signal is in (first-pass 👍 on the PR body / any 👀 resolved; or a re-review referencing your latest commit — a `pulls/reviews` entry with findings, or the clean issue comment). You need CI *finished*, not passing, so you can collect and fix its failures. Match on the **reviewed-commit SHA**, not merely "a review exists" — a review of a prior commit is stale.
-- **To MERGE up** — CI must be **fully green** (all jobs) in addition to a clean review signal (see [§7](#7-phase-6--merging-up-the-tree)).
+- **To MERGE up** — CI must be **fully green** (all jobs), and the review must have reached its stopping condition per "When to stop reviewing" below (see [§7](#7-phase-6--merging-up-the-tree)). This does not mean the report is spotless — it means the agent has kept reviewing while it was worth it and stopped once it wasn't.
 
-Re-request **at most once per round of fixes**. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), or Codex reports it is **rate-limited**, Codex is unavailable for this PR — fall back to the **Claude self-review** below rather than inventing some other substitute or silently skipping review.
+Re-request after each round of fixes, for as many rounds as the findings stay substantive. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), or Codex reports it is **rate-limited**, Codex is unavailable for this PR — fall back to the **Claude self-review** below rather than inventing some other substitute or silently skipping review.
 
 ### Fallback when Codex is unavailable (rate limits)
 
@@ -224,24 +224,35 @@ This self-review **satisfies the review gate** for merging up the tree — it is
 
 > An external `@claude review` GitHub Action is deliberately **not** used as the fallback: it runs Claude inside CI, which requires paid auth (a Claude Max OAuth token or an `ANTHROPIC_API_KEY`) this repo does not carry. The Claude Code agent already driving the work provides the equivalent review at no extra cost.
 
-### Iterating on review feedback
+### Acting on review feedback
 
-Read the whole review, decide what is reasonable to fix, and **make those fixes yourself**. Do not turn the review into a checklist of questions for the human — that is the failure mode this section exists to prevent.
+Read the whole review, decide what is reasonable to fix, and **make those specific fixes yourself**. Do not turn the review into a checklist of questions for the human — that is one failure mode. Grinding through round after round chasing a perfectly silent report is the other. A review is a set of suggestions to weigh each round, not a queue to empty.
 
 For each Codex comment, apply the [§10.1](#101-when-to-decide-vs-ask) test:
 
-1. **If the fix is clear and reasonable — just make it.** A defect, an inconsistency, a missed test, a straightforward correctness/security fix, or a change with one obviously-right implementation is the agent's to make at its own discretion. Push a follow-up commit; re-request review.
+1. **If the fix is clear and reasonable — make it.** A defect, an inconsistency, a missed test, a straightforward correctness/security fix, or a change with one obviously-right implementation is the agent's to make at its own discretion.
 2. **Escalate only a genuine fork:** a fix that has **multiple materially-different reasonable implementations**, or that is a true product/policy/naming/architecture decision per [§10](#10-subjective-vs-objective-decisions). Then ask one focused question — "implement it this way or that way?" — with a recommendation. Do not ask about fixes that are straightforward to make.
 3. **Decline what would overcomplicate.** A suggestion that adds scope, abstraction, or infrastructure beyond what the spec needs may be declined or deferred — briefly note why on the PR. Keeping it simple (§1) outranks satisfying every suggestion.
-4. Repeat until Codex issues a clean/approving pass **and** any genuinely-escalated fork has a human answer.
+4. **Push a follow-up commit with those changes and re-request review.** If that next round comes back with more substantive findings, repeat the same triage on them — a second or third round of real findings is normal. If it doesn't (see below), stop.
 
-The PR is only eligible to merge up when **both** are true: a **clean review signal** for your latest commit — a clean Codex signal (a first-pass 👍 on the PR body, or a clean requested re-review — the `issues/<pr>/comments` note whose `Reviewed commit` SHA equals HEAD — NOT necessarily a 👍, since a clean re-review signals via that comment and posts no `pulls/reviews` entry), **or**, when Codex is unavailable (rate-limited / no signal), the agent's **self-review** posted for your latest commit per the fallback above — AND any escalated forks resolved by the human.
+### When to stop reviewing
+
+The goal is never a literally empty report — it's a round whose comments stop being worth acting on. After each round, ask whether it raised anything substantive: a real defect, an inconsistency, a gap in test coverage, a genuine fork. If yes, fix it (or escalate it) and go again. Stop the loop once a round's remaining comments are:
+
+- restating something already declined or deferred with a reason on the PR,
+- purely stylistic/cosmetic with no behavior or clarity impact,
+- scope the PR deliberately doesn't cover, or
+- otherwise not clearing the [§10.1](#101-when-to-decide-vs-ask) bar for "worth changing."
+
+Note the outcome briefly on the PR ("remaining comments are stylistic nits / already addressed — stopping here") and move on. This is a judgment call the agent makes itself, the same way it makes any other §10.1 call — it is not a genuine fork to escalate.
+
+The PR is eligible to merge up once **both** are true: the review has reached this stopping point — a first-pass 👍 on the PR body needs no further action; a re-review (findings or the clean issue comment) has, on its most recent round, either come back clean or surfaced nothing left worth fixing per the criteria above; or, when Codex is unavailable (rate-limited / no signal), the agent's **self-review** posted for your latest commit per the fallback above has been triaged the same way — AND any escalated forks are resolved by the human. None of this requires a spotless report; it requires that the feedback was actually considered each round and acted on where it mattered.
 
 ---
 
 ## 7. Phase 6 — Merging Up the Tree
 
-- Merges from sub → feature and feature → root are **allowed and expected** without additional user gating, provided **CI is green (all jobs)** and the Codex loop in [§6](#6-phase-5--codex-auto-review-loop) has completed.
+- Merges from sub → feature and feature → root are **allowed and expected** without additional user gating, provided **CI is green (all jobs)** and the Codex review in [§6](#6-phase-5--codex-review) has been triaged.
 - **Use merge commits everywhere** (not squash, not rebase-and-merge). Full history is preserved so the small-commit trail up the tree stays intact and auditable.
 - After each successful merge, propose branch cleanup per [§9](#9-phase-8--branch-cleanup).
 
@@ -330,7 +341,7 @@ The agent MUST NOT:
 - Delete any branch without user approval.
 - Commit secrets, tokens, credentials, or `.env` files. If one is discovered committed, stop and alert the user.
 - Make a genuine-fork decision on the human's behalf — a §10 category (product/UX, public API shape, naming, deps, architecture, security posture) or a choice with multiple materially-different reasonable implementations (see [§10.1](#101-when-to-decide-vs-ask)). Straightforward fixes are the agent's to make.
-- Merge a PR up the tree before the review loop ([§6](#6-phase-5--codex-auto-review-loop)) completes — a clean Codex signal, or the agent self-review stand-in when Codex is rate-limited/unavailable.
+- Merge a PR up the tree before the Codex review ([§6](#6-phase-5--codex-review)) — or the agent self-review stand-in when Codex is rate-limited/unavailable — has been read and triaged for HEAD.
 - Treat "the CI passed" as a substitute for the Codex review.
 
 ---
@@ -352,8 +363,9 @@ Per PR:
 - [ ] Waited for the **entire CI run** (completed, green or red) AND the **entire Codex review** to finish before making any fix — no reacting to partial signals.
 - [ ] Detected the pass-aware Codex signal for HEAD: first-pass 👍 on the PR body, or (after `@codex review`) a re-review referencing HEAD — a findings review (`pulls/reviews` `commit_id`) or the clean issue comment (`Reviewed commit` SHA).
 - [ ] If Codex was unavailable (rate-limited / no signal), posted the Claude **self-review** stand-in for HEAD as a PR comment (or asked the human only if that wasn't possible).
-- [ ] Made the reasonable fixes at own discretion; declined/deferred anything that would overcomplicate (noted why).
+- [ ] Made the reasonable fixes at own discretion each round; declined/deferred anything that would overcomplicate (noted why).
 - [ ] Escalated only genuine forks (multiple reasonable implementations, or a §10 decision); recorded the human's answer.
+- [ ] Repeated review-fix rounds only while findings stayed substantive; stopped once remaining comments were nits/already-addressed/out-of-scope, and noted that on the PR.
 - [ ] Merged up with a **merge commit** (not squash, not rebase).
 - [ ] Proposed branch deletion to the human.
 
