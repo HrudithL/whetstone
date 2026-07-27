@@ -15,7 +15,7 @@ Given the model's *elaborated intent* (never the raw prompt — that closes the 
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 
 from .config import Config
@@ -50,6 +50,30 @@ class RecalledIssue:
     rule: str
     scope: str
     origin: str = "skill"
+
+
+@dataclass
+class RetrievalSnapshot:
+    """§M7b: a copy of the exact index rows one ``retrieve()`` call read, for a caller that needs to
+    inspect entries beyond what ``RecalledLearning``/``RecalledIssue`` carry (e.g. `server.recall`'s
+    post-hoc conflict pass, which needs each returned entry's title/body/vector/scope).
+
+    Pass ``snapshot_out=RetrievalSnapshot()`` to ``retrieve()`` and it is filled in place; every
+    existing caller omits it and sees byte-identical behavior (opt-in, keyword-only, no change to
+    scope-matching/cutoff/MMR/fallback logic). ``entries`` holds ONLY the entries this call
+    actually returned (picked/matched-scope, or the fallback floor's picks) — never the whole
+    store — keyed by id. ``scope_phrase`` is scope name -> phrase vector, reusing the scope
+    vectors this call already loaded (no extra query), for a scope-overlap check mirroring
+    `_find_conflict`'s.
+
+    Both are captured from the single connection this ``retrieve()`` call opened, so a caller that
+    reads this snapshot analyzes the SAME data the payload was built from — a concurrent
+    capture/revise index rebuild that lands after this call returns can't produce an analysis
+    inconsistent with what was actually returned.
+    """
+
+    entries: dict[str, IndexedEntry] = field(default_factory=dict)
+    scope_phrase: dict[str, list[float]] = field(default_factory=dict)
 
 
 def _scope_similarity(query: list[float], scope: ScopeVectors) -> float:
@@ -129,6 +153,7 @@ def _fallback(
     learnings_k: int,
     config: Config,
     today: date,
+    snapshot_out: RetrievalSnapshot | None = None,
 ) -> tuple[list[RecalledLearning], list[RecalledIssue]]:
     top_learnings = sorted(
         learnings, key=lambda e: _entry_weight(e, config, today), reverse=True
@@ -136,6 +161,9 @@ def _fallback(
     ranked = sorted(issue_scopes, key=lambda s: _scope_similarity(query, s), reverse=True)
     keep = {s.scope for s in ranked[:_FALLBACK_ISSUE_SCOPES]}
     broad_issues = [e for e in issues if e.scope in keep]
+    if snapshot_out is not None:
+        snapshot_out.entries.update({e.id: e for e in top_learnings})
+        snapshot_out.entries.update({e.id: e for e in broad_issues})
     return (
         [_to_learning(e, config, today) for e in top_learnings],
         [_to_issue(e) for e in broad_issues],
@@ -149,11 +177,16 @@ def retrieve(
     config: Config,
     learnings_k: int | None = None,
     today: date | None = None,
+    *,
+    snapshot_out: RetrievalSnapshot | None = None,
 ) -> tuple[list[RecalledLearning], list[RecalledIssue]]:
     """Retrieve the learnings and issues relevant to ``intent`` (assumes the index is fresh).
 
     ``today`` is the reference date for the recency decay (§4.4); it defaults to the current UTC
-    date and is injectable so tests can score against a fixed ``last_seen``.
+    date and is injectable so tests can score against a fixed ``last_seen``. ``snapshot_out``
+    (§M7b, keyword-only, opt-in) fills in a :class:`RetrievalSnapshot` with the raw entries/scope
+    vectors this call read, for a caller that needs more than ``RecalledLearning``/``RecalledIssue``
+    carry — every other caller omits it and the return value is unaffected.
     """
     if learnings_k is None:
         learnings_k = config.learnings_k
@@ -177,16 +210,27 @@ def retrieve(
     finally:
         conn.close()
 
+    if snapshot_out is not None:
+        # Scope-phrase vectors this call already loaded above — no extra query — for a §M7b
+        # scope-overlap check on the entries this call is about to return.
+        snapshot_out.scope_phrase.update({s.scope: s.phrase for s in learning_scopes})
+        snapshot_out.scope_phrase.update({s.scope: s.phrase for s in issue_scopes})
+
     matched_learning = _matched_scopes(query, learning_scopes, config.learnings_cutoff)
     matched_issue = _matched_scopes(query, issue_scopes, config.issues_cutoff)
 
     if not matched_learning and not matched_issue:
-        return _fallback(query, learnings, issues, issue_scopes, learnings_k, config, today)
+        return _fallback(
+            query, learnings, issues, issue_scopes, learnings_k, config, today, snapshot_out
+        )
 
     in_scope_learnings = [e for e in learnings if e.scope in matched_learning]
     in_scope_issues = [e for e in issues if e.scope in matched_issue]
 
     picked = _mmr(query, in_scope_learnings, learnings_k, config.mmr_lambda, config, today)
+    if snapshot_out is not None:
+        snapshot_out.entries.update({e.id: e for e in picked})
+        snapshot_out.entries.update({e.id: e for e in in_scope_issues})
     return (
         [_to_learning(e, config, today) for e in picked],
         [_to_issue(e) for e in in_scope_issues],
