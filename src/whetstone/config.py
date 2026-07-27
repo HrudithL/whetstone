@@ -82,6 +82,21 @@ class Config:
     # `compact --all` clusters near-duplicate learnings appearing in at least this many distinct
     # skills and promotes the cluster into the `__global__` layer (M5e). PROVISIONAL / UNCALIBRATED.
     global_skill_count: int = 3
+    # M7c — SPIKE, on by default based on calibration (see below). When a new learning near-dups an
+    # existing one (already above `dedup_similarity`, same/close scope), also run a small,
+    # hand-picked, explicitly non-exhaustive antonym/negation lexicon check over the two bodies
+    # before silently reinforcing. If it detects an asymmetry (e.g. "left" on one side, "right" on
+    # the other; a negation word on only one side), `capture` returns `possible_contradiction`
+    # instead of reinforcing -- a signal only, nothing is written.
+    # Default reflects the M7c calibration harness result (1.0 precision / 1.0 recall on
+    # `harness/calibration/labels.yaml`'s `same_polarity_contradiction` set, scored via
+    # `python -m harness.calibrate`) PLUS manual adversarial spot-checks against realistic
+    # (non-hand-picked) paraphrase pairs, which is why the negation word list
+    # (`_NEGATION_ASYMMETRY` in server.py) is deliberately narrower than the cross-polarity
+    # `_PROHIBITION` regex it was inspired by -- see LEARNING_SKILLS_DESIGN.md §7 and the PR for the
+    # full story, including the one known false-positive category still identified (a genuine
+    # negation phrase, e.g. "do not overboard", flagged against a same-meaning positive rewording).
+    same_polarity_contradiction_check: bool = True
     store_root: Path = field(default_factory=default_store_root)
 
     def __post_init__(self) -> None:
@@ -135,6 +150,7 @@ _FIELD_TYPES: dict[str, type] = {
     "harden_reinforcements": int,
     "stale_runs": int,
     "global_skill_count": int,
+    "same_polarity_contradiction_check": bool,
     "store_root": Path,
 }
 
