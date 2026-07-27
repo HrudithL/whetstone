@@ -19,6 +19,7 @@ from whetstone.promotion import promote_cluster
 from whetstone.server import capture, recall, revise
 from whetstone.server import main as cli_main
 from whetstone.store.access import load_learnings
+from whetstone.store.index import entry_text
 from whetstone.store.layout import (
     GLOBAL_SLUG,
     ensure_store,
@@ -165,10 +166,12 @@ def test_possible_contradiction_residue_flagged(env, monkeypatch):
     assert residue[0]["id"] == "L1"
     # §round-6 Codex review finding: the persisted candidate_body/note must be surfaced in the
     # finding's evidence, not just live on the underlying event -- otherwise an operator viewing the
-    # report still can't see what actually opposed the flagged entry.
-    assert residue[0]["evidence"]["candidate_body"] == (
-        "Left-align currency columns for a cleaner ledger look."
-    )
+    # report still can't see what actually opposed the flagged entry. The value is the candidate's
+    # full title+body text (M7 root-PR review finding), not body alone -- see
+    # test_same_polarity_heuristic.py's ``_title`` helper for why single-sentence bodies duplicate
+    # via entry_text here.
+    candidate_body = "Left-align currency columns for a cleaner ledger look."
+    assert residue[0]["evidence"]["candidate_body"] == entry_text(candidate_body, candidate_body)
     assert residue[0]["evidence"]["note"]
 
 

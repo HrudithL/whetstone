@@ -298,7 +298,9 @@ def capture(
                         )
                         if mandatory_conflict is not None:
                             return _conflict_result(loc, run_id, "learning", mandatory_conflict)
-                        return _possible_contradiction_result(loc, run_id, duplicate, body, note)
+                        return _possible_contradiction_result(
+                            loc, run_id, duplicate, entry_text(title, body), note
+                        )
                 return _capture_reinforce(loc, backend, duplicate, run_id, confirm, config)
             conflict = _find_conflict(
                 loc, "learning", scope, title, body, candidate_vec, scope_vec, config
@@ -919,10 +921,20 @@ def _possible_contradiction_result(
     text cached from a prior `recall` could not actually compare the two sides to decide (round-3
     Codex review finding).
 
+    ``existing_body``/``candidate_body`` are each the entry's full compared text — title AND body
+    (:func:`entry_text`'s ``"{title}\\n{body}"``), not body alone. The heuristic itself compares
+    title+body for both sides (title can diverge from a fresh `_title_from_body(body)` derivation
+    when a learning's markdown is hand-edited — the store's whole design lets a human edit the
+    heading line directly, per the project's "markdown is the source of truth" philosophy — so a
+    trigger word can live in the title alone). Exposing only ``duplicate.body`` would let a
+    hand-edited title silently drive a flag the caller can't see or account for (M7 root-PR review
+    finding).
+
     Also persists ``candidate_body``/``note`` onto the emitted event (not just the return value), so
     a later `compact` residue-mining pass can still show what opposed this entry after the calling
     conversation has ended (round-5 Codex review finding).
     """
+    existing_text = entry_text(duplicate.title, duplicate.body)
     emit_capture(
         loc,
         run_id,
@@ -936,7 +948,7 @@ def _possible_contradiction_result(
     return {
         "status": "possible_contradiction",
         "entry_id": duplicate.id,
-        "existing_body": duplicate.body,
+        "existing_body": existing_text,
         "candidate_body": candidate_body.strip(),
         "note": note,
     }
@@ -1217,8 +1229,8 @@ def _find_duplicate(
 
 # §M7c — SPIKE. A small, hand-picked, DELIBERATELY NON-EXHAUSTIVE lexicon of antonym pairs relevant
 # to the styling/table-preference vocabulary this project's scenarios and tests already use (see
-# harness/scenarios/, tests/test_capture_conflict.py): alignment, color temperature/tone, spacing,
-# magnitude, orientation, width. This is explicitly NOT a general antonym/NLP subsystem — it exists
+# harness/scenarios/, tests/test_capture_conflict.py): alignment, color temperature/tone, magnitude,
+# orientation. This is explicitly NOT a general antonym/NLP subsystem — it exists
 # only to catch the clearest, most literal cases where a near-duplicate learning pair (already
 # flagged by cosine similarity, same/close scope) actually says the opposite thing rather than
 # restating the same thing. Anything not in this list is a false negative by design — a genuine gap

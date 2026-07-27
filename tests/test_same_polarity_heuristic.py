@@ -24,7 +24,17 @@ import pytest
 
 from whetstone.server import capture
 from whetstone.store.access import load_learnings
+from whetstone.store.index import entry_text
 from whetstone.store.layout import store_location
+
+
+def _title(body: str) -> str:
+    """Mirror ``server._title_from_body``: single-sentence bodies (every body in this file) become
+    their own title verbatim, so ``entry_text(title, body)`` duplicates the text with a newline in
+    between -- exactly what ``existing_body``/``candidate_body`` now expose (M7 root-PR review
+    finding: these fields carry the full title+body text actually compared, not body alone, since a
+    hand-edited title can carry a trigger word the body doesn't)."""
+    return body
 
 
 @pytest.fixture
@@ -73,9 +83,10 @@ def test_antonym_pair_asymmetry_is_flagged_and_not_reinforced(env, monkeypatch):
         "prov-2",
     )
 
+    candidate_body = "Left-align currency columns for a cleaner ledger look."
     assert result["status"] == "possible_contradiction"
     assert result["entry_id"] == "L1"
-    assert result["candidate_body"] == "Left-align currency columns for a cleaner ledger look."
+    assert result["candidate_body"] == entry_text(_title(candidate_body), candidate_body)
     assert "note" in result and result["note"]
 
     # Nothing written: no new commit, the original entry's recurrence is untouched.
@@ -282,8 +293,9 @@ def test_possible_contradiction_includes_the_existing_entrys_body(env, monkeypat
         "prov-2",
     )
 
+    existing_body = "Right-align currency columns for a cleaner ledger look."
     assert result["status"] == "possible_contradiction"
-    assert result["existing_body"] == "Right-align currency columns for a cleaner ledger look."
+    assert result["existing_body"] == entry_text(_title(existing_body), existing_body)
 
 
 def test_unrelated_alignment_cue_elsewhere_does_not_trigger_left_right(env, monkeypatch):
