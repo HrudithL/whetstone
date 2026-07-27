@@ -78,6 +78,15 @@ Classify it: taste / preference → `polarity:"learning"`; a mistake to never re
 scoped rule of a few short sentences that capture the user's *why*. `capture` dedupes and
 conflict-checks against existing entries before writing.
 
+**`possible_contradiction`** (§M7c, experimental — gated by `same_polarity_contradiction_check`,
+default on): a near-duplicate **learning** whose wording actually flips against the existing one —
+a small, hand-picked antonym/negation lexicon catches the clearest cases ("left" vs. "right", a
+negation word on only one side) — returns this status (the existing entry's id, the candidate body,
+and a short note) instead of silently reinforcing. Nothing is written; resolve it with `revise` on
+the flagged entry, or re-`capture` if it genuinely was a duplicate. This narrows, but does not
+remove, the general limitation that embeddings alone can't separate a same-polarity contradiction
+from a paraphrase — see [Concepts](concepts.qmd) and `LEARNING_SKILLS_DESIGN.md` §7.
+
 On a committed change `capture` (and `revise`) return a short human-facing **`confirmation`** string
 — *"Captured: currency columns — …. Re-applies on future great-tables runs."* — so the agent can
 tell you what it recorded and that it will stick. The learned layer is otherwise invisible; the
