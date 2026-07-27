@@ -508,13 +508,26 @@ def _mine_conflict_residue(events: list[dict], learnings: dict, issues: dict) ->
             scope = issues[wid].scope
         else:
             continue  # the entry it clashed with is gone — nothing left to resolve
-        pending[wid] = {"run_id": e.get("run_id"), "scope": scope}
+        # §M7c round-6: carry the event's own persisted candidate_body/note (present only for
+        # possible_contradiction) into the finding's evidence too -- emit_capture already writes
+        # them onto the event (round-5), but this function was still only reading run_id/scope,
+        # so an operator viewing the report couldn't see what actually opposed the entry.
+        pending[wid] = {
+            "run_id": e.get("run_id"),
+            "scope": scope,
+            "candidate_body": e.get("candidate_body"),
+            "note": e.get("note"),
+        }
     return [
         {
             "rule": "conflict_residue",
             "id": wid,
             "scope": data["scope"],
-            "evidence": {"run_id": data["run_id"]},
+            "evidence": {
+                "run_id": data["run_id"],
+                "candidate_body": data["candidate_body"],
+                "note": data["note"],
+            },
             "enact": f"resolve the unresolved conflict on {wid!r} via revise(...)",
         }
         for wid, data in pending.items()

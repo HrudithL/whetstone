@@ -282,6 +282,17 @@ def capture(
                         # entry only to discover the mandatory conflict on the very next call
                         # (round-5 Codex review finding — a real data-loss risk via this PR's own
                         # documented resolution path).
+                        #
+                        # KNOWN LIMITATION (round-6 finding): this checks the LOCAL skill store
+                        # only, matching every other `_find_conflict` call in `capture` — `capture`
+                        # has never consulted the `__global__` store for cross-polarity conflicts
+                        # (unlike `recall`, which was purpose-built for that in M5e/M7b). A
+                        # candidate conflicting with a GLOBAL-origin mandatory issue is missed here
+                        # exactly as it already was before this fix, for the ordinary (non-M7c)
+                        # conflict path too — giving `capture` global-store conflict awareness
+                        # would be a materially larger, cross-cutting change to its architecture,
+                        # not a narrow M7c fix, so it's left as a pre-existing, documented boundary
+                        # rather than solved here.
                         mandatory_conflict = _find_conflict(
                             loc, "learning", scope, title, body, candidate_vec, scope_vec, config
                         )
@@ -1337,6 +1348,16 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
     signal fires (the ordinary case — treat it as a genuine duplicate and reinforce). Conservative
     by design: an ambiguous antonym-plus-negation combination is resolved toward NOT flagging, since
     this heuristic would rather miss a real contradiction than wrongly block a genuine duplicate.
+
+    KNOWN LIMITATION (round-6 finding): each side of a pair is looked up via its FIRST matching
+    clause only (:func:`_clause_with`/:func:`_alignment_clause_with`), so if the SAME antonym word
+    appears in more than one clause of the same text — some cancelled by negation, some not — an
+    earlier cancelled occurrence stops the pair from being checked again against a LATER, genuinely
+    uncancelled occurrence elsewhere in the same body (e.g. two mentions of "dark"/"light" across
+    different topics, one of which is negated and one of which isn't). Fully handling this would
+    mean evaluating every occurrence of every pair as an independent candidate flip rather than one
+    per pair, which is a larger, more NLP-shaped undertaking than this narrow heuristic's scope —
+    documented as a known gap rather than attempted here.
     """
     c, d = candidate_text.lower(), duplicate_text.lower()
     cancelled_c_clauses: set[str] = set()

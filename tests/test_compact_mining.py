@@ -163,6 +163,13 @@ def test_possible_contradiction_residue_flagged(env, monkeypatch):
     residue = [f for f in compact("gt")["findings"] if f["rule"] == "conflict_residue"]
     assert len(residue) == 1
     assert residue[0]["id"] == "L1"
+    # §round-6 Codex review finding: the persisted candidate_body/note must be surfaced in the
+    # finding's evidence, not just live on the underlying event -- otherwise an operator viewing the
+    # report still can't see what actually opposed the flagged entry.
+    assert residue[0]["evidence"]["candidate_body"] == (
+        "Left-align currency columns for a cleaner ledger look."
+    )
+    assert residue[0]["evidence"]["note"]
 
 
 # --------------------------------------------------------------------------- report file + advisory
