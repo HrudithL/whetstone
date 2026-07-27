@@ -20,7 +20,7 @@ each skill) so concurrent promotions can never deadlock.
 
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import replace
 
 from .config import Config, load_config
@@ -137,28 +137,41 @@ def _find_cluster_for(clusters, skill: str, entry_id: str):
 def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> dict:
     """Enact one cross-skill promotion candidate reported by ``compact --all`` (§M7a).
 
-    ``skill``/``entry_id`` name the *representative* entry of a ``global_candidate`` finding (the
-    same deterministic representative :func:`whetstone.compaction.cluster_representative` picks).
+    ``skill``/``entry_id`` must name the cluster's *current representative* — the same one a
+    ``global_candidate`` finding's ``representative`` field names, and the same deterministic pick
+    :func:`whetstone.compaction.cluster_representative` makes. Passing a non-representative member
+    (or a stale representative that a concurrent reinforcement has since replaced) is rejected
+    rather than silently substituted, so the write always uses the exact entry the caller named.
     Re-runs the same cross-skill clustering detection, restricted to whichever cluster contains
     that entry, then performs the write ``compact --all`` used to do automatically: the
     representative is written into the global store and every cluster member — across all its
     skills — is retired from its per-skill store. This is the only place a cross-skill cluster is
     actually promoted; ``compact --all`` itself only ever detects and reports.
 
-    Detection runs twice: once unlocked (to fail fast on an obviously-stale candidate), and again
-    immediately after the global write lock is taken, and only the **second, locked** run is ever
-    acted on. This matters because detection re-checks real cluster membership — same-skill
-    dedup-similarity threshold *and* ``global_skill_count`` — not just whether an id still exists,
-    so a member that was revised (not removed) in between, or a cluster that dropped below
-    threshold, is caught the same way an outright-removed entry is. The global lock serializes
-    racing ``promote_cluster`` calls for the same finding: a second, losing call's locked
-    redetection runs strictly after the first, winning call's writes/retirements complete (they
-    happen inside the same lock), so it reliably sees the post-promotion state and raises rather
-    than writing a stale duplicate.
+    Detection runs twice: once unlocked (to fail fast on an obviously-stale candidate and to learn
+    which skills participate), and again after every participating skill's write lock is held
+    (nested inside the global lock, in sorted order — see below) — only the **second, fully-locked**
+    run is ever acted on. This matters for two independent reasons: (1) the global lock alone only
+    serializes *other* ``promote_cluster`` calls, not `capture`/`revise`/`compact <skill>`, which
+    each only take their own source store's lock — so every participating source store must be
+    locked too, before the final check, or one of those could mutate a cluster member out from
+    under this call between detection and the write; (2) detection re-checks real cluster
+    membership — same-skill dedup-similarity threshold *and* ``global_skill_count`` — not just
+    whether an id still exists, so a member that was revised (not removed), or a cluster that
+    dropped below threshold, is caught the same way an outright-removed entry is.
+
+    Lock order is global-first, then every participating skill in sorted order — the same
+    global-then-skill convention :func:`promote_to_global` uses, extended to multiple skills so two
+    calls whose candidate sets overlap can never deadlock against each other (in practice the
+    global lock already fully serializes concurrent ``promote_cluster`` calls, since both must
+    acquire it before touching any skill lock; the sorted order is what keeps this call consistent
+    with that same convention if it is ever extended to lock skills without holding the global lock
+    for the whole duration).
 
     Raises ``ValueError`` if no current cluster containing ``(skill, entry_id)`` meets
     ``global_skill_count`` — the candidate may be stale (already enacted, revised, or removed since
-    it was reported) or the entry may not exist.
+    it was reported), the entry may not exist, or the passed entry is a cluster member but not (or
+    no longer) its representative.
     """
     if config is None:
         config = load_config()
@@ -179,9 +192,12 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
             "`compact --all` for a fresh finding"
         )
 
-    # Fail fast, unlocked — a cheap check before we bother taking any lock at all.
-    if _find_cluster_for(find_cross_skill_clusters(config, backend), skill, entry_id) is None:
+    # Fail fast, unlocked — a cheap check before we bother taking any lock at all, and it tells us
+    # which skills participate, so we know which source-store locks to acquire below.
+    provisional = _find_cluster_for(find_cross_skill_clusters(config, backend), skill, entry_id)
+    if provisional is None:
         raise _stale_error()
+    candidate_skills = sorted({s for s, _ in provisional})
 
     ensure_store(GLOBAL_SLUG, config)
     g_loc = global_store_location(config)
@@ -189,22 +205,43 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
     with store_write_lock(g_loc):
         index.rebuild_index_if_stale(g_loc, backend)
 
-        # The authoritative check: re-run detection now that the global lock serializes us against
-        # any racing `promote_cluster` call, and act only on this fresh result — never the unlocked
-        # snapshot above, which could be stale (a member revised, the cluster no longer meeting
-        # threshold, or already promoted by a call that won the race).
-        cluster = _find_cluster_for(find_cross_skill_clusters(config, backend), skill, entry_id)
-        if cluster is None:
-            raise _stale_error()
+        # Hold EVERY candidate source store's write lock for the rest of this call — not just one
+        # at a time as each is retired — so nothing (`capture`, `revise`, `compact <skill>`, or a
+        # racing `promote_cluster`) can mutate any participating skill's store between the
+        # authoritative check below and the writes. Sorted order, nested inside the already-held
+        # global lock (see the docstring for why this ordering matters).
+        with ExitStack() as stack:
+            for cand_skill in candidate_skills:
+                stack.enter_context(store_write_lock(store_location(cand_skill, config)))
 
-        rep_skill, rep_entry = cluster_representative(cluster)
-        global_id = write_global_entry(g_loc, backend, rep_entry, rep_skill)
-        retired = []
-        for member_skill, entry in cluster:
-            skill_loc = store_location(member_skill, config)
-            with store_write_lock(skill_loc):
-                retire_source(skill_loc, backend, entry.id)
-            retired.append({"skill": member_skill, "id": entry.id})
+            # The authoritative check: re-run detection now that every participant is locked,
+            # restricted to exactly those skills (a concurrent capture on some OTHER, unlocked
+            # skill could never safely join this promotion anyway, since we hold no lock for it —
+            # restricting keeps this a single deterministic pass rather than looping to acquire
+            # more locks). Act only on this result, never the provisional one above.
+            cluster = _find_cluster_for(
+                find_cross_skill_clusters(config, backend, skills=candidate_skills),
+                skill,
+                entry_id,
+            )
+            if cluster is None:
+                raise _stale_error()
+
+            rep_skill, rep_entry = cluster_representative(cluster)
+            if (rep_skill, rep_entry.id) != (skill, entry_id):
+                raise ValueError(
+                    f"{entry_id!r} in skill {skill!r} is a cluster member but not its current "
+                    f"representative (that's {rep_entry.id!r} in skill {rep_skill!r} now) — pass "
+                    "the representative a `global_candidate` finding names, or re-run "
+                    "`compact --all` for a fresh one"
+                )
+
+            global_id = write_global_entry(g_loc, backend, rep_entry, rep_skill)
+            retired = []
+            for member_skill, entry in cluster:
+                member_loc = store_location(member_skill, config)
+                retire_source(member_loc, backend, entry.id)
+                retired.append({"skill": member_skill, "id": entry.id})
 
     return {
         "global_id": global_id,

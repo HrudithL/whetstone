@@ -98,8 +98,13 @@ def compact(
     ``today`` is the reference date for the recency decay used to score learnings for retirement
     (§4.4); it defaults to the current UTC date and is injectable so tests are deterministic. The
     per-skill pass runs under that store's write lock and commits at most once. With
-    ``all_skills=True`` every registered skill is compacted and cross-skill clusters are promoted
-    into the learned global layer (§M5e); ``skill`` is then ignored.
+    ``all_skills=True`` every registered skill is compacted, and cross-skill clusters (learnings
+    recurring across ``>= global_skill_count`` distinct skills) are reported — under the returned
+    ``global_candidates`` key — as advisory findings, the same M5a finding shape as the per-skill
+    behavioral mining below; ``skill`` is then ignored. This is **advisory only** (§M7a): ``--all``
+    never writes to the global store or retires anything itself. Enacting one reported cluster is
+    an explicit, separate call: ``whetstone promote <skill> <id> --cluster`` (or
+    :func:`whetstone.promotion.promote_cluster` directly), naming the finding's representative.
     """
     if config is None:
         config = load_config()

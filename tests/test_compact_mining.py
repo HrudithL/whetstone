@@ -268,6 +268,32 @@ def test_promote_cluster_unknown_entry_raises(env):
         promote_cluster("gt", "L999")
 
 
+def test_promote_cluster_rejects_non_representative_member(env):
+    """Regression: `<skill> <id>` must actually BE the cluster's current representative, not just
+    any member — passing an arbitrary member id must not silently promote the cluster using
+    whatever entry happens to be the real representative instead."""
+    body = "Prefer muted, low-saturation color palettes."
+    for skill in ("gt", "web", "ppt"):
+        capture(skill, "learning", body, "palette", "prov")
+
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+    other = next(
+        m
+        for m in finding["evidence"]["members"]
+        if (m["skill"], m["id"]) != (rep["skill"], rep["id"])
+    )
+
+    with pytest.raises(ValueError, match="not its current representative"):
+        promote_cluster(other["skill"], other["id"])
+
+    # Nothing was written or retired (the global store directory may exist from `ensure_store`,
+    # but it must hold no entries).
+    assert load_learnings(global_store_location(Config(store_root=env, embedding_dim=384))) == []
+    for skill in ("gt", "web", "ppt"):
+        assert len(load_learnings(store_location(skill))) == 1
+
+
 def test_promote_cluster_revalidates_under_lock_against_stale_detection(env, monkeypatch):
     """Regression for a Codex-flagged race: `find_cross_skill_clusters` runs unlocked, so two
     concurrent `promote_cluster` calls for the same finding could both pass their own unlocked
