@@ -26,11 +26,18 @@ preferences:
       # "Install Marrow ... Big test suites" order check could pass on a deck that was never reordered.
       # Requiring two "add_slide(" calls before "Install Marrow" ties it to the actual slide-add call
       # sequence (proving the CTA text isn't part of slide 1), on top of the existing before-the-
-      # problem-slide check. This assumes the straightforward, single top-to-bottom script a 5-slide
-      # deck like this one is expected to produce (consistent with pitch_deck.yaml's checks, which
-      # assume the same non-abstracted style) - not airtight against a deliberately indirect helper-
-      # function structure, but this harness's checks work over generated source text, not a rendered
-      # deck, so a perfect structural guarantee isn't available here.
+      # problem-slide check. Accepted residual gap, tried and reverted: an "exactly the second slide"
+      # version (tempered-greedy-token gating every gap, anchored to the start of the source) correctly
+      # rejects a Title -> Agenda -> Install Marrow -> Problem adversarial sample in a real deck.py, but
+      # the `^`-anchor that makes it work there is incompatible with how this harness's --stub sampler
+      # embeds a check's literal deep inside a wrapper statement (never at position 0 of the "source"),
+      # so that stricter version can never self-satisfy under `--stub` - a materially worse trade than
+      # this "at least 2" version's narrower gap (an unasked-for extra slide inserted before the CTA,
+      # which the prompt gives a real model no reason to invent). This assumes the straightforward,
+      # single top-to-bottom script a 5-slide deck like this one is expected to produce (consistent
+      # with pitch_deck.yaml's checks, which assume the same non-abstracted style) - not airtight
+      # against a deliberately indirect helper-function structure, but this harness's checks work over
+      # generated source text, not a rendered deck, so a perfect structural guarantee isn't available.
       # Cold-clean: the outline lists the CTA last and the prompt says "in the order given", so a cold
       # run reproduces that order (CTA content after problem content, and after only 1 add_slide call).
       kind: regex
@@ -46,12 +53,14 @@ preferences:
       Add a "Why now" slide in between the idea and how-it-works slides - explain why this problem
       is urgent today, not just that it exists.
     check:
-      # A bare presence check would count a "Why now" slide inserted anywhere (e.g. appended at the
-      # end) as honoring a preference that specifically asks for it BETWEEN the idea and how-it-works
-      # slides. Anchoring on "Watch one run" (the idea slide's own on-slide tagline, per the outline)
-      # and "How it works" (that slide's on-slide title - the outline gives it no separate quoted
-      # tagline, so the model has every reason to reuse this literal label) proves "Why now" falls
-      # textually between them. Cold-clean: the outline has no "Why now" slide at all, so a cold run
-      # never produces this whole 3-way sequence.
+      # A bare presence check would count "Why now" text added anywhere - even as extra text bolted
+      # onto the existing idea slide rather than a genuinely new slide - as honoring a preference that
+      # specifically asks for a SEPARATE slide BETWEEN the idea and how-it-works slides. Anchoring on
+      # "Watch one run" (the idea slide's own on-slide tagline, per the outline), requiring an
+      # "add_slide(" call before "Why now" (proving it's a new slide, not appended text), and "How it
+      # works" (that slide's on-slide title - the outline gives it no separate quoted tagline, so the
+      # model has every reason to reuse this literal label) together prove a genuinely new slide falls
+      # between them. Cold-clean: the outline has no "Why now" slide at all, so a cold run never
+      # produces this whole sequence.
       kind: regex
-      pattern: 'Watch one run[\s\S]*Why now[\s\S]*How it works'
+      pattern: 'Watch one run[\s\S]*add_slide\([\s\S]*?Why now[\s\S]*How it works'

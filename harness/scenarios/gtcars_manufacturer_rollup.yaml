@@ -23,14 +23,17 @@ preferences:
       horsepower and average price across their whole lineup.
     check:
       # Cold-clean: the prompt never mentions "manufacturer" or "average", so a cold run has no reason
-      # to reach for a groupby - it lists cars. A bare "groupby(" is a light but honest signal that the
-      # grain actually changed, matching this harness's existing style of checking for the specific API
-      # call rather than re-deriving the whole aggregation semantically.
-      kind: code_contains
-      pattern: groupby(
+      # to reach for a groupby - it lists cars. Requires "mfr" to actually appear after groupby( (not
+      # just any groupby call), so grouping by a different column (e.g. ctry_origin, which would
+      # produce a plausible-looking but wrong-grain rollup) doesn't falsely count as honoring this.
+      kind: regex
+      pattern: 'groupby\([\s\S]*?mfr'
   - id: rollup-count-column
+    # Distinct scope from rollup-by-manufacturer (was "data organization" for both) - a stub/synthetic
+    # honoring check treats "was this preference's scope recalled" as membership-by-scope-string, so
+    # two preferences sharing a scope can't be told apart when only one of them is actually recalled.
     polarity: learning
-    scope: data organization
+    scope: row count column
     body: >
       Add a "Models" column showing how many models from that manufacturer went into each average -
       the reader should be able to tell a 2-model average from a 12-model one.
@@ -42,6 +45,8 @@ preferences:
       # aggregation - .agg(Models=("model", "count")) - passes "count"/"size" as a plain string, not a
       # call, and is the aggregation style this repo's great-tables skill itself demonstrates. code_for_
       # check's ast-unparse normalizes all string quotes to single, so the quoted-string forms below
-      # only need the single-quote spelling to catch that idiom too.
+      # only need the single-quote spelling to catch that idiom too. Requires "Models" to precede the
+      # count/size signal (matching the Models=(...) named-agg keyword order), so an unrelated count()
+      # on some other field doesn't falsely count as adding the requested column.
       kind: regex
-      pattern: "(size\\(\\)|count\\(\\)|'count'|'size')"
+      pattern: "Models[\\s\\S]*?(size\\(\\)|count\\(\\)|'count'|'size')"

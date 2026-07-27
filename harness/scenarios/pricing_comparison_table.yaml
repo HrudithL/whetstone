@@ -22,7 +22,12 @@ preferences:
     check:
       # Cold-clean: the brief itself says "a row of three cards", so a cold run has every reason to
       # build cards (divs), not a <table>. Presence of a real <table> element is a direct, honest
-      # signal the layout actually changed shape.
+      # signal the layout actually changed shape. Accepted residual gap: this doesn't prove the old
+      # card markup was REMOVED (only that a table now also exists) - ruling that out would mean
+      # guessing at a specific card/div class name the model might use, which trades one fragility
+      # (false positive on co-existing markup) for a worse one (false negative from a wrong guess);
+      # this matches the "light but honest signal, not exhaustive proof" check style used throughout
+      # this harness (e.g. a bare `Dark2`/`PuRd`/`tab_spanner` presence check elsewhere).
       kind: code_contains
       pattern: <table
   - id: enterprise-before-team
@@ -39,9 +44,11 @@ preferences:
       # Team" (comparing tiers), so "Enterprise[\s\S]*Team" would false-positive on an unchanged cold
       # page (Enterprise's title, followed later by that bullet's "...in Team", satisfies the pattern
       # even though Team's card/column still comes first). Anchored on each tier's CTA text instead -
-      # "Contact sales" (Enterprise) and "Start 14-day trial" (Team) are tier-exclusive strings that
-      # don't cross-reference other tiers, so this only matches once the columns are truly reordered.
+      # "Start free" (Solo), "Contact sales" (Enterprise), "Start 14-day trial" (Team) are tier-
+      # exclusive strings that don't cross-reference other tiers. Chaining all three (not just
+      # Enterprise-before-Team) also rules out an Enterprise/Solo/Team ordering, which a two-way check
+      # would have wrongly accepted since Enterprise still precedes Team there.
       # Cold-clean: the brief lists CTAs in Solo/Team/Enterprise order, so a cold run naturally puts
       # "Start 14-day trial" before "Contact sales" and this check fails on it.
       kind: regex
-      pattern: 'Contact sales[\s\S]*Start 14-day trial'
+      pattern: 'Start free[\s\S]*Contact sales[\s\S]*Start 14-day trial'

@@ -22,9 +22,11 @@ preferences:
       # Cold-clean: the prompt only asks to "show the country of origin", which the skill's own
       # defaults satisfy with a single color-encoded scatter (its documented default for a categorical
       # variable) - faceting is a genuinely different structural choice the cold run has no reason to
-      # make on its own.
-      kind: code_contains
-      pattern: facet_wrap(
+      # make on its own. Requires "ctry_origin" to actually appear after facet_wrap( (not just any
+      # facet_wrap call), so faceting by a different column (e.g. bdy_style) while still color-
+      # encoding country doesn't falsely count as honoring this preference.
+      kind: regex
+      pattern: 'facet_wrap\([\s\S]*?ctry_origin'
   - id: facet-free-y
     polarity: learning
     scope: scales
@@ -36,5 +38,12 @@ preferences:
       Give each facet its own y-axis scale - don't force them to share one range, some countries'
       prices barely move compared to others.
     check:
+      # NOT a ["']-style character-class quote check: code_for_check's ast-unparse always normalizes
+      # a real generated string literal to single quotes, so a plain single-quote literal is both
+      # sufficient for a real --agent run AND the only form the harness's --stub sampler
+      # (harness.generate._regex_sample) can turn into a genuinely self-matching literal - a
+      # character-class quote alternation gets flattened into literal bracket/quote text that no
+      # longer satisfies the pattern it was drawn from, so every stub run of this preference silently
+      # never converges even though the check is fine against real model output.
       kind: regex
-      pattern: 'scales\s*=\s*["'']free_y["'']'
+      pattern: "scales\\s*=\\s*'free_y'"
