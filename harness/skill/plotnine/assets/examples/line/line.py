@@ -22,10 +22,12 @@ df = df[df["date"] >= df["date"].max() - pd.Timedelta(days=365)]
 
 p = (
     ggplot(df, aes("date", "close"))
-    + geom_line(color=HOUSE_STYLE["accent"], size=0.7)
+    + geom_line(color=HOUSE_STYLE["accent"], size=HOUSE_STYLE["line_size"])
+    # date-axis defaults (api.md): ~365-day span falls in the "90 days-2 years" bucket
     + scale_x_date(date_breaks="2 months", date_labels="%b %Y")
     + scale_y_continuous(labels=label_comma())
-    + labs(title="S&P 500 close over the last year",
+    # title template (geoms.md): trend over time, no color-encoded group -> "{Y} over time"
+    + labs(title="Close over time",
            x="", y="Close")
 )
 p = apply_house_style(p, legend_position="none")
