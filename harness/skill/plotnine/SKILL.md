@@ -118,8 +118,9 @@ values live in the references.
 - **Named palettes over manual lists.** When a named house palette exists for the data
   shape (`big_color.md`), use the `scale_*` for it rather than a hand-typed color list.
 - **Overplotting.** Many overlapping points → alpha and/or `geom_jitter` (which MUST pin
-  `random_state=42` — see `geoms.md`); a dense scatter may want `geom_bin2d`/
-  `geom_density_2d`. `geoms.md` has the rule.
+  its `random_state` to the named `jitter_random_state` value — see `geoms.md` for the
+  exact seed); a dense scatter may want `geom_bin2d`/`geom_density_2d`. `geoms.md` has
+  the rule.
 - **`fmt`/scales for numbers & dates.** Currency, percent, thousands need the right
   `scale_*_continuous(labels=...)`; date axes need `scale_x_date(...)` with the
   **pinned `date_breaks`/`date_labels` pair for the data's span** (`api.md` — Date-axis

@@ -82,7 +82,8 @@ a top-N.
 | Relationship (`geom_point`) | `"{Y} vs {X}"` |
 | Ranking/amount (`geom_col`/`geom_bar`) | `"{Y} by {X}"`; if sliced to a top-N (e.g. `.head(n)`), use `"Top {n} by {Y}"` instead |
 | Trend over time (`geom_line`) | `"{Y} over time"`; append `" by {group}"` when a `color=`/`group=` hero variable is mapped |
-| Distribution (histogram/density/boxplot/violin) | `"Distribution of {Y}"`; append `" by {X}"` when compared across a group |
+| Distribution, one numeric var (`geom_histogram`/`geom_density`) | `"Distribution of {X}"` — the measured variable is mapped to `x=`; `y` is a computed count/density, never the template's `{Y}` |
+| Distribution, compared across groups (`geom_boxplot`/`geom_violin`) | `"Distribution of {Y}"`; append `" by {X}"` when compared across a group |
 | Part-of-whole (stacked/dodged bar) | `"{Y} by {X}"` |
 | Heatmap (`geom_tile`) | `"{fill} by {X} and {Y}"` |
 

@@ -18,11 +18,17 @@ aes(x=None, y=None, **kwargs)            # color=, fill=, group=, shape=, size=,
 ## Geoms (all take `mapping=`, `data=`, plus `**kwargs` for constants/params)
 
 ```python
-geom_point(alpha=, size=, color=)                 # scatter; size defaults to HOUSE_STYLE["point_size"]=2
+geom_point(alpha=, size=, color=)                 # scatter; ALWAYS pass size=HOUSE_STYLE["point_size"]
+                                                   # explicitly -- plotnine has no size of its own
+                                                   # worth trusting, and omitting size= silently falls
+                                                   # back to plotnine's own (unpinned) default, not this one
 geom_jitter(width=, height=, alpha=, random_state=)  # jittered points (discrete/rounded x);
-                                                      # random_state is MANDATORY -- pin
-                                                      # HOUSE_STYLE["jitter_random_state"]=42, never unseeded
-geom_line(size=, color=)                          # trend; pair with geom_point(); size defaults to HOUSE_STYLE["line_size"]=0.8
+                                                      # random_state is MANDATORY -- ALWAYS pass
+                                                      # random_state=HOUSE_STYLE["jitter_random_state"]
+                                                      # explicitly, never unseeded
+geom_line(size=, color=)                          # trend; pair with geom_point(); ALWAYS pass
+                                                   # size=HOUSE_STYLE["line_size"] explicitly -- same
+                                                   # reasoning as geom_point above
 geom_col()                                        # bars from a y value (stat="identity")
 geom_bar()                                        # bars as counts of rows (stat="count")
 geom_histogram(bins=30)                           # ALWAYS pass bins
@@ -63,8 +69,11 @@ free choice:
 | Data span | `date_breaks` | `date_labels` |
 |---|---|---|
 | ≤ 90 days | `"2 weeks"` | `"%b %d"` |
-| 90 days – 2 years | `"2 months"` | `"%b %Y"` |
+| > 90 days and ≤ 2 years | `"2 months"` | `"%b %Y"` |
 | > 2 years | `"1 year"` | `"%Y"` |
+
+Boundaries are non-overlapping by construction (`≤`/`>` on each edge) — a span of
+exactly 90 days always falls in the first row, never both.
 
 ## Labels, facets, coords
 
