@@ -1,0 +1,11 @@
+{
+  "learnings": [],
+  "issues": [
+    {
+      "id": "I1",
+      "rule": "Don't color-encode country of origin on one combined scatter plot. Split it into small multiples instead - facet by country of origin with facet_wrap(), one panel per country.",
+      "scope": "layout structure",
+      "origin": "skill"
+    }
+  ]
+}

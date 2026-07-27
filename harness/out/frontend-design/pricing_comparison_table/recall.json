@@ -1,0 +1,11 @@
+{
+  "learnings": [],
+  "issues": [
+    {
+      "id": "I1",
+      "rule": "Don't lay the tiers out as three side-by-side cards. Restructure this as a single comparison table instead: one row per feature, one column per tier, so a reader can scan across a row and compare the tiers directly at a glance.",
+      "scope": "layout structure",
+      "origin": "skill"
+    }
+  ]
+}

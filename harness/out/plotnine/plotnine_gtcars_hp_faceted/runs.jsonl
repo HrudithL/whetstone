@@ -1,0 +1,5 @@
+{"run": 1, "phase": "cold", "honored": {"facet-by-country": false, "facet-free-y": false}, "weights": {"facet-by-country": null, "facet-free-y": null}, "recurrence": {"facet-by-country": null, "facet-free-y": null}}
+{"run": 2, "phase": "warm", "honored": {"facet-by-country": true, "facet-free-y": false}, "weights": {"facet-by-country": null, "facet-free-y": null}, "recurrence": {"facet-by-country": null, "facet-free-y": null}}
+{"run": 3, "phase": "warm", "honored": {"facet-by-country": true, "facet-free-y": false}, "weights": {"facet-by-country": null, "facet-free-y": null}, "recurrence": {"facet-by-country": null, "facet-free-y": null}}
+{"run": 4, "phase": "warm", "honored": {"facet-by-country": true, "facet-free-y": false}, "weights": {"facet-by-country": null, "facet-free-y": null}, "recurrence": {"facet-by-country": null, "facet-free-y": null}}
+{"run": 5, "phase": "warm", "honored": {"facet-by-country": true, "facet-free-y": false}, "weights": {"facet-by-country": null, "facet-free-y": null}, "recurrence": {"facet-by-country": null, "facet-free-y": null}}

@@ -1,52 +1,48 @@
+"""Plot how price (MSRP) relates to horsepower for the gtcars sports cars,
+colored by country of origin. Built with plotnine following the house style.
+"""
+import sys
+from pathlib import Path
+
 import pandas as pd
-from plotnine import (
-    ggplot, aes, geom_point, labs, theme_minimal, theme,
-    element_text, element_line, element_blank,
-    scale_color_manual, scale_y_log10
-)
+from plotnine import ggplot, aes, geom_point, labs, scale_y_log10
+from mizani.labels import label_currency
 
-# STEP 1: Load and clean data
+# House style helpers live in the skill's scripts/ directory.
+SKILL_SCRIPTS = Path(
+    ".claude/skills/plotnine/scripts"
+).resolve()
+sys.path.insert(0, str(SKILL_SCRIPTS))
+from pn_house_style import apply_house_style, house_palette, humanize_labels, save_plot, HOUSE_STYLE
+
+# --- Step 1: understand + clean the data --------------------------------------
 df = pd.read_csv("gtcars.csv")
+# hp and msrp are already numeric floats; ctry_origin is the categorical hero.
+df = df.dropna(subset=["hp", "msrp", "ctry_origin"])
 
-# Ensure numeric types
-df["hp"] = pd.to_numeric(df["hp"], errors="coerce")
-df["msrp"] = pd.to_numeric(df["msrp"], errors="coerce")
+# --- Step 4: humanized labels -------------------------------------------------
+lab = humanize_labels(
+    "hp", "msrp", "ctry_origin",
+    overrides={"hp": "Horsepower (hp)", "msrp": "MSRP (USD)", "ctry_origin": "Country of Origin"},
+)
 
-# Remove rows with missing hp or msrp
-df = df.dropna(subset=["hp", "msrp"])
-
-# STEP 2 & 3: Build the plot with geom_point and color encoding for country
-# Okabe-Ito qualitative palette from big_color.md
-OKABE_ITO = ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00", "#F0E442", "#000000"]
-
+# --- Steps 2, 3, 4: scatter, categorical Big Color, scales --------------------
 p = (
-    ggplot(df, aes("hp", "msrp", color="ctry_origin"))
-    # STEP 2: Scatter plot for relationship
-    + geom_point(size=2.5, alpha=0.7)
-    # STEP 3: Color by country (categorical)
-    + scale_color_manual(values=OKABE_ITO, name="Country")
-    # STEP 4: Log scale for price (user preference) + labels with units
-    + scale_y_log10(name="Price (USD, log scale)")
+    ggplot(df, aes(x="hp", y="msrp", color="ctry_origin"))
+    + geom_point(size=HOUSE_STYLE["point_size"], alpha=0.85)
+    + scale_y_log10(labels=label_currency(prefix="$", precision=0))  # price on a log scale
+    + house_palette("qualitative", aes="color", name=lab["ctry_origin"])
     + labs(
-        title="Sports Car Price vs. Horsepower",
-        x="Horsepower (hp)",
-        y="Price (USD, log scale)"
-    )
-    # STEP 5: Theme and styling
-    + theme_minimal(base_size=12)
-    + theme(
-        figure_size=(8, 5),
-        plot_title=element_text(size=15, weight="bold", color="#222222"),
-        axis_title=element_text(size=12, color="#222222"),
-        axis_text=element_text(size=10, color="#222222"),
-        panel_grid_major=element_line(color="#E6E6E6", size=0.4),
-        panel_grid_minor=element_blank(),
-        legend_title=element_text(size=11, color="#222222"),
-        legend_text=element_text(size=10, color="#222222"),
-        legend_position="right"
+        title=f"{lab['msrp']} vs {lab['hp']}",
+        x=lab["hp"],
+        y=lab["msrp"],
+        color=lab["ctry_origin"],
     )
 )
 
-# STEP 6: Render and save
-p.save("plot.png", width=8, height=5, dpi=200, verbose=False)
-print("Plot saved to plot.png")
+# --- Step 5: house theme ------------------------------------------------------
+p = apply_house_style(p)
+
+# --- Step 6: render -----------------------------------------------------------
+save_plot(p, "plot.png")
+print("wrote plot.png")

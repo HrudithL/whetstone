@@ -1,0 +1,4 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Issues (mandatory constraints):
+  - [I1] (layout structure) Don't color-encode country of origin on one combined scatter plot. Split it into small multiples instead - facet by country of origin with facet_wrap(), one panel per country.

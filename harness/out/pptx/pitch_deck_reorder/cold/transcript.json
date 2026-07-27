@@ -1,0 +1,595 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "data": {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck_reorder-2irs4nkx",
+      "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+      "tools": [
+        "Bash",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Read",
+        "Skill",
+        "Write"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-4-8[1m]",
+      "permissionMode": "default",
+      "slash_commands": [
+        "pptx",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "run",
+        "run-skill-generator",
+        "agents",
+        "clear",
+        "color",
+        "compact",
+        "config",
+        "context",
+        "effort",
+        "fast",
+        "heapdump",
+        "init",
+        "mcp",
+        "model",
+        "__remote-workflow",
+        "reload-skills",
+        "rename",
+        "review",
+        "security-review",
+        "usage-credits",
+        "extra-usage",
+        "usage",
+        "insights",
+        "recap",
+        "goal",
+        "design",
+        "design-consent",
+        "design-revoke",
+        "team-onboarding"
+      ],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.215",
+      "output_style": "default",
+      "agents": [
+        "claude",
+        "claude-code-guide",
+        "Explore",
+        "general-purpose",
+        "Plan",
+        "statusline-setup"
+      ],
+      "skills": [
+        "pptx",
+        "design-sync",
+        "dataviz",
+        "update-config",
+        "verify",
+        "debug",
+        "code-review",
+        "simplify",
+        "batch",
+        "fewer-permission-prompts",
+        "doctor",
+        "loop",
+        "schedule",
+        "claude-api",
+        "run",
+        "run-skill-generator"
+      ],
+      "plugins": [],
+      "capabilities": [
+        "interrupt_receipt_v1",
+        "msg_lifecycle_v1"
+      ],
+      "analytics_disabled": false,
+      "product_feedback_disabled": false,
+      "uuid": "3be9d2f3-1e75-40ea-8283-15d2da61c040",
+      "memory_paths": {
+        "auto": "/Users/hrudithl/.claude/projects/-private-var-folders-3m-v29g5g8n3m737cc9llvckcjr0000gp-T-whetstone-showcase-pitch-deck-reorder-2irs4nkx/memory/"
+      },
+      "fast_mode_state": "off"
+    }
+  },
+  {
+    "type": "RateLimitEvent",
+    "rate_limit_info": {
+      "type": "RateLimitInfo",
+      "status": "allowed",
+      "resets_at": 1785542400,
+      "rate_limit_type": "overage",
+      "utilization": null,
+      "overage_status": "allowed",
+      "overage_resets_at": 1785542400,
+      "overage_disabled_reason": null,
+      "raw": {
+        "status": "allowed",
+        "resetsAt": 1785542400,
+        "rateLimitType": "overage",
+        "overageStatus": "allowed",
+        "overageResetsAt": 1785542400,
+        "isUsingOverage": false,
+        "overageInUse": true
+      }
+    },
+    "uuid": "524ed9fb-9c67-4d08-95d5-a7d272348fc6",
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "EqwCCokBCBAYAipARjvr/A3eL4ARpGu4sx70eA9JZiO8KcVSxv3WNLj5Z26O4yWo5PE4sS2TE4/05ujfNwbP87J+VTsO59dtAqQxEDIPY2xhdWRlLW9wdXMtNC04OABCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDGFL43uJu1kqk/YU1xoMH9ICxrz2HoUz+6QhIjCTxfujBDJzCkYmXBTldJI41G81WSuEhNPLRXes77SUQ1xnBIUsarhya3hZyjcvDsIqUDMd0x5GDUFV0pKplvo2RMfa/y9J6UBYzGbXrJCA+mFOeudwukuHuRkTVPilHrSmuEQnKKrCMLiB8uL2+6Gv2+1bBOWLSwuovttpYNeI/rSSGAE="
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 507,
+      "cache_read_input_tokens": 4631,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 507
+      },
+      "output_tokens": 9,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjFra5UgsKRaz2Ddd1Q",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "11e75c9d-f33d-45be-898c-42ee4eb508e9"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01W22gr23Q2jitFfQF2EXmsN",
+        "name": "Read",
+        "input": {
+          "file_path": "pitch_deck_outline.md"
+        }
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 507,
+      "cache_read_input_tokens": 4631,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 507
+      },
+      "output_tokens": 9,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjFra5UgsKRaz2Ddd1Q",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "53de8a5f-bc1e-452a-bf79-a0671ca25687"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01W22gr23Q2jitFfQF2EXmsN",
+        "content": "1\t# Outline: Marrow \u2014 short pitch deck\n2\t\n3\tA 5-slide pitch deck for Marrow, a CLI that maps a repo's tests to the code they actually cover.\n4\tOne idea per slide.\n5\t\n6\t1. **Title** \u2014 \"Marrow\" / subtitle: \"Know what your tests actually cover.\"\n7\t2. **The problem** \u2014 \"Big test suites hide their gaps.\" Large suites are slow and nobody knows which\n8\t   tests cover which code, so dead tests linger and real gaps go unnoticed.\n9\t3. **The idea** \u2014 \"Watch one run. Draw the real map.\" Marrow instruments a single test run and\n10\t   produces a test\u2192code coverage map \u2014 no annotations, no config.\n11\t4. **How it works** \u2014 three steps: run `marrow watch -- <your test cmd>`; Marrow records which lines\n12\t   each test exercised; it emits an interactive map plus a list of dead tests and untested lines.\n13\t5. **Call to action** \u2014 \"Install Marrow\" / `pipx install marrow` / \"Works with pytest, Jest, go test.\"\n14\t",
+        "is_error": null
+      }
+    ],
+    "uuid": "eceefd5a-a3e6-48a4-9832-53e0d8739fcd",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "text",
+      "file": {
+        "filePath": "pitch_deck_outline.md",
+        "content": "# Outline: Marrow \u2014 short pitch deck\n\nA 5-slide pitch deck for Marrow, a CLI that maps a repo's tests to the code they actually cover.\nOne idea per slide.\n\n1. **Title** \u2014 \"Marrow\" / subtitle: \"Know what your tests actually cover.\"\n2. **The problem** \u2014 \"Big test suites hide their gaps.\" Large suites are slow and nobody knows which\n   tests cover which code, so dead tests linger and real gaps go unnoticed.\n3. **The idea** \u2014 \"Watch one run. Draw the real map.\" Marrow instruments a single test run and\n   produces a test\u2192code coverage map \u2014 no annotations, no config.\n4. **How it works** \u2014 three steps: run `marrow watch -- <your test cmd>`; Marrow records which lines\n   each test exercised; it emits an interactive map plus a list of dead tests and untested lines.\n5. **Call to action** \u2014 \"Install Marrow\" / `pipx install marrow` / \"Works with pytest, Jest, go test.\"\n",
+        "numLines": 14,
+        "startLine": 1,
+        "totalLines": 14
+      }
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01GVN9wrQMmuZEEJbRoJBKbc",
+        "name": "Skill",
+        "input": {
+          "skill": "pptx"
+        }
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 507,
+      "cache_read_input_tokens": 4631,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 507
+      },
+      "output_tokens": 9,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjFra5UgsKRaz2Ddd1Q",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "5c2ade77-d214-4731-8239-cd5edb373f46"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01GVN9wrQMmuZEEJbRoJBKbc",
+        "content": "Launching skill: pptx",
+        "is_error": null
+      }
+    ],
+    "uuid": "063966fe-46cd-4a7f-83fb-376c5491e3f1",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "success": true,
+      "commandName": "pptx"
+    }
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "Base directory for this skill: /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck_reorder-2irs4nkx/.claude/skills/pptx\n\n# PPTX (slide decks)\n\nBuild presentation decks in Python with **python-pptx**. Produce one deck that reads as a single,\nconsistent product: a coherent type scale, a small palette, and a predictable slide layout.\n\n## Workflow\n\n1. **Plan the deck** from the brief: the slide sequence (title slide \u2192 one idea per content slide),\n   a small palette (a background, a text color, one accent), and a type treatment (one family, a\n   title size and a body size).\n2. **Build it** with `python-pptx`:\n   - `from pptx import Presentation`, `from pptx.util import Inches, Pt`, and (as needed)\n     `from pptx.dml.color import RGBColor`, `from pptx.enum.text import PP_ALIGN`.\n   - Add slides from layouts (`prs.slide_layouts[...]`); set each slide's title and body text.\n   - Style deliberately: set `run.font.name`, `run.font.size = Pt(...)`, `run.font.color.rgb =\n     RGBColor(...)`, and paragraph `alignment` where it serves the design.\n   - Keep one slide per idea; do not overfill.\n3. **Save and verify**: `prs.save(\"deck.pptx\")`, then run the script so the `.pptx` is actually\n   produced.\n\n## Defaults (used only absent an instruction)\n\n- A clean, legible sans-serif family, titles noticeably larger than body.\n- Titles read top-aligned and, by convention, **centered** unless the design says otherwise.\n- A light slide background with dark text and a single restrained accent color.\n- Generous margins; a handful of bullets per slide at most.\n\n## Rule 0 \u2014 the user's instructions override every default\n\nEvery default above is just a default. Any explicit instruction in the prompt or the learned layer\n(a specific font, title alignment, slide size, background color, accent) **wins** \u2014 apply it exactly\nto every slide and drop the conflicting default silently. The defaults decide what to do only *in\nthe absence of* an instruction; they never override one.\n"
+      }
+    ],
+    "uuid": "1a898fee-4848-4167-b656-564c3de9427f",
+    "parent_tool_use_id": null,
+    "tool_use_result": null
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "EroCCokBCBAYAipApgv2ni4Xf+ZEvXGbR1BQF91OUb52I3ZdVpGNn2DpDfMVk2MGWPy67c9tKL5gg7XPcuQbOSP6mErDZGqSst26tzIPY2xhdWRlLW9wdXMtNC04OABCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDGDmb5O7g53t7OFIwBoMyxeLqW8RwVv5wIu3IjB37qzzA2k0Cyx6fV5ZG/tED9J4Py5lCynJls06CAokuD7WHKgP74pkPjs63JbpFOAqXkb4MmpyNGTAjh97IjxoavRrWiFa8NCd08pGdqTmMXheGJow00aVCSILgt8ew/QNw87BkvlJEneGBMGTaDDYh9qry45XfuDMrPHz0ieaPl8jv3e4ouUky78V4yiXE9kYAQ=="
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 1,
+      "cache_creation_input_tokens": 1306,
+      "cache_read_input_tokens": 5138,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 1306
+      },
+      "output_tokens": 5,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjG5Nm9y5RoxC6wMwHz",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "363a8f85-ac68-4955-9247-f70fd2ac3de2"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_017EFSeh5taaf5BLd6EF25t7",
+        "name": "Bash",
+        "input": {
+          "command": "python3 -c \"import pptx; print(pptx.__version__)\"",
+          "description": "Check python-pptx availability"
+        }
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 1,
+      "cache_creation_input_tokens": 1306,
+      "cache_read_input_tokens": 5138,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 1306
+      },
+      "output_tokens": 5,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjG5Nm9y5RoxC6wMwHz",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "8e401c9f-db70-422b-ad74-c75e1d8f3a83"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_017EFSeh5taaf5BLd6EF25t7",
+        "content": "1.0.2",
+        "is_error": false
+      }
+    ],
+    "uuid": "c9eddb8a-e3aa-458b-8d18-9b027768b9db",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "stdout": "1.0.2",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "EpoCCokBCBAYAipAtWBnBLq7ZRMqw0lUiwvebHZQWcnotprBWiHKlzRIGnLnL5GSpP9caSAgaSpd/hNGJfFoHWclS/d4t9XPl2ySnjIPY2xhdWRlLW9wdXMtNC04OABCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDETWutd4RfwiVscc6BoMuvz/w6yIgIr2Lq6aIjCzY/C7UkpCZkjseZVngX3K2mw7fTbQ4KElZagmYDXXhuejOOyCmDfTyDgpxuydmjAqPtt1grNok/EkPFc7C0A3+7tXbHLUdFGPSHCap0snERZWQoKhOT/NMZIQ3W+rD7GXqZup+IkCVn4gSFopJl2HGAE="
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 136,
+      "cache_read_input_tokens": 6444,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 136
+      },
+      "output_tokens": 9,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjGL355PGKNMeAwwwYh",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "3eb31a6d-ad69-480e-91fa-20df122b678b"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_013jrgeY1n7RsvW9rphnciac",
+        "name": "Write",
+        "input": {
+          "file_path": "deck.py",
+          "content": "from pptx import Presentation\nfrom pptx.util import Inches, Pt, Emu\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.text import PP_ALIGN, MSO_ANCHOR\nfrom pptx.enum.shapes import MSO_SHAPE\n\n# ----- Palette -----\nBG = RGBColor(0x12, 0x16, 0x1C)        # deep slate background\nTEXT = RGBColor(0xE8, 0xEC, 0xF1)      # near-white text\nMUTED = RGBColor(0x9A, 0xA6, 0xB2)     # muted gray for secondary text\nACCENT = RGBColor(0xF2, 0x6B, 0x3A)    # warm orange accent\nPANEL = RGBColor(0x1B, 0x22, 0x2B)     # slightly lighter panel\n\nFONT = \"Arial\"\n\n# ----- Setup: 16:9 -----\nprs = Presentation()\nprs.slide_width = Inches(13.333)\nprs.slide_height = Inches(7.5)\nSW, SH = prs.slide_width, prs.slide_height\nBLANK = prs.slide_layouts[6]\n\n\ndef add_slide():\n    slide = prs.slides.add_slide(BLANK)\n    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, SW, SH)\n    bg.fill.solid()\n    bg.fill.fore_color.rgb = BG\n    bg.line.fill.background()\n    bg.shadow.inherit = False\n    slide.shapes._spTree.remove(bg._element)\n    slide.shapes._spTree.insert(2, bg._element)\n    return slide\n\n\ndef accent_bar(slide, left, top, w=Inches(0.9), h=Inches(0.09)):\n    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, w, h)\n    bar.fill.solid()\n    bar.fill.fore_color.rgb = ACCENT\n    bar.line.fill.background()\n    bar.shadow.inherit = False\n    return bar\n\n\ndef textbox(slide, left, top, width, height, anchor=MSO_ANCHOR.TOP):\n    tb = slide.shapes.add_textbox(left, top, width, height)\n    tf = tb.text_frame\n    tf.word_wrap = True\n    tf.vertical_anchor = anchor\n    tf.margin_left = 0\n    tf.margin_right = 0\n    tf.margin_top = 0\n    tf.margin_bottom = 0\n    return tf\n\n\ndef style(para, text, size, color, bold=False, align=PP_ALIGN.LEFT,\n          font=FONT, space_after=None, space_before=None):\n    para.alignment = align\n    if space_after is not None:\n        para.space_after = space_after\n    if space_before is not None:\n        para.space_before = space_before\n    run = para.add_run()\n    run.text = text\n    run.font.name = font\n    run.font.size = Pt(size)\n    run.font.bold = bold\n    run.font.color.rgb = color\n    return run\n\n\n# =========================================================\n# Slide 1 \u2014 Title\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(2.55), w=Inches(1.4), h=Inches(0.12))\ntf = textbox(s, Inches(1.0), Inches(2.75), Inches(11.3), Inches(2.4))\nstyle(tf.paragraphs[0], \"Marrow\", 88, TEXT, bold=True)\np = tf.add_paragraph()\nstyle(p, \"Know what your tests actually cover.\", 30, MUTED, space_before=Pt(14))\n\n# =========================================================\n# Slide 2 \u2014 The problem\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(1.1))\ntf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(1.4))\nstyle(tf.paragraphs[0], \"Big test suites hide their gaps.\", 44, TEXT, bold=True)\n\ntf = textbox(s, Inches(1.0), Inches(3.2), Inches(10.8), Inches(3.0))\nlines = [\n    \"Large suites are slow to run.\",\n    \"Nobody knows which tests cover which code.\",\n    \"Dead tests linger, and real gaps go unnoticed.\",\n]\nfor i, t in enumerate(lines):\n    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()\n    r = style(p, \"\u2014  \", 26, ACCENT, bold=True, space_after=Pt(16))\n    run = p.add_run()\n    run.text = t\n    run.font.name = FONT\n    run.font.size = Pt(26)\n    run.font.color.rgb = TEXT\n\n# =========================================================\n# Slide 3 \u2014 The idea\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(1.1))\ntf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(2.2))\nstyle(tf.paragraphs[0], \"Watch one run.\", 52, TEXT, bold=True)\np = tf.add_paragraph()\nstyle(p, \"Draw the real map.\", 52, ACCENT, bold=True)\n\ntf = textbox(s, Inches(1.0), Inches(4.35), Inches(10.6), Inches(2.2))\nstyle(tf.paragraphs[0],\n      \"Marrow instruments a single test run and produces a \"\n      \"test \u2192 code coverage map.\", 26, TEXT, space_after=Pt(10))\np = tf.add_paragraph()\nstyle(p, \"No annotations. No config.\", 24, MUTED)\n\n# =========================================================\n# Slide 4 \u2014 How it works\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(1.1))\ntf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(1.2))\nstyle(tf.paragraphs[0], \"How it works\", 44, TEXT, bold=True)\n\nsteps = [\n    (\"1\", \"Run\", \"marrow watch -- <your test cmd>\", True),\n    (\"2\", \"Record\", \"Marrow records which lines each test exercised.\", False),\n    (\"3\", \"Map\", \"It emits an interactive map plus a list of dead \"\n                 \"tests and untested lines.\", False),\n]\ncol_w = Inches(3.6)\ngap = Inches(0.35)\nstart_x = Inches(1.0)\ntop = Inches(3.1)\nh = Inches(3.0)\nfor i, (num, head, body, mono) in enumerate(steps):\n    x = start_x + (col_w + gap) * i\n    card = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, top, col_w, h)\n    card.fill.solid()\n    card.fill.fore_color.rgb = PANEL\n    card.line.color.rgb = ACCENT\n    card.line.width = Pt(1.0)\n    card.shadow.inherit = False\n\n    tf = textbox(s, x + Inches(0.35), top + Inches(0.3),\n                 col_w - Inches(0.7), h - Inches(0.6))\n    style(tf.paragraphs[0], num, 40, ACCENT, bold=True, space_after=Pt(6))\n    p = tf.add_paragraph()\n    style(p, head, 24, TEXT, bold=True, space_after=Pt(12))\n    p = tf.add_paragraph()\n    if mono:\n        r = style(p, body, 16, TEXT, font=\"Courier New\")\n    else:\n        style(p, body, 18, MUTED)\n\n# =========================================================\n# Slide 5 \u2014 Call to action\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(2.35), w=Inches(1.4), h=Inches(0.12))\ntf = textbox(s, Inches(1.0), Inches(2.6), Inches(11.3), Inches(1.2))\nstyle(tf.paragraphs[0], \"Install Marrow\", 60, TEXT, bold=True)\n\n# command chip\nchip = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,\n                          Inches(1.0), Inches(3.95), Inches(5.2), Inches(0.95))\nchip.fill.solid()\nchip.fill.fore_color.rgb = PANEL\nchip.line.color.rgb = ACCENT\nchip.line.width = Pt(1.0)\nchip.shadow.inherit = False\nctf = chip.text_frame\nctf.vertical_anchor = MSO_ANCHOR.MIDDLE\nctf.margin_left = Inches(0.35)\nstyle(ctf.paragraphs[0], \"pipx install marrow\", 28, TEXT, font=\"Courier New\")\n\ntf = textbox(s, Inches(1.0), Inches(5.35), Inches(11.3), Inches(0.8))\nstyle(tf.paragraphs[0], \"Works with pytest, Jest, go test.\", 24, MUTED)\n\nprs.save(\"deck.pptx\")\nprint(\"Saved deck.pptx\")\n"
+        }
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 136,
+      "cache_read_input_tokens": 6444,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 136
+      },
+      "output_tokens": 9,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjGL355PGKNMeAwwwYh",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "1194fd98-a78f-4b74-81fd-5c96393a5cc1"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_013jrgeY1n7RsvW9rphnciac",
+        "content": "File created successfully at: deck.py (file state is current in your context \u2014 no need to Read it back)",
+        "is_error": null
+      }
+    ],
+    "uuid": "99eecad8-036b-45bf-bf7d-03e5d374e578",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "create",
+      "filePath": "deck.py",
+      "content": "from pptx import Presentation\nfrom pptx.util import Inches, Pt, Emu\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.text import PP_ALIGN, MSO_ANCHOR\nfrom pptx.enum.shapes import MSO_SHAPE\n\n# ----- Palette -----\nBG = RGBColor(0x12, 0x16, 0x1C)        # deep slate background\nTEXT = RGBColor(0xE8, 0xEC, 0xF1)      # near-white text\nMUTED = RGBColor(0x9A, 0xA6, 0xB2)     # muted gray for secondary text\nACCENT = RGBColor(0xF2, 0x6B, 0x3A)    # warm orange accent\nPANEL = RGBColor(0x1B, 0x22, 0x2B)     # slightly lighter panel\n\nFONT = \"Arial\"\n\n# ----- Setup: 16:9 -----\nprs = Presentation()\nprs.slide_width = Inches(13.333)\nprs.slide_height = Inches(7.5)\nSW, SH = prs.slide_width, prs.slide_height\nBLANK = prs.slide_layouts[6]\n\n\ndef add_slide():\n    slide = prs.slides.add_slide(BLANK)\n    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, SW, SH)\n    bg.fill.solid()\n    bg.fill.fore_color.rgb = BG\n    bg.line.fill.background()\n    bg.shadow.inherit = False\n    slide.shapes._spTree.remove(bg._element)\n    slide.shapes._spTree.insert(2, bg._element)\n    return slide\n\n\ndef accent_bar(slide, left, top, w=Inches(0.9), h=Inches(0.09)):\n    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, w, h)\n    bar.fill.solid()\n    bar.fill.fore_color.rgb = ACCENT\n    bar.line.fill.background()\n    bar.shadow.inherit = False\n    return bar\n\n\ndef textbox(slide, left, top, width, height, anchor=MSO_ANCHOR.TOP):\n    tb = slide.shapes.add_textbox(left, top, width, height)\n    tf = tb.text_frame\n    tf.word_wrap = True\n    tf.vertical_anchor = anchor\n    tf.margin_left = 0\n    tf.margin_right = 0\n    tf.margin_top = 0\n    tf.margin_bottom = 0\n    return tf\n\n\ndef style(para, text, size, color, bold=False, align=PP_ALIGN.LEFT,\n          font=FONT, space_after=None, space_before=None):\n    para.alignment = align\n    if space_after is not None:\n        para.space_after = space_after\n    if space_before is not None:\n        para.space_before = space_before\n    run = para.add_run()\n    run.text = text\n    run.font.name = font\n    run.font.size = Pt(size)\n    run.font.bold = bold\n    run.font.color.rgb = color\n    return run\n\n\n# =========================================================\n# Slide 1 \u2014 Title\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(2.55), w=Inches(1.4), h=Inches(0.12))\ntf = textbox(s, Inches(1.0), Inches(2.75), Inches(11.3), Inches(2.4))\nstyle(tf.paragraphs[0], \"Marrow\", 88, TEXT, bold=True)\np = tf.add_paragraph()\nstyle(p, \"Know what your tests actually cover.\", 30, MUTED, space_before=Pt(14))\n\n# =========================================================\n# Slide 2 \u2014 The problem\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(1.1))\ntf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(1.4))\nstyle(tf.paragraphs[0], \"Big test suites hide their gaps.\", 44, TEXT, bold=True)\n\ntf = textbox(s, Inches(1.0), Inches(3.2), Inches(10.8), Inches(3.0))\nlines = [\n    \"Large suites are slow to run.\",\n    \"Nobody knows which tests cover which code.\",\n    \"Dead tests linger, and real gaps go unnoticed.\",\n]\nfor i, t in enumerate(lines):\n    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()\n    r = style(p, \"\u2014  \", 26, ACCENT, bold=True, space_after=Pt(16))\n    run = p.add_run()\n    run.text = t\n    run.font.name = FONT\n    run.font.size = Pt(26)\n    run.font.color.rgb = TEXT\n\n# =========================================================\n# Slide 3 \u2014 The idea\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(1.1))\ntf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(2.2))\nstyle(tf.paragraphs[0], \"Watch one run.\", 52, TEXT, bold=True)\np = tf.add_paragraph()\nstyle(p, \"Draw the real map.\", 52, ACCENT, bold=True)\n\ntf = textbox(s, Inches(1.0), Inches(4.35), Inches(10.6), Inches(2.2))\nstyle(tf.paragraphs[0],\n      \"Marrow instruments a single test run and produces a \"\n      \"test \u2192 code coverage map.\", 26, TEXT, space_after=Pt(10))\np = tf.add_paragraph()\nstyle(p, \"No annotations. No config.\", 24, MUTED)\n\n# =========================================================\n# Slide 4 \u2014 How it works\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(1.1))\ntf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(1.2))\nstyle(tf.paragraphs[0], \"How it works\", 44, TEXT, bold=True)\n\nsteps = [\n    (\"1\", \"Run\", \"marrow watch -- <your test cmd>\", True),\n    (\"2\", \"Record\", \"Marrow records which lines each test exercised.\", False),\n    (\"3\", \"Map\", \"It emits an interactive map plus a list of dead \"\n                 \"tests and untested lines.\", False),\n]\ncol_w = Inches(3.6)\ngap = Inches(0.35)\nstart_x = Inches(1.0)\ntop = Inches(3.1)\nh = Inches(3.0)\nfor i, (num, head, body, mono) in enumerate(steps):\n    x = start_x + (col_w + gap) * i\n    card = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, top, col_w, h)\n    card.fill.solid()\n    card.fill.fore_color.rgb = PANEL\n    card.line.color.rgb = ACCENT\n    card.line.width = Pt(1.0)\n    card.shadow.inherit = False\n\n    tf = textbox(s, x + Inches(0.35), top + Inches(0.3),\n                 col_w - Inches(0.7), h - Inches(0.6))\n    style(tf.paragraphs[0], num, 40, ACCENT, bold=True, space_after=Pt(6))\n    p = tf.add_paragraph()\n    style(p, head, 24, TEXT, bold=True, space_after=Pt(12))\n    p = tf.add_paragraph()\n    if mono:\n        r = style(p, body, 16, TEXT, font=\"Courier New\")\n    else:\n        style(p, body, 18, MUTED)\n\n# =========================================================\n# Slide 5 \u2014 Call to action\n# =========================================================\ns = add_slide()\naccent_bar(s, Inches(1.0), Inches(2.35), w=Inches(1.4), h=Inches(0.12))\ntf = textbox(s, Inches(1.0), Inches(2.6), Inches(11.3), Inches(1.2))\nstyle(tf.paragraphs[0], \"Install Marrow\", 60, TEXT, bold=True)\n\n# command chip\nchip = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,\n                          Inches(1.0), Inches(3.95), Inches(5.2), Inches(0.95))\nchip.fill.solid()\nchip.fill.fore_color.rgb = PANEL\nchip.line.color.rgb = ACCENT\nchip.line.width = Pt(1.0)\nchip.shadow.inherit = False\nctf = chip.text_frame\nctf.vertical_anchor = MSO_ANCHOR.MIDDLE\nctf.margin_left = Inches(0.35)\nstyle(ctf.paragraphs[0], \"pipx install marrow\", 28, TEXT, font=\"Courier New\")\n\ntf = textbox(s, Inches(1.0), Inches(5.35), Inches(11.3), Inches(0.8))\nstyle(tf.paragraphs[0], \"Works with pytest, Jest, go test.\", 24, MUTED)\n\nprs.save(\"deck.pptx\")\nprint(\"Saved deck.pptx\")\n",
+      "structuredPatch": [],
+      "originalFile": null,
+      "userModified": false
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01N3yitiYKLRDFKBDGsXJJDN",
+        "name": "Bash",
+        "input": {
+          "command": "python3 deck.py && ls -la deck.pptx",
+          "description": "Run deck script and verify output"
+        }
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 3271,
+      "cache_read_input_tokens": 6580,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 3271
+      },
+      "output_tokens": 63,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjJf2NuPSq7wakyfdKg",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "ac48facf-41e3-480a-ba13-6de325902439"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01N3yitiYKLRDFKBDGsXJJDN",
+        "content": "Saved deck.pptx\n-rw-r--r--@ 1 hrudithl  staff  34188 Jul 27 09:36 deck.pptx",
+        "is_error": false
+      }
+    ],
+    "uuid": "0e46a07b-41f4-440d-83f1-d3c70a81ed5a",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "stdout": "Saved deck.pptx\n-rw-r--r--@ 1 hrudithl  staff  34188 Jul 27 09:36 deck.pptx",
+      "stderr": "",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "The deck built successfully. `deck.py` produces `deck.pptx` \u2014 a 5-slide 16:9 \"Marrow\" pitch deck in the order given by the outline:\n\n1. **Title** \u2014 \"Marrow\" with the subtitle \"Know what your tests actually cover.\"\n2. **The problem** \u2014 \"Big test suites hide their gaps.\" with three accented lines on slowness, unknown coverage, and lingering dead tests.\n3. **The idea** \u2014 \"Watch one run. Draw the real map.\" plus the test\u2192code map / no-config pitch.\n4. **How it works** \u2014 three numbered cards: Run (`marrow watch -- <your test cmd>` in monospace), Record, Map.\n5. **Call to action** \u2014 \"Install Marrow\" with a `pipx install marrow` command chip and \"Works with pytest, Jest, go test.\"\n\nDesign is consistent throughout: a deep slate background, near-white text, muted gray for secondary copy, and a single warm-orange accent (bars, card outlines, numbers), with Arial for text and Courier New for commands. Only `deck.py` and `deck.pptx` were created."
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 149,
+      "cache_read_input_tokens": 9851,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 149
+      },
+      "output_tokens": 1,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjJuxoPE6noaVXPUSHu",
+    "stop_reason": null,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "uuid": "574ad018-fb0e-4433-b866-1b2957f27d8f"
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "duration_ms": 50390,
+    "duration_api_ms": 51596,
+    "is_error": false,
+    "num_turns": 7,
+    "session_id": "adbe06f9-5aee-4fe7-85ba-961b68f660bf",
+    "stop_reason": "end_turn",
+    "total_cost_usd": 0.16972500000000001,
+    "usage": {
+      "input_tokens": 9,
+      "cache_creation_input_tokens": 5369,
+      "cache_read_input_tokens": 32644,
+      "output_tokens": 3957,
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 5369,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "global",
+      "iterations": [
+        {
+          "input_tokens": 2,
+          "output_tokens": 363,
+          "cache_read_input_tokens": 9851,
+          "cache_creation_input_tokens": 149,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 149
+          },
+          "type": "message"
+        }
+      ],
+      "speed": "standard"
+    },
+    "result": "The deck built successfully. `deck.py` produces `deck.pptx` \u2014 a 5-slide 16:9 \"Marrow\" pitch deck in the order given by the outline:\n\n1. **Title** \u2014 \"Marrow\" with the subtitle \"Know what your tests actually cover.\"\n2. **The problem** \u2014 \"Big test suites hide their gaps.\" with three accented lines on slowness, unknown coverage, and lingering dead tests.\n3. **The idea** \u2014 \"Watch one run. Draw the real map.\" plus the test\u2192code map / no-config pitch.\n4. **How it works** \u2014 three numbered cards: Run (`marrow watch -- <your test cmd>` in monospace), Record, Map.\n5. **Call to action** \u2014 \"Install Marrow\" with a `pipx install marrow` command chip and \"Works with pytest, Jest, go test.\"\n\nDesign is consistent throughout: a deep slate background, near-white text, muted gray for secondary copy, and a single warm-orange accent (bars, card outlines, numbers), with Arial for text and Courier New for commands. Only `deck.py` and `deck.pptx` were created.",
+    "structured_output": null,
+    "model_usage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 643,
+        "outputTokens": 20,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0007430000000000001,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      },
+      "claude-opus-4-8[1m]": {
+        "inputTokens": 9,
+        "outputTokens": 3957,
+        "cacheReadInputTokens": 32644,
+        "cacheCreationInputTokens": 5369,
+        "webSearchRequests": 0,
+        "costUSD": 0.168982,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000
+      }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": null,
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "17d1c589-b6f9-4317-bb4f-a46903c1af3a"
+  }
+]

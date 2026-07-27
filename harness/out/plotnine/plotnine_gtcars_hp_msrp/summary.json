@@ -97,7 +97,7 @@
     "points-large": {
       "polarity": "learning",
       "scope": "geoms",
-      "cold_honored": true,
+      "cold_honored": false,
       "runs_to_stick": null,
       "value_over_time": [
         {

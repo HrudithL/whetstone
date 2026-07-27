@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-23T14:37:34.938579+00:00",
+  "generated_at": "2026-07-27T15:13:58.529106+00:00",
   "scenarios": {
     "landing_hero": {
       "scenario": "landing_hero",
@@ -146,6 +146,108 @@
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.6667,
           "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "pricing_comparison_table": {
+      "scenario": "pricing_comparison_table",
+      "skill": "frontend-design",
+      "output": "index.html",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 5,
+      "preferences": {
+        "cards-to-comparison-table": {
+          "polarity": "issue",
+          "scope": "layout structure",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        },
+        "enterprise-before-team": {
+          "polarity": "learning",
+          "scope": "column order",
+          "cold_honored": false,
+          "runs_to_stick": null,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "frontend-design-pricing_comparison_table",
+        "runs": 5,
+        "avg_learnings_applied_per_run": 0.0,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 4,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.8,
+          "reinforcements": 4,
           "learnings_created": 1
         },
         "learnings_survived_pct": {
@@ -327,6 +429,88 @@
         }
       },
       "skill": "great-tables"
+    },
+    "gtcars_manufacturer_rollup": {
+      "scenario": "gtcars_manufacturer_rollup",
+      "skill": "great-tables",
+      "output": "table.py",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "rollup-by-manufacturer": {
+          "polarity": "issue",
+          "scope": "data organization",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        },
+        "rollup-count-column": {
+          "polarity": "learning",
+          "scope": "row count column",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "great-tables-gtcars_manufacturer_rollup",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.0,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
     },
     "gtcars_top10_by_country": {
       "scenario": "gtcars_top10_by_country",
@@ -652,6 +836,108 @@
       },
       "skill": "great-tables"
     },
+    "plotnine_gtcars_hp_faceted": {
+      "scenario": "plotnine_gtcars_hp_faceted",
+      "skill": "plotnine",
+      "output": "plot.py",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 5,
+      "preferences": {
+        "facet-by-country": {
+          "polarity": "issue",
+          "scope": "layout structure",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        },
+        "facet-free-y": {
+          "polarity": "learning",
+          "scope": "scales",
+          "cold_honored": false,
+          "runs_to_stick": null,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "plotnine-plotnine_gtcars_hp_faceted",
+        "runs": 5,
+        "avg_learnings_applied_per_run": 0.0,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 4,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.8,
+          "reinforcements": 4,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
     "plotnine_gtcars_hp_msrp": {
       "scenario": "plotnine_gtcars_hp_msrp",
       "skill": "plotnine",
@@ -751,7 +1037,7 @@
         "points-large": {
           "polarity": "learning",
           "scope": "geoms",
-          "cold_honored": true,
+          "cold_honored": false,
           "runs_to_stick": null,
           "value_over_time": [
             {
@@ -1065,10 +1351,139 @@
           "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
         }
       }
+    },
+    "pitch_deck_reorder": {
+      "scenario": "pitch_deck_reorder",
+      "skill": "pptx",
+      "output": "deck.py",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 5,
+      "preferences": {
+        "cta-second": {
+          "polarity": "issue",
+          "scope": "slide order",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 3,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 4,
+              "weight": null,
+              "recurrence": null
+            },
+            {
+              "run": 5,
+              "weight": null,
+              "recurrence": null
+            }
+          ]
+        },
+        "why-now-slide": {
+          "polarity": "learning",
+          "scope": "slide structure",
+          "cold_honored": false,
+          "runs_to_stick": 4,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            },
+            {
+              "run": 4,
+              "weight": 0.75,
+              "recurrence": 3
+            },
+            {
+              "run": 5,
+              "weight": 0.8,
+              "recurrence": 4
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "pptx-pitch_deck_reorder",
+        "runs": 5,
+        "avg_learnings_applied_per_run": 0.8,
+        "captures_by_status": {
+          "committed": 2,
+          "reinforced": 4,
+          "noop": 0,
+          "conflict": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.8,
+          "reinforcements": 4,
+          "learnings_created": 1
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
     }
   },
   "skills": {
     "frontend-design": {
+      "scenarios": 3,
+      "preferences_total": 6,
+      "preferences_wrong_in_cold": 6,
+      "preferences_stuck": 5,
+      "stuck_rate": 0.8333,
+      "corrected_and_stuck": 5,
+      "median_runs_to_stick": 2
+    },
+    "great-tables": {
+      "scenarios": 7,
+      "preferences_total": 14,
+      "preferences_wrong_in_cold": 10,
+      "preferences_stuck": 14,
+      "stuck_rate": 1.0,
+      "corrected_and_stuck": 10,
+      "median_runs_to_stick": 2.0
+    },
+    "plotnine": {
+      "scenarios": 4,
+      "preferences_total": 10,
+      "preferences_wrong_in_cold": 10,
+      "preferences_stuck": 5,
+      "stuck_rate": 0.5,
+      "corrected_and_stuck": 5,
+      "median_runs_to_stick": 2
+    },
+    "pptx": {
       "scenarios": 2,
       "preferences_total": 4,
       "preferences_wrong_in_cold": 4,
@@ -1076,56 +1491,29 @@
       "stuck_rate": 1.0,
       "corrected_and_stuck": 4,
       "median_runs_to_stick": 2.0
-    },
-    "great-tables": {
-      "scenarios": 6,
-      "preferences_total": 12,
-      "preferences_wrong_in_cold": 8,
-      "preferences_stuck": 12,
-      "stuck_rate": 1.0,
-      "corrected_and_stuck": 8,
-      "median_runs_to_stick": 2.0
-    },
-    "plotnine": {
-      "scenarios": 3,
-      "preferences_total": 8,
-      "preferences_wrong_in_cold": 7,
-      "preferences_stuck": 4,
-      "stuck_rate": 0.5,
-      "corrected_and_stuck": 4,
-      "median_runs_to_stick": 2.0
-    },
-    "pptx": {
-      "scenarios": 1,
-      "preferences_total": 2,
-      "preferences_wrong_in_cold": 2,
-      "preferences_stuck": 2,
-      "stuck_rate": 1.0,
-      "corrected_and_stuck": 2,
-      "median_runs_to_stick": 2.0
     }
   },
   "aggregate": {
-    "scenarios": 12,
-    "preferences_total": 26,
-    "preferences_wrong_in_cold": 21,
-    "preferences_stuck": 22,
-    "stuck_rate": 0.8462,
-    "corrected_and_stuck": 18,
+    "scenarios": 16,
+    "preferences_total": 34,
+    "preferences_wrong_in_cold": 30,
+    "preferences_stuck": 28,
+    "stuck_rate": 0.8235,
+    "corrected_and_stuck": 24,
     "median_runs_to_stick": 2.0
   },
   "showcase_only_kpis": {
     "capture_rate": {
       "value": null,
-      "note": "Not computed: the showcase seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator here. See runs_to_stick and value_over_time for the metrics this harness does measure."
+      "note": "Not computed here: the scenario runner seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator in the scenario pass. Run `python -m harness.calibrate` to compute it against the labeled set; see runs_to_stick and value_over_time for the metrics the scenario pass does measure."
     },
     "regressions_prevented": {
       "value": null,
-      "note": "Not computed: the showcase seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator here. See runs_to_stick and value_over_time for the metrics this harness does measure."
+      "note": "Not computed here: the scenario runner seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator in the scenario pass. Run `python -m harness.calibrate` to compute it against the labeled set; see runs_to_stick and value_over_time for the metrics the scenario pass does measure."
     },
     "retrieval_precision": {
       "value": null,
-      "note": "Not computed: the showcase seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator here. See runs_to_stick and value_over_time for the metrics this harness does measure."
+      "note": "Not computed here: the scenario runner seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator in the scenario pass. Run `python -m harness.calibrate` to compute it against the labeled set; see runs_to_stick and value_over_time for the metrics the scenario pass does measure."
     }
   }
 }

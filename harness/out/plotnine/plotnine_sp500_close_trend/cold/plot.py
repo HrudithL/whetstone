@@ -1,45 +1,54 @@
+"""Trend of the S&P 500 closing price over the most recent year of data."""
+import sys
+from pathlib import Path
+
 import pandas as pd
 from plotnine import (
-    ggplot, aes, geom_line, labs, theme_minimal,
-    theme, element_text, element_line, element_blank,
-    scale_x_date, scale_y_continuous
+    aes,
+    geom_line,
+    ggplot,
+    labs,
+    scale_x_date,
+    scale_y_continuous,
 )
-from mizani.labels import label_comma
+from mizani.labels import label_currency
 
-# Load data
+# House style helper (theme, mark sizes, save) lives with the skill.
+sys.path.insert(
+    0,
+    str(Path(".claude/skills/plotnine/scripts").resolve()),
+)
+from pn_house_style import HOUSE_STYLE, apply_house_style, humanize_labels, save_plot
+
+# --- Step 1: understand & clean the data -> one tidy, correctly-typed frame ---
 df = pd.read_csv("sp500.csv")
-
-# Parse date to datetime
 df["date"] = pd.to_datetime(df["date"])
+df["close"] = pd.to_numeric(df["close"], errors="coerce")
+df = df.dropna(subset=["date", "close"])
 
-# Filter to most recent year of data
-max_date = df["date"].max()
-one_year_ago = max_date - pd.Timedelta(days=365)
-df_recent = df[df["date"] >= one_year_ago].copy()
+# Most recent year of data: last 365 days up to the latest observation.
+latest = df["date"].max()
+recent = df[df["date"] >= latest - pd.DateOffset(years=1)].sort_values("date")
 
-# Build plot
+# Span is ~1 year (>90 days and <=2 years) -> date_breaks "2 months", labels "%b %Y".
+
+# --- Steps 2-4: single-series line, house accent (no hero color variable) ---
+lab = humanize_labels("date", "close", overrides={"close": "Closing Price (USD)"})
+
 p = (
-    ggplot(df_recent, aes(x="date", y="close"))
-    + geom_line(color="#2C6FB3", size=0.8)
+    ggplot(recent, aes(x="date", y="close"))
+    + geom_line(color=HOUSE_STYLE["accent"], size=HOUSE_STYLE["line_size"])
+    + scale_x_date(date_breaks="2 months", date_labels="%b %Y")
+    + scale_y_continuous(labels=label_currency(prefix="$", precision=0))
     + labs(
-        title="S&P 500 Closing Price Trend",
-        x="Date",
-        y="Closing Price ($)"
-    )
-    + scale_x_date(date_labels="%b %Y", date_breaks="1 month")
-    + scale_y_continuous(labels=label_comma())
-    + theme_minimal(base_size=12)
-    + theme(
-        figure_size=(8, 5),
-        plot_title=element_text(size=15, weight="bold", color="#222222"),
-        axis_title=element_text(size=12, color="#222222"),
-        axis_text=element_text(size=10, color="#222222"),
-        panel_grid_major=element_line(color="#E6E6E6", size=0.4),
-        panel_grid_minor=element_blank(),
-        axis_line=element_line(color="#E6E6E6", size=0.4)
+        title=f"{lab['close']} over time",
+        x=lab["date"],
+        y=lab["close"],
     )
 )
 
-# Render
-p.save("plot.png", width=8, height=5, dpi=200, verbose=False)
-print("Plot saved to plot.png")
+# --- Step 5: house theme, no legend (single un-grouped series) ---
+p = apply_house_style(p, legend_position="none")
+
+# --- Step 6: render (the only renderer) ---
+save_plot(p, "plot.png")
