@@ -43,6 +43,7 @@ from .store.layout import (
     ensure_store,
     global_store_location,
     read_registry,
+    registry_write_lock,
     store_location,
     store_write_lock,
 )
@@ -150,37 +151,39 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
     actually promoted; ``compact --all`` itself only ever detects and reports.
 
     Detection runs twice: once unlocked (to fail fast on an obviously-stale candidate before
-    bothering to take any lock), and again over **exactly the skills this call has proven it holds
-    the write lock for** (nested inside the global lock, in sorted order — see below) — only the
-    **second, fully-locked** run is ever acted on. This matters for three independent reasons: (1)
-    the global lock alone only serializes *other* ``promote_cluster`` calls, not
+    bothering to take any lock), and again over **every currently-registered skill, with the
+    registry itself held frozen** (nested inside the global lock, in sorted order — see below) —
+    only the **second, fully-locked** run is ever acted on. This matters for four independent
+    reasons: (1) the global lock alone only serializes *other* ``promote_cluster`` calls, not
     `capture`/`revise`/`compact <skill>`, which each only take their own source store's lock — so
     every store that could possibly join or leave the cluster must be locked too, before the final
     check, or one of those could mutate a member out from under this call between detection and the
     write; (2) detection re-checks real cluster membership — same-skill dedup-similarity threshold
     *and* ``global_skill_count`` — not just whether an id still exists, so a member that was revised
     (not removed), or a cluster that dropped below threshold, is caught the same way an
-    outright-removed entry is; (3) the lock set is grown to a **fixed point** against the live
-    registry (below), and the authoritative rescan is then restricted to *exactly* that locked set
-    rather than taking one more independent registry read of its own — a fresh read at scan time
-    would reopen the same race the fixed-point loop exists to close (a skill registering in the gap
-    between "locking settled" and "the scan actually runs" would be seen but not locked). A skill
-    that registers after the locked set is fixed is simply invisible to this call and picked up by
-    a later ``compact --all``/``promote_cluster`` instead — a missed cluster member, never an
-    unlocked one.
+    outright-removed entry is; (3) the registry is frozen (below) for this call's whole write+retire
+    span, not just read once — locking every skill *that exists right now* isn't enough on its own,
+    because a brand-new skill could finish registering, with a matching learning already captured,
+    at any point between that snapshot and the retirement loop completing; that new copy would never
+    get locked or retired, and — critically — a later ``compact --all`` can NOT clean it up
+    afterwards, because cross-skill clustering only ever compares PER-SKILL learnings against each
+    other, never against an already-promoted GLOBAL entry, so a lone straggler left behind by this
+    call has no automatic path back into the global layer (round-4 Codex review finding: this is
+    stronger than "a later compact --all will catch it," which turns out to be false once the rest
+    of the cluster has already been retired); (4) because the registry is frozen for the whole
+    span (not just re-read repeatedly until it looks stable), a single read of it is authoritative —
+    there is no separate "grow the lock set to a fixed point" loop to reason about.
 
-    Growing the lock set to a fixed point: a single upfront registry read isn't enough on its own,
-    since a skill could be registered (via `attach`/lazy `ensure_store`) after that read but before
-    every lock in it is acquired. So the loop below repeatedly re-reads the registry and locks
-    whatever is new, until a read finds nothing left to lock — the registry only ever grows (skills
-    are never deregistered), so this always terminates, and in the overwhelmingly common case where
-    nothing registers mid-call it's one extra cheap read.
+    Freezing the registry: :func:`whetstone.store.layout.registry_write_lock` is the SAME lock
+    :func:`whetstone.store.layout._register` must hold to add a skill — so while this call holds
+    it, no new skill can finish registering, full stop. That makes one read of the registry, taken
+    right after acquiring this lock, good for the rest of the call: locking, detection, and the
+    writes below all operate on that one list, with no window for it to grow underneath them.
 
-    Lock order is global-first, then every locked skill in sorted order — the same
-    global-then-skill convention :func:`promote_to_global` uses, extended to the full (fixed-point)
-    registry so two concurrent ``promote_cluster`` calls (whose true participant sets could
-    otherwise diverge as the store changes underneath them) can never deadlock against each other or
-    miss a skill the other is relying on.
+    Lock order is global-first, then the registry, then every registered skill in sorted order —
+    the same global-then-skill convention :func:`promote_to_global` uses, with the registry lock
+    slotted in between so two concurrent ``promote_cluster`` calls (or a concurrent `attach`) can
+    never deadlock against each other or race on what "every registered skill" means.
 
     Raises ``ValueError`` if no current cluster containing ``(skill, entry_id)`` meets
     ``global_skill_count`` — the candidate may be stale (already enacted, revised, or removed since
@@ -220,43 +223,24 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
     with store_write_lock(g_loc):
         index.rebuild_index_if_stale(g_loc, backend)
 
-        # Hold EVERY registered skill's write lock for the rest of this call — not just the
-        # provisional scan's participants, and not just one at a time as each is retired — so
-        # nothing (`capture`, `revise`, `compact <skill>`, or a racing `promote_cluster`) can mutate
-        # ANY store between the authoritative check below and the writes. A single upfront
-        # `read_registry` snapshot isn't enough on its own: a brand-new skill could be registered
-        # (via `attach`/lazy `ensure_store`) after that snapshot is read but before every lock in it
-        # is acquired, leaving that skill unlocked yet still visible to a scan that re-reads the
-        # registry. So the lock set is grown to a
-        # FIXED POINT: after acquiring locks for the current registry snapshot, the registry is
-        # read again; if it grew, the newly-appeared skills are locked too, and this repeats until
-        # a read finds nothing left to lock. The registry only ever grows (skills are never
-        # deregistered), so this terminates — in practice it's one extra read in the overwhelmingly
-        # common case where nothing was registered mid-call. Sorted order per pass, nested inside
-        # the already-held global lock (see the docstring for why this ordering matters).
-        with ExitStack() as stack:
-            locked: set[str] = set()
-            while True:
-                newly_registered = sorted(set(read_registry(config)) - locked)
-                if not newly_registered:
-                    break
-                for reg_skill in newly_registered:
-                    stack.enter_context(store_write_lock(store_location(reg_skill, config)))
-                    locked.add(reg_skill)
+        # Freeze the registry for the rest of this call: `registry_write_lock` is the same lock
+        # `_register` needs to add a skill, so while we hold it, no new skill can finish
+        # registering — the registry cannot grow underneath us. That makes the read right below
+        # authoritative for the whole span (detection AND the writes), not just the instant it's
+        # taken, which is why no repeated-read "fixed point" loop is needed here (round-4 Codex
+        # review finding on the previous approach: a snapshot-then-lock loop that settles still
+        # leaves a gap for a fresh, independent read taken later to see something new — freezing the
+        # registry itself removes that gap entirely rather than chasing it with more reads).
+        with registry_write_lock(config), ExitStack() as stack:
+            locked = sorted(read_registry(config))
+            for reg_skill in locked:
+                stack.enter_context(store_write_lock(store_location(reg_skill, config)))
 
-            # The authoritative check: re-run detection over EXACTLY `locked` — not a fresh
-            # `find_cross_skill_clusters(config, backend)` call, which would silently re-read the
-            # registry itself and could see a skill registered in the gap between the loop above
-            # settling and this call running (round-3 Codex review finding: a snapshot-then-lock
-            # loop still leaves a window between "locking is done" and "the scan that acts on that
-            # locked state runs," if the scan takes its own fresh look at what "done" means). Once
-            # the loop above has proven `locked` stable against a real read, that set — not a new
-            # read — is the only thing this detection is allowed to see; a skill registered after
-            # is simply not considered this call and picked up by a later `compact --all`/
-            # `promote_cluster` instead, which is safe (a missed cluster member, not an unlocked
-            # one).
+            # The authoritative check, over exactly the frozen `locked` list above — never a fresh
+            # `find_cross_skill_clusters(config, backend)` call, which would re-read the registry
+            # itself (redundant and, without the freeze above, unsafe).
             cluster = _find_cluster_for(
-                find_cross_skill_clusters(config, backend, skills=sorted(locked)),
+                find_cross_skill_clusters(config, backend, skills=locked),
                 skill,
                 entry_id,
             )

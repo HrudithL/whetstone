@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import shlex
+import threading
+import time
 from datetime import date
 
 import pytest
@@ -16,7 +18,7 @@ from conftest import make_learning, seed
 from whetstone.compaction import compact
 from whetstone.config import Config
 from whetstone.promotion import promote_cluster
-from whetstone.server import capture, recall, revise
+from whetstone.server import attach, capture, recall, revise
 from whetstone.server import main as cli_main
 from whetstone.store.access import load_learnings
 from whetstone.store.index import entry_text
@@ -24,6 +26,7 @@ from whetstone.store.layout import (
     GLOBAL_SLUG,
     ensure_store,
     global_store_location,
+    read_registry,
     store_location,
 )
 from whetstone.telemetry import append_event
@@ -379,6 +382,80 @@ def test_promote_cluster_revalidates_under_lock_against_stale_detection(env, mon
 
     g_learnings = load_learnings(global_store_location(Config(store_root=env, embedding_dim=384)))
     assert len(g_learnings) == 1  # only the winner's write landed — no stale duplicate
+
+
+def test_promote_cluster_freezes_the_registry_against_concurrent_registration(env, monkeypatch):
+    """Round-4 Codex review finding: a brand-new skill finishing registration mid-call must not be
+    able to slip past `promote_cluster`'s locked span. If it could, that skill's copy would never
+    be locked or retired -- and unlike a plain unlocked mutation (which a later `compact --all`
+    could still catch and re-report), a lone straggler left behind here has NO automatic path back
+    into the global layer, because cross-skill clustering only ever compares PER-SKILL learnings
+    against each other, never against an already-promoted GLOBAL entry. `registry_write_lock` is
+    the fix: it's the SAME lock `attach`/`_register` must hold to add a skill, so while
+    `promote_cluster` holds it, registration genuinely cannot complete -- not just "is unlikely to."
+
+    This is real thread-based concurrency, not a simulated single-thread interleaving (unlike the
+    race test above), because what's under test here is actual OS-level (`flock`) exclusion, not
+    ordering of two calls: a background thread's `attach` for a brand-new skill is started from
+    INSIDE `promote_cluster`'s frozen section (via a `find_cross_skill_clusters` monkeypatch on its
+    SECOND call only -- the first is the unlocked, pre-freeze fail-fast check, which must be left
+    alone), and this asserts the new skill is still completely absent from the registry after
+    giving that thread a real chance to run, and only appears once `promote_cluster` has returned
+    (and thus released the lock).
+    """
+    body = "Prefer muted, low-saturation color palettes."
+    for skill in ("gt", "web", "ppt"):
+        capture(skill, "learning", body, "palette", "prov")
+
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+
+    import whetstone.compaction as compaction_mod
+
+    real_detect = compaction_mod.find_cross_skill_clusters
+    calls = {"n": 0}
+    started = threading.Event()
+    registered = threading.Event()
+
+    def register_new_skill():
+        started.set()
+        attach("brand-new-skill")
+        registered.set()
+
+    thread_holder: dict[str, threading.Thread] = {}
+
+    def detect_and_race(config, backend, skills=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            # The unlocked, pre-freeze fail-fast check -- nothing is held yet, leave it alone.
+            return real_detect(config, backend, skills=skills)
+        # The authoritative call, made INSIDE
+        # `promote_cluster`'s `with registry_write_lock(config), ExitStack() ...` block. The lock
+        # is held for the REST of `promote_cluster` (through the writes below, not just this call),
+        # so the background thread cannot possibly finish until `promote_cluster` itself returns
+        # and releases it -- joining it here, before that, would deadlock/timeout. Just start it
+        # and hand it back to the test body to join AFTER `promote_cluster` returns.
+        thread = threading.Thread(target=register_new_skill)
+        thread_holder["thread"] = thread
+        thread.start()
+        assert started.wait(timeout=2), "the registration thread never started"
+        time.sleep(0.2)  # give it a real chance to reach (and block on) registry_write_lock
+        assert not registered.is_set(), (
+            "a concurrent registration completed WHILE promote_cluster held the registry frozen "
+            "-- the freeze isn't actually excluding it"
+        )
+        assert "brand-new-skill" not in read_registry(
+            Config(store_root=env, embedding_dim=384)
+        ), "the new skill is visible in the registry before the freeze was released"
+        return real_detect(config, backend, skills=skills)
+
+    monkeypatch.setattr(compaction_mod, "find_cross_skill_clusters", detect_and_race)
+
+    promote_cluster(rep["skill"], rep["id"])
+
+    thread_holder["thread"].join(timeout=2)
+    assert registered.is_set(), "the concurrent registration never completed at all"
+    assert "brand-new-skill" in read_registry(Config(store_root=env, embedding_dim=384))
 
 
 def test_promote_cluster_revalidates_real_membership_not_just_id_existence(env):

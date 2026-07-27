@@ -286,10 +286,24 @@ def read_registry(config: Config | None = None) -> dict[str, dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+@contextmanager
+def registry_write_lock(config: Config | None = None):
+    """Serialize registry read-modify-writes across calls and processes.
+
+    This is the SAME lock :func:`_register` takes to add a skill, exposed publicly so a caller
+    that needs to *prevent* a new skill from being registered for a stretch of its own critical
+    section — not just read a snapshot of the registry — can hold it too. `whetstone.promotion`'s
+    ``promote_cluster`` is the first such caller: while it holds this lock, `_register` cannot
+    complete, so a fresh :func:`read_registry` taken under it is authoritative for the whole span,
+    not just the instant it was read.
+    """
+    with _file_lock(registry_path(config).parent / ".registry.lock"):
+        yield
+
+
 def _register(loc: StoreLocation, config: Config | None, skill_path: str | None = None) -> None:
-    path = registry_path(config)
-    with _file_lock(path.parent / ".registry.lock"):
-        path.parent.mkdir(parents=True, exist_ok=True)
+    with registry_write_lock(config):
+        path = registry_path(config)
         registry = read_registry(config)
         record = registry.get(loc.skill, {})
         record.update(
