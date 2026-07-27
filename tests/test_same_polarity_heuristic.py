@@ -239,22 +239,22 @@ def test_left_right_restricted_to_alignment_wording(env, monkeypatch):
 
 def test_both_sides_locally_negated_with_a_shared_target_is_not_a_false_positive(env, monkeypatch):
     # Both antonym words locally negated can still agree when a shared explicit target reconciles
-    # them ("avoid wide"/"avoid narrow", both funneling to "keep a medium width") -- round-3 Codex
-    # review finding. Must reinforce normally, not flag.
+    # them ("avoid warm"/"avoid cool", both funneling to "keep it neutral") -- round-3 Codex review
+    # finding. Must reinforce normally, not flag.
     monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
     capture(
         "gt",
         "learning",
-        "Avoid wide tables; keep the table at a medium width.",
-        "table width",
+        "Avoid warm accent colors; keep the palette neutral.",
+        "accent colors",
         "prov-1",
     )
 
     result = capture(
         "gt",
         "learning",
-        "Avoid narrow tables; keep the table at a medium width.",
-        "table width",
+        "Avoid cool accent colors; keep the palette neutral.",
+        "accent colors",
         "prov-2",
     )
 
@@ -362,21 +362,22 @@ def test_negation_cancellation_is_clause_scoped_not_sentence_scoped(env, monkeyp
     capture(
         "gt",
         "learning",
-        "Avoid a dark background, but use wide margins.",
-        "background and margins",
+        "Avoid a dark background, but use horizontal dividers.",
+        "background and dividers",
         "prov-1",
     )
 
     result = capture(
         "gt",
         "learning",
-        "Use a light background, but use narrow margins.",
-        "background and margins",
+        "Use a light background, but use vertical dividers.",
+        "background and dividers",
         "prov-2",
     )
 
-    # The background clause agrees (avoid dark ~ light); the margins clause genuinely flips
-    # (wide vs narrow) and must still surface, not be masked by the background cancellation.
+    # The background clause agrees (avoid dark ~ light); the dividers clause genuinely flips
+    # (horizontal vs vertical) and must still surface, not be masked by the background
+    # cancellation.
     assert result["status"] == "possible_contradiction"
 
 
@@ -391,6 +392,25 @@ def test_more_less_is_not_in_the_lexicon(env, monkeypatch):
 
     result = capture(
         "gt", "learning", "Use two decimal places or less.", "currency precision", "prov-2"
+    )
+
+    assert result["status"] == "reinforced"
+
+
+def test_wide_narrow_is_not_in_the_lexicon(env, monkeypatch):
+    # wide/narrow has the same argument-reversal ambiguity as the already-excluded before/after,
+    # above/below, larger/smaller, and more/less pairs ("the table is wide compared with the
+    # chart" == "the chart is narrow compared with the table") -- M7 root-PR Codex review finding.
+    # Must reinforce normally, not flag.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt", "learning", "Make the table wide compared with the chart.", "size comparison",
+        "prov-1",
+    )
+
+    result = capture(
+        "gt", "learning", "Make the chart narrow compared with the table.", "size comparison",
+        "prov-2",
     )
 
     assert result["status"] == "reinforced"

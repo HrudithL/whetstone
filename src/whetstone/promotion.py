@@ -208,7 +208,6 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
 
     ensure_store(GLOBAL_SLUG, config)
     g_loc = global_store_location(config)
-    all_skills = sorted(read_registry(config))
 
     with store_write_lock(g_loc):
         index.rebuild_index_if_stale(g_loc, backend)
@@ -216,17 +215,30 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
         # Hold EVERY registered skill's write lock for the rest of this call — not just the
         # provisional scan's participants, and not just one at a time as each is retired — so
         # nothing (`capture`, `revise`, `compact <skill>`, or a racing `promote_cluster`) can mutate
-        # ANY store, including one the unlocked scan never saw as a candidate, between the
-        # authoritative check below and the writes. Sorted order, nested inside the already-held
-        # global lock (see the docstring for why this ordering matters).
+        # ANY store between the authoritative check below and the writes. A single upfront
+        # `read_registry` snapshot isn't enough on its own: a brand-new skill could be registered
+        # (via `attach`/lazy `ensure_store`) after that snapshot is read but before every lock in it
+        # is acquired, leaving that skill locked and re-detected. So the lock set is grown to a
+        # FIXED POINT: after acquiring locks for the current registry snapshot, the registry is
+        # read again; if it grew, the newly-appeared skills are locked too, and this repeats until
+        # a read finds nothing left to lock. The registry only ever grows (skills are never
+        # deregistered), so this terminates — in practice it's one extra read in the overwhelmingly
+        # common case where nothing was registered mid-call. Sorted order per pass, nested inside
+        # the already-held global lock (see the docstring for why this ordering matters).
         with ExitStack() as stack:
-            for reg_skill in all_skills:
-                stack.enter_context(store_write_lock(store_location(reg_skill, config)))
+            locked: set[str] = set()
+            while True:
+                newly_registered = sorted(set(read_registry(config)) - locked)
+                if not newly_registered:
+                    break
+                for reg_skill in newly_registered:
+                    stack.enter_context(store_write_lock(store_location(reg_skill, config)))
+                    locked.add(reg_skill)
 
-            # The authoritative check: re-run detection now that every registered skill is locked,
-            # over the FULL registry (not the provisional scan's skill set) — so a member that only
-            # became part of the cluster after the provisional scan is still caught. Act only on
-            # this result, never the provisional one above.
+            # The authoritative check: re-run detection now that every registered skill (as of the
+            # last, lock-satisfying registry read above) is locked, over the FULL registry — so a
+            # member that only became part of the cluster after the provisional scan is still
+            # caught. Act only on this result, never the provisional one above.
             cluster = _find_cluster_for(
                 find_cross_skill_clusters(config, backend),
                 skill,

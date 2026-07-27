@@ -1227,14 +1227,16 @@ def _find_duplicate(
 #
 # DELIBERATELY EXCLUDES relational/directional/comparative pairs whose meaning depends on argument
 # order — "before"/"after" and "above"/"below" were dropped in round-2, "larger"/"smaller" in
-# round-4, and "more"/"less" in round-5 (Codex review findings): "Make headings larger than body
-# text." and "Make body text smaller than headings." mean the SAME thing (the comparison AND its
-# arguments both reversed), and so do "Use no more than two decimal places." and "Use two decimal
-# places or less." — but this word-presence check can't tell that apart from a genuine flip
-# without argument-aware parsing, which is out of scope for a narrow lexical heuristic. The
-# remaining pairs below are used as monadic attributes in this project's vocabulary ("increase
-# padding", "right-align columns" — an instruction, not "X more than Y" restated as "Y or less"),
-# so they don't share this specific failure mode — EXCEPT "left"/"right", also a relational
+# round-4, "more"/"less" in round-5, and "wide"/"narrow" in the M7 root-PR review, all for the same
+# reason: "Make headings larger than body text." and "Make body text smaller than headings." mean
+# the SAME thing (the comparison AND its arguments both reversed), and so do "Use no more than two
+# decimal places." and "Use two decimal places or less.", and so do "Make the table wide compared
+# with the chart." and "Make the chart narrow compared with the table." — but this word-presence
+# check can't tell that apart from a genuine flip without argument-aware parsing, which is out of
+# scope for a narrow lexical heuristic. The remaining pairs below are used as monadic attributes in
+# this project's vocabulary ("increase padding", "right-align columns" — an instruction, not "X
+# more than Y" restated as "Y or less" or "X compared with Y" restated as "Y compared with X"), so
+# they don't share this specific failure mode — EXCEPT "left"/"right", also a relational
 # preposition
 # ("put the legend left of the plot" / "put the plot right of the legend"). Rather than drop
 # "left"/"right" outright — it's the spec's own worked example ("right-align"/"left-align") —
@@ -1245,7 +1247,6 @@ _ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
     ("light", "dark"),
     ("horizontal", "vertical"),
     ("increase", "decrease"),
-    ("wide", "narrow"),
 )
 
 
@@ -1332,8 +1333,8 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
        EITHER side's matched clause is negated, the flip is treated as an explained cancellation and
        does NOT fire on its own — this covers both a differing-negation cancellation ("Avoid a dark
        background." ~ "Use a light background.") and a both-negated case that can also agree ("avoid
-       wide tables; keep a medium width" ~ "avoid narrow tables; keep a medium width" both funnel to
-       the same explicit target); only a flip where NEITHER matched clause is negated fires. The
+       warm accents; keep it neutral" ~ "avoid cool accents; keep it neutral" both funnel to the
+       same explicit target); only a flip where NEITHER matched clause is negated fires. The
        loop still checks every remaining pair after a cancellation, so a genuine flip in a different
        clause of the same text is still caught.
     2. **Negation asymmetry** — one text carries a :data:`_NEGATION_ASYMMETRY` marker and the other
