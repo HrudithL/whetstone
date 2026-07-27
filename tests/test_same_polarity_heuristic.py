@@ -283,6 +283,100 @@ def test_possible_contradiction_includes_the_existing_entrys_body(env, monkeypat
     assert result["existing_body"] == "Right-align currency columns for a cleaner ledger look."
 
 
+def test_unrelated_alignment_cue_elsewhere_does_not_trigger_left_right(env, monkeypatch):
+    # A same-sentence "align" cue that has nothing to do with the matched "left"/"right" must not
+    # count -- round-4 Codex review finding: the earlier fix only checked co-occurrence anywhere in
+    # the sentence, not that the cue actually qualifies the side word (here it qualifies "title",
+    # via "center-align", not the relational "left of the plot"/"right of the legend").
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt",
+        "learning",
+        "Put the legend left of the plot and center-align the title.",
+        "legend and title layout",
+        "prov-1",
+    )
+
+    result = capture(
+        "gt",
+        "learning",
+        "Put the plot right of the legend and center-align the title.",
+        "legend and title layout",
+        "prov-2",
+    )
+
+    assert result["status"] == "reinforced"
+
+
+def test_negation_scoping_uses_the_matched_alignment_occurrence(env, monkeypatch):
+    # `left`/`right` can appear TWICE (once relational, once as a real alignment instruction) --
+    # negation-scoping must check the clause that actually satisfied the alignment match, not just
+    # the word's first occurrence anywhere in the text -- round-4 Codex review finding. "Never
+    # left-align" ~ "right-align" agree (negating one alignment affirms the other), so this must
+    # reinforce, not flag.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt",
+        "learning",
+        "Keep the legend left of the plot. Never left-align numeric columns.",
+        "legend and column alignment",
+        "prov-1",
+    )
+
+    result = capture(
+        "gt",
+        "learning",
+        "Keep the legend left of the plot. Right-align numeric columns.",
+        "legend and column alignment",
+        "prov-2",
+    )
+
+    assert result["status"] == "reinforced"
+
+
+def test_larger_smaller_is_not_in_the_lexicon(env, monkeypatch):
+    # larger/smaller has the same argument-reversal ambiguity as the already-excluded before/after
+    # and above/below pairs ("headings larger than body" == "body smaller than headings") -- round-4
+    # Codex review finding. Must reinforce normally, not flag.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture("gt", "learning", "Make headings larger than body text.", "heading sizing", "prov-1")
+
+    result = capture(
+        "gt", "learning", "Make body text smaller than headings.", "heading sizing", "prov-2"
+    )
+
+    assert result["status"] == "reinforced"
+
+
+def test_negation_cancellation_is_clause_scoped_not_sentence_scoped(env, monkeypatch):
+    # Two clauses joined by "but" in ONE sentence can carry unrelated meanings -- a negation that
+    # correctly cancels one antonym pair's flip must not also cancel an unrelated flip in a
+    # different clause of the same sentence -- round-4 Codex review finding.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    # This pair's hashing similarity (~0.56) falls just under the env fixture's 0.6 -- lower it
+    # further so `_find_duplicate` reliably reaches the heuristic under test here.
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.5")
+    capture(
+        "gt",
+        "learning",
+        "Avoid a dark background, but use wide margins.",
+        "background and margins",
+        "prov-1",
+    )
+
+    result = capture(
+        "gt",
+        "learning",
+        "Use a light background, but use narrow margins.",
+        "background and margins",
+        "prov-2",
+    )
+
+    # The background clause agrees (avoid dark ~ light); the margins clause genuinely flips
+    # (wide vs narrow) and must still surface, not be masked by the background cancellation.
+    assert result["status"] == "possible_contradiction"
+
+
 # --------------------------------------------------------------------------- config gate
 
 

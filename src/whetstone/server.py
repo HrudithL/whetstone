@@ -234,7 +234,12 @@ def capture(
     opposite observation straight to the promotion threshold. Instead ``"remove"`` the flagged
     entry (NOT ``"weaken"`` — weaken only lowers recurrence and typically leaves the entry indexed,
     so a fresh ``capture`` of the corrected wording would flag again) and THEN ``capture`` the
-    corrected preference fresh, so it starts at its own honest recurrence.
+    corrected preference fresh, so it starts at its own honest recurrence. CONFIRM with the user
+    before calling ``"remove"`` — a ``possible_contradiction`` is a HEURISTIC signal, not a
+    user decision, and ``revise(action="remove")`` on a learning deletes immediately outside
+    supervised mode (it is dial-governed like any routine learning removal, unlike an issue
+    contradiction, which always confirms regardless of mode) — do not delete the user's accrued
+    preference on this signal alone.
 
     On a committed/reinforced result the payload carries a ``confirmation`` string (e.g. "Captured:
     <scope> — …. Re-applies on future <skill> runs."). RELAY it to the user so they can see the
@@ -1184,25 +1189,24 @@ def _find_duplicate(
 # left to the user noticing via `revise`, exactly like the existing learning<->learning limitation
 # this heuristic narrows but does not remove (§7).
 #
-# DELIBERATELY EXCLUDES relational/directional pairs whose meaning depends on argument order —
-# "before"/"after" and "above"/"below" were in an earlier version and were dropped (round-2 Codex
-# review finding): "Put the totals above the notes." and "Put the notes below the totals." mean the
-# SAME thing (the relation AND its arguments both reversed), but this word-presence check can't tell
-# that apart from a genuine flip without argument-aware parsing, which is out of scope for a narrow
+# DELIBERATELY EXCLUDES relational/directional/comparative pairs whose meaning depends on argument
+# order — "before"/"after" and "above"/"below" were in an earlier version and were dropped (round-2
+# Codex review finding), and "larger"/"smaller" was dropped in round-3 (round-4 finding): "Make
+# headings larger than body text." and "Make body text smaller than headings." mean the SAME thing
+# (the comparison AND its arguments both reversed), but this word-presence check can't tell that
+# apart from a genuine flip without argument-aware parsing, which is out of scope for a narrow
 # lexical heuristic. The remaining pairs below are used as monadic attributes in this project's
-# vocabulary ("increase padding", "right-align columns" — an instruction, not "X above Y" restated
-# as "Y below X"), so they don't share this specific failure mode — EXCEPT "left"/"right", which is
-# also common as a relational preposition ("put the legend left of the plot" / "put the plot right
-# of the legend" — the same argument-order ambiguity as above/below, round-3 Codex review finding).
-# Rather than drop "left"/"right" outright — it's the spec's own worked example
-# ("right-align"/"left-align") — :func:`_alignment_side_in` restricts it to ALIGNMENT wording only
-# (see there).
+# vocabulary ("increase padding", "right-align columns" — an instruction, not "X larger than Y"
+# restated as "Y smaller than X"), so they don't share this specific failure mode — EXCEPT
+# "left"/"right", which is also common as a relational preposition ("put the legend left of the
+# plot" / "put the plot right of the legend"). Rather than drop "left"/"right" outright — it's the
+# spec's own worked example ("right-align"/"left-align") — :func:`_alignment_clause_with` restricts
+# it to TIGHT alignment-compound wording only (see there).
 _ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
     ("left", "right"),
     ("warm", "cool"),
     ("light", "dark"),
     ("more", "less"),
-    ("larger", "smaller"),
     ("horizontal", "vertical"),
     ("increase", "decrease"),
     ("wide", "narrow"),
@@ -1220,46 +1224,53 @@ _ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
 # positives on ordinary phrasing — the right trade for a signal-only, narrow heuristic.
 _NEGATION_ASYMMETRY = re.compile(r"\b(never|avoid|don'?t|do not|refrain)\b", re.IGNORECASE)
 
-# A naive sentence splitter — good enough for the short, few-sentence bodies `capture` asks for
-# (§5.2), not a real tokenizer. Used to scope negation-cancellation (below) to the SENTENCE
-# containing the matched antonym word, rather than the whole entry: an unrelated negation elsewhere
-# in a multi-sentence body ("Use a light background. Keep padding restrained." vs. "Use a dark
-# background. Avoid excessive padding.") must not cancel a real antonym flip that has nothing to do
-# with it (round-2 Codex review finding).
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+# A naive CLAUSE splitter — good enough for the short, few-clause bodies `capture` asks for (§5.2),
+# not a real tokenizer. Splits on sentence boundaries AND on a comma before a contrastive
+# conjunction / a semicolon, so negation-cancellation (below) is scoped to the CLAUSE containing the
+# matched antonym word, not the whole entry or even the whole sentence: an unrelated negation in a
+# different clause of the SAME sentence ("Avoid a dark background, but use wide margins." vs. "Use
+# a light background, but use narrow margins.") must not cancel a real, unrelated antonym flip
+# (round-4 Codex review finding) any more than one in a different sentence can (round-2 finding).
+_CLAUSE_SPLIT = re.compile(r"(?<=[.!?])\s+|;\s*|,\s*(?=(?:but|however|while|yet)\b)", re.IGNORECASE)
 
-# "left"/"right" restricted to ALIGNMENT wording (round-3 Codex review finding): bare "left"/"right"
-# is also common as a relational preposition ("put the legend left of the plot"), which has the same
-# argument-order ambiguity as the already-excluded above/below pair. Requiring an "align"/"justify"
-# cue in the SAME sentence keeps the common "left-align"/"align ... to the left" case (the spec's
-# own worked example) while excluding bare relational placement text.
-_ALIGNMENT_CUE = re.compile(r"\balign\w*|\bjustif\w*", re.IGNORECASE)
+# "left"/"right" restricted to TIGHT alignment-compound wording (round-3 finding, tightened again in
+# round-4): bare "left"/"right" is also common as a relational preposition ("put the legend left of
+# the plot"), which has the same argument-order ambiguity as the excluded above/below and
+# larger/smaller pairs. An earlier version required only an "align"/"justify" cue ANYWHERE in the
+# same sentence, which was still too loose — "Put the legend left of the plot and center-align the
+# title" shares a sentence with an unrelated alignment instruction and matched anyway (round-4
+# finding). Restricting to "left-align"/"align ... left" as an immediate compound/two-word phrase
+# (not a same-sentence co-occurrence) trades some recall (a spelled-out "align the columns to the
+# left" is missed) for eliminating that whole false-positive class — the spec's own worked example
+# ("right-align"/"left-align") is a tight compound and stays covered.
+_ALIGNMENT_SIDE: dict[str, re.Pattern] = {
+    "left": re.compile(r"\bleft[\s-]?align\w*\b|\balign\w*\s+left\b", re.IGNORECASE),
+    "right": re.compile(r"\bright[\s-]?align\w*\b|\balign\w*\s+right\b", re.IGNORECASE),
+}
+_LEFT_RIGHT = {"left", "right"}
 
 
 def _word_in(word: str, text: str) -> bool:
     return re.search(rf"\b{re.escape(word)}\b", text) is not None
 
 
-def _alignment_side_in(side: str, text: str) -> bool:
-    """Whether ``side`` ("left"/"right") appears in ``text`` in an ALIGNMENT sense — the same
-    sentence also names alignment/justification — rather than a relational-placement sense. See
-    :data:`_ALIGNMENT_CUE`."""
-    for sentence in _SENTENCE_SPLIT.split(text):
-        if _word_in(side, sentence) and _ALIGNMENT_CUE.search(sentence):
-            return True
-    return False
+def _clause_with(word: str, text: str) -> str | None:
+    """The clause (see :data:`_CLAUSE_SPLIT`) containing ``word``'s first occurrence, or ``None``
+    if no clause contains it."""
+    for clause in _CLAUSE_SPLIT.split(text):
+        if _word_in(word, clause):
+            return clause
+    return None
 
 
-def _sentence_with(word: str, text: str) -> str:
-    """The sentence (naive split) containing ``word``'s first occurrence, or the whole ``text`` if
-    sentence-splitting finds none containing it (e.g. no terminal punctuation)."""
-    for sentence in _SENTENCE_SPLIT.split(text):
-        if _word_in(word, sentence):
-            return sentence
-    return text
-
-
-_LEFT_RIGHT = {"left", "right"}
+def _alignment_clause_with(side: str, text: str) -> str | None:
+    """The clause (see :data:`_CLAUSE_SPLIT`) containing a TIGHT alignment-compound match for
+    ``side`` ("left"/"right"), or ``None``. See :data:`_ALIGNMENT_SIDE`."""
+    pattern = _ALIGNMENT_SIDE[side]
+    for clause in _CLAUSE_SPLIT.split(text):
+        if pattern.search(clause):
+            return clause
+    return None
 
 
 def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | None:
@@ -1276,27 +1287,26 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
 
     1. **Antonym asymmetry** — one text contains ONE side of an :data:`_ANTONYM_PAIRS` pair and NOT
        the other, while the other text contains the OPPOSITE side and not the first ("left" vs.
-       "right", restricted to alignment wording for that specific pair — see
-       :func:`_alignment_side_in`). A pair mentioned on BOTH sides (e.g. two duplicates both
+       "right", restricted to tight alignment-compound wording for that specific pair — see
+       :func:`_alignment_clause_with`). A pair mentioned on BOTH sides (e.g. two duplicates both
        discussing "left and right padding") is symmetric, not asymmetric, and is deliberately NOT
-       flagged — the point is a flip, not shared vocabulary. This is gated by LOCAL negation:
-       when EITHER side's matched word is in a negated sentence, the flip is treated as an
-       explained cancellation and does NOT fire on its own — this covers both a differing-negation
-       cancellation ("Avoid a dark background." ~ "Use a light background.") and a both-negated
-       case that can also agree ("avoid wide tables; keep a medium width" ~ "avoid narrow tables;
-       keep a medium width" both funnel to the same explicit target — round-3 Codex review
-       finding); only a flip where NEITHER side is locally negated fires. This check is
-       sentence-scoped (not whole-text) specifically so an UNRELATED negation elsewhere in a
-       multi-sentence body can't cancel a real flip it has nothing to do with (round-2 finding) —
-       the loop still checks every remaining pair after a cancellation, so a genuine flip elsewhere
-       in the same text is still caught.
+       flagged — the point is a flip, not shared vocabulary. This is gated by LOCAL negation, scoped
+       to the SPECIFIC CLAUSE that matched each side (not just "somewhere in the text" — a
+       different clause's negation must not apply to an unrelated pair, round-4 finding): when
+       EITHER side's matched clause is negated, the flip is treated as an explained cancellation and
+       does NOT fire on its own — this covers both a differing-negation cancellation ("Avoid a dark
+       background." ~ "Use a light background.") and a both-negated case that can also agree ("avoid
+       wide tables; keep a medium width" ~ "avoid narrow tables; keep a medium width" both funnel to
+       the same explicit target); only a flip where NEITHER matched clause is negated fires. The
+       loop still checks every remaining pair after a cancellation, so a genuine flip in a different
+       clause of the same text is still caught.
     2. **Negation asymmetry** — one text carries a :data:`_NEGATION_ASYMMETRY` marker and the other
-       does not, OUTSIDE of any sentence already explained by an antonym cancellation above (e.g.
+       does not, OUTSIDE of any clause already explained by an antonym cancellation above (e.g.
        "Never right-align currency columns" vs. "Right-align currency columns" — the same content,
-       negated on only one side, is still a real flip; and a SEPARATE, unrelated negation
-       difference elsewhere in a body that also contains an explained antonym cancellation is still
-       caught, not masked by it — round-3 Codex review finding). Two duplicates that are BOTH
-       negated (with no antonym content) are symmetric and NOT flagged either way.
+       negated on only one side, is still a real flip; and a SEPARATE, unrelated negation difference
+       in a different clause of a body that also contains an explained antonym cancellation is
+       still caught, not masked by it). Two duplicates that are BOTH negated (with no antonym
+       content) are symmetric and NOT flagged either way.
 
     Returns a short human-readable note describing the detected asymmetry, or ``None`` when neither
     signal fires (the ordinary case — treat it as a genuine duplicate and reinforce). Conservative
@@ -1304,26 +1314,30 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
     this heuristic would rather miss a real contradiction than wrongly block a genuine duplicate.
     """
     c, d = candidate_text.lower(), duplicate_text.lower()
-    cancelled_c_sentences: set[str] = set()
-    cancelled_d_sentences: set[str] = set()
+    cancelled_c_clauses: set[str] = set()
+    cancelled_d_clauses: set[str] = set()
     for a, b in _ANTONYM_PAIRS:
         if {a, b} == _LEFT_RIGHT:
-            c_a, c_b = _alignment_side_in(a, c), _alignment_side_in(b, c)
-            d_a, d_b = _alignment_side_in(a, d), _alignment_side_in(b, d)
+            c_clause_a, c_clause_b = _alignment_clause_with(a, c), _alignment_clause_with(b, c)
+            d_clause_a, d_clause_b = _alignment_clause_with(a, d), _alignment_clause_with(b, d)
         else:
-            c_a, c_b = _word_in(a, c), _word_in(b, c)
-            d_a, d_b = _word_in(a, d), _word_in(b, d)
+            c_clause_a, c_clause_b = _clause_with(a, c), _clause_with(b, c)
+            d_clause_a, d_clause_b = _clause_with(a, d), _clause_with(b, d)
+        c_a, c_b = c_clause_a is not None, c_clause_b is not None
+        d_a, d_b = d_clause_a is not None, d_clause_b is not None
         flipped_ab = c_a and not c_b and d_b and not d_a
         flipped_ba = c_b and not c_a and d_a and not d_b
         if not (flipped_ab or flipped_ba):
             continue
-        word_c, word_d = (a, b) if flipped_ab else (b, a)
-        c_sentence, d_sentence = _sentence_with(word_c, c), _sentence_with(word_d, d)
-        c_local_negated = bool(_NEGATION_ASYMMETRY.search(c_sentence))
-        d_local_negated = bool(_NEGATION_ASYMMETRY.search(d_sentence))
+        if flipped_ab:
+            word_c, word_d, c_clause, d_clause = a, b, c_clause_a, d_clause_b
+        else:
+            word_c, word_d, c_clause, d_clause = b, a, c_clause_b, d_clause_a
+        c_local_negated = bool(_NEGATION_ASYMMETRY.search(c_clause))
+        d_local_negated = bool(_NEGATION_ASYMMETRY.search(d_clause))
         if c_local_negated or d_local_negated:
-            cancelled_c_sentences.add(c_sentence)
-            cancelled_d_sentences.add(d_sentence)
+            cancelled_c_clauses.add(c_clause)
+            cancelled_d_clauses.add(d_clause)
             continue
         return (
             f"one entry says {word_c!r}, the other says {word_d!r} — likely opposite, not "
@@ -1331,8 +1345,8 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
         )
     # Fallback: a plain negation asymmetry over whatever text ISN'T already explained by an antonym
     # cancellation above, so an unrelated real flip elsewhere in the same body still surfaces.
-    remaining_c = " ".join(s for s in _SENTENCE_SPLIT.split(c) if s not in cancelled_c_sentences)
-    remaining_d = " ".join(s for s in _SENTENCE_SPLIT.split(d) if s not in cancelled_d_sentences)
+    remaining_c = " ".join(cl for cl in _CLAUSE_SPLIT.split(c) if cl not in cancelled_c_clauses)
+    remaining_d = " ".join(cl for cl in _CLAUSE_SPLIT.split(d) if cl not in cancelled_d_clauses)
     remaining_negation_differs = bool(_NEGATION_ASYMMETRY.search(remaining_c)) != bool(
         _NEGATION_ASYMMETRY.search(remaining_d)
     )

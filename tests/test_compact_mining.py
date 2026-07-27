@@ -133,6 +133,26 @@ def test_conflict_residue_cleared_after_revise(env):
     assert "conflict_residue" not in _rules(compact("gt"))
 
 
+def test_possible_contradiction_residue_flagged(env, monkeypatch):
+    # §M7c: an unresolved `possible_contradiction` (same-polarity, signal-only) must also surface as
+    # residue -- it writes nothing, just like `conflict`, so without this a real, still-blocking
+    # contradiction would never show up in a compact report.
+    monkeypatch.setenv("WHETSTONE_DEDUP_SIMILARITY", "0.6")
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt", "learning", "Right-align currency columns for a cleaner ledger look.", "palette",
+        "prov",
+    )
+    capture(
+        "gt", "learning", "Left-align currency columns for a cleaner ledger look.", "palette",
+        "prov",
+    )
+
+    residue = [f for f in compact("gt")["findings"] if f["rule"] == "conflict_residue"]
+    assert len(residue) == 1
+    assert residue[0]["id"] == "L1"
+
+
 # --------------------------------------------------------------------------- report file + advisory
 
 

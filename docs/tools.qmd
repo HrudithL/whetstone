@@ -90,9 +90,12 @@ without re-running this check). If it truly was a contradiction, don't `"reinfor
 reworded `body` — that keeps the old recurrence and could push a single opposite observation
 straight to promotion; `"remove"` the entry instead (not `"weaken"`, which only lowers recurrence
 and typically leaves it indexed, so a fresh `capture` would flag again) and THEN `capture` the
-corrected preference fresh, at its own honest recurrence. This narrows, but does not remove, the
-general limitation that embeddings alone can't separate a same-polarity contradiction from a
-paraphrase — see [Concepts](concepts.qmd) and `LEARNING_SKILLS_DESIGN.md` §7.
+corrected preference fresh, at its own honest recurrence. **Confirm with the user before calling
+`"remove"`** — this is a heuristic signal, not a user decision, and removing a learning is
+dial-governed (it deletes immediately outside supervised mode, unlike an issue contradiction, which
+always confirms). This narrows, but does not remove, the general limitation that embeddings alone
+can't separate a same-polarity contradiction from a paraphrase — see [Concepts](concepts.qmd) and
+`LEARNING_SKILLS_DESIGN.md` §7.
 
 On a committed change `capture` (and `revise`) return a short human-facing **`confirmation`** string
 — *"Captured: currency columns — …. Re-applies on future great-tables runs."* — so the agent can

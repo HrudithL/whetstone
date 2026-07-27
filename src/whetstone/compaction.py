@@ -476,14 +476,20 @@ def _mine_stale(events: list[dict], learnings: dict, config: Config) -> list[dic
     return findings
 
 
+_RESIDUE_STATUSES = ("conflict", "possible_contradiction")
+
+
 def _mine_conflict_residue(events: list[dict], learnings: dict, issues: dict) -> list[dict]:
-    """A capture that surfaced a ``conflict`` against a still-present entry which was never later
-    revised → an unresolved contradiction to decide on."""
+    """A capture that surfaced a ``conflict`` (cross-polarity) OR a ``possible_contradiction``
+    (§M7c, same-polarity) against a still-present entry which was never later revised → an
+    unresolved contradiction to decide on. Both are signal-only outcomes that write nothing, so
+    without this they'd otherwise sit invisible forever — a `compact` report with no residue would
+    wrongly look clean while one keeps blocking every recapture of the same wording."""
     revised = {e.get("entry_id") for e in events if e.get("type") == "revise"}
     findings = []
     seen: set[str] = set()
     for e in events:
-        if e.get("type") != "capture" or e.get("status") != "conflict":
+        if e.get("type") != "capture" or e.get("status") not in _RESIDUE_STATUSES:
             continue
         wid = e.get("entry_id")
         if wid in seen or wid in revised:
