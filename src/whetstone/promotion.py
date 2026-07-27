@@ -5,13 +5,17 @@ moved out of its per-skill store into the reserved ``__global__`` store, where `
 it for every skill. This module is the **writer** half of the global layer:
 
 - :func:`promote_to_global` — lift ONE entry from a skill store (manual ``whetstone promote``).
-- :func:`write_global_entry` / :func:`retire_source` — the building blocks ``compact --all`` uses to
-  promote a *cross-skill cluster* once and retire the redundant per-skill copies (M5a).
+- :func:`promote_cluster` — enact ONE cross-skill cluster that ``compact --all`` reported as a
+  ``global_candidate`` finding (manual ``whetstone promote <skill> <id> --cluster``, §M7a).
+  ``compact --all`` itself only ever detects and reports these — it never writes (promotion always
+  asks a human, the same rule the rest of Whetstone already holds).
+- :func:`write_global_entry` / :func:`retire_source` — the shared building blocks both promotion
+  paths above use to actually write the global entry and retire the per-skill copies.
 
 Ids are **always re-minted** in the global store — a foreign per-skill id is never trusted (the same
-no-reuse discipline the rest of the store keeps). Two stores are mutated (global + the source
-skill); both write locks are taken in a fixed order (global first, then the skill) so concurrent
-promotions can never deadlock.
+no-reuse discipline the rest of the store keeps). Two (or more, for a cluster) stores are mutated
+(global + the source skill(s)); write locks are always taken in a fixed order (global first, then
+each skill) so concurrent promotions can never deadlock.
 """
 
 from __future__ import annotations
@@ -122,4 +126,62 @@ def promote_to_global(skill: str, entry_id: str, config: Config | None = None) -
         "source_id": entry_id,
         "global_id": global_id,
         "polarity": polarity,
+    }
+
+
+def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> dict:
+    """Enact one cross-skill promotion candidate reported by ``compact --all`` (§M7a).
+
+    ``skill``/``entry_id`` name the *representative* entry of a ``global_candidate`` finding (the
+    same deterministic representative :func:`whetstone.compaction.cluster_representative` picks).
+    Re-runs the same cross-skill clustering detection, restricted to whichever cluster contains
+    that entry, then performs the write ``compact --all`` used to do automatically: the
+    representative is written into the global store and every cluster member — across all its
+    skills — is retired from its per-skill store. This is the only place a cross-skill cluster is
+    actually promoted; ``compact --all`` itself only ever detects and reports.
+
+    Raises ``ValueError`` if no current cluster containing ``(skill, entry_id)`` meets
+    ``global_skill_count`` (e.g. the candidate is stale — the store changed since it was reported,
+    or the entry doesn't exist).
+    """
+    if config is None:
+        config = load_config()
+    if skill == GLOBAL_SLUG:
+        raise ValueError("cannot promote from the global store to itself")
+
+    # Lazy import: compaction.py imports from this module at load time, so importing it back at
+    # module level here would create a circular import. Deferring to call time breaks the cycle.
+    from .compaction import cluster_representative, find_cross_skill_clusters
+
+    backend = get_backend(config)
+    clusters = find_cross_skill_clusters(config, backend)
+    cluster = next(
+        (c for c in clusters if any(s == skill and e.id == entry_id for s, e in c)), None
+    )
+    if cluster is None:
+        raise ValueError(
+            f"no cross-skill cluster containing {entry_id!r} in skill {skill!r} meets "
+            f"global_skill_count={config.global_skill_count} right now — the candidate may be "
+            "stale; re-run `compact --all` to get a fresh finding"
+        )
+
+    ensure_store(GLOBAL_SLUG, config)
+    g_loc = global_store_location(config)
+
+    with store_write_lock(g_loc):
+        index.rebuild_index_if_stale(g_loc, backend)
+        rep_skill, rep_entry = cluster_representative(cluster)
+        global_id = write_global_entry(g_loc, backend, rep_entry, rep_skill)
+        retired = []
+        for member_skill, entry in cluster:
+            skill_loc = store_location(member_skill, config)
+            with store_write_lock(skill_loc):
+                retire_source(skill_loc, backend, entry.id)
+            retired.append({"skill": member_skill, "id": entry.id})
+
+    return {
+        "global_id": global_id,
+        "representative": {"skill": rep_skill, "id": rep_entry.id},
+        "skills": sorted({s for s, _ in cluster}),
+        "retired": retired,
     }
