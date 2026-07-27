@@ -16,6 +16,8 @@ website:
     left:
       - href: index.qmd
         text: Home
+      - href: concepts.qmd
+        text: Concepts
       - href: triptych.qmd
         text: Before / After
       - href: metrics.qmd
@@ -28,8 +30,6 @@ website:
             text: Install & quickstart
           - href: tools.qmd
             text: Tools
-          - href: concepts.qmd
-            text: Concepts
     right:
       - icon: github
         href: https://github.com/HrudithL/whetstone
