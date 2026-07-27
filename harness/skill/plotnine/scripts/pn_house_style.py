@@ -14,8 +14,11 @@ arguments to these helpers or skip them and call plotnine directly. Nothing here
 mandatory; it is a sensible, tested default.
 
 The values here are the single source of truth that the `references/` files describe:
-`big_color.md` documents the palettes returned by `house_palette()`, and
-`small_color.md` documents the theme/hexes applied by `apply_house_style()`.
+`big_color.md` documents the palettes returned by `house_palette()`,
+`small_color.md` documents the theme/hexes applied by `apply_house_style()`, and
+`geoms.md` documents the pinned mark defaults (`point_size`, `line_size`, the
+`geom_jitter` `random_state`) applied directly in `geom_point()`/`geom_line()`/
+`geom_jitter()` calls.
 
 Usage:
     from pn_house_style import apply_house_style, house_palette, humanize_labels, save_plot, HOUSE_STYLE
@@ -69,6 +72,12 @@ HOUSE_STYLE = {
     "figure_size": (8, 5),
     "dpi": 200,
     "legend_position": "right",
+    # mark defaults (geoms.md) -- pinned so a cold run never free-associates a
+    # size; a taught preference (e.g. "make points bigger") overrides these
+    # explicitly, it does not need to guess what the untaught default was.
+    "point_size": 2,
+    "line_size": 0.8,
+    "jitter_random_state": 42,
 }
 
 
