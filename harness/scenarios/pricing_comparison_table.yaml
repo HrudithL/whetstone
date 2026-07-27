@@ -35,8 +35,13 @@ preferences:
     feedback: >
       Reorder the columns - Solo, then Enterprise, then Team last, not Team stuck in the middle.
     check:
-      # Cold-clean: the brief itself lists the tiers Solo, Team, Enterprise, so a cold run naturally
-      # reproduces that order (Team before Enterprise) and this check fails on it, same across-newline
-      # trick as the pptx scenario above.
+      # NOT anchored on the tier NAMES: the Enterprise card's own bullet list says "Everything in
+      # Team" (comparing tiers), so "Enterprise[\s\S]*Team" would false-positive on an unchanged cold
+      # page (Enterprise's title, followed later by that bullet's "...in Team", satisfies the pattern
+      # even though Team's card/column still comes first). Anchored on each tier's CTA text instead -
+      # "Contact sales" (Enterprise) and "Start 14-day trial" (Team) are tier-exclusive strings that
+      # don't cross-reference other tiers, so this only matches once the columns are truly reordered.
+      # Cold-clean: the brief lists CTAs in Solo/Team/Enterprise order, so a cold run naturally puts
+      # "Start 14-day trial" before "Contact sales" and this check fails on it.
       kind: regex
-      pattern: 'Enterprise[\s\S]*Team'
+      pattern: 'Contact sales[\s\S]*Start 14-day trial'

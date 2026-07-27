@@ -21,13 +21,20 @@ preferences:
       Put the "Install Marrow" slide right after the title - don't bury the call-to-action at the
       end, lead with it.
     check:
+      # Literal source-text order alone is a weak proxy for slide-build order - a helper defined near
+      # the top of the script could contain "Install Marrow" while still being called last, so a bare
+      # "Install Marrow ... Big test suites" order check could pass on a deck that was never reordered.
+      # Requiring two "add_slide(" calls before "Install Marrow" ties it to the actual slide-add call
+      # sequence (proving the CTA text isn't part of slide 1), on top of the existing before-the-
+      # problem-slide check. This assumes the straightforward, single top-to-bottom script a 5-slide
+      # deck like this one is expected to produce (consistent with pitch_deck.yaml's checks, which
+      # assume the same non-abstracted style) - not airtight against a deliberately indirect helper-
+      # function structure, but this harness's checks work over generated source text, not a rendered
+      # deck, so a perfect structural guarantee isn't available here.
       # Cold-clean: the outline lists the CTA last and the prompt says "in the order given", so a cold
-      # run reproduces that order (CTA content after problem content). The character class [\s\S]
-      # matches across newlines without needing a regex DOTALL flag, so this proves the CTA's own
-      # on-slide text now appears BEFORE the problem slide's on-slide text in source order (which
-      # mirrors build order for a straight-line python-pptx script).
+      # run reproduces that order (CTA content after problem content, and after only 1 add_slide call).
       kind: regex
-      pattern: 'Install Marrow[\s\S]*Big test suites'
+      pattern: 'add_slide\([\s\S]*?add_slide\([\s\S]*?Install Marrow[\s\S]*?Big test suites'
   - id: why-now-slide
     polarity: learning
     scope: slide structure
@@ -39,7 +46,12 @@ preferences:
       Add a "Why now" slide in between the idea and how-it-works slides - explain why this problem
       is urgent today, not just that it exists.
     check:
-      # The outline has no "Why now" slide at all, so this is cold-clean by construction - its mere
-      # presence in the deck proves a new slide was actually inserted, not just reworded content.
-      kind: code_contains
-      pattern: Why now
+      # A bare presence check would count a "Why now" slide inserted anywhere (e.g. appended at the
+      # end) as honoring a preference that specifically asks for it BETWEEN the idea and how-it-works
+      # slides. Anchoring on "Watch one run" (the idea slide's own on-slide tagline, per the outline)
+      # and "How it works" (that slide's on-slide title - the outline gives it no separate quoted
+      # tagline, so the model has every reason to reuse this literal label) proves "Why now" falls
+      # textually between them. Cold-clean: the outline has no "Why now" slide at all, so a cold run
+      # never produces this whole 3-way sequence.
+      kind: regex
+      pattern: 'Watch one run[\s\S]*Why now[\s\S]*How it works'

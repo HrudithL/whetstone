@@ -38,6 +38,10 @@ preferences:
       Also show how many models were averaged together for each manufacturer, so I know how much
       each row is really representing.
     check:
-      # size()/count() are the two idiomatic pandas ways to get a per-group row count; either counts.
+      # size()/count() calls are the two idiomatic pandas ways to get a per-group row count, but named
+      # aggregation - .agg(Models=("model", "count")) - passes "count"/"size" as a plain string, not a
+      # call, and is the aggregation style this repo's great-tables skill itself demonstrates. code_for_
+      # check's ast-unparse normalizes all string quotes to single, so the quoted-string forms below
+      # only need the single-quote spelling to catch that idiom too.
       kind: regex
-      pattern: '(size\(\)|count\(\))'
+      pattern: "(size\\(\\)|count\\(\\)|'count'|'size')"
