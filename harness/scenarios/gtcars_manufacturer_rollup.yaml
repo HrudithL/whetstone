@@ -1,0 +1,55 @@
+name: gtcars_manufacturer_rollup
+skill: great-tables
+difficulty: hard
+prompt: >
+  Build a table of the GT cars showing horsepower and price.
+data: data/gtcars.csv
+# COMPLEX-STRUCTURAL anchor: unlike this harness's other great-tables scenarios (which teach cosmetic
+# formatting/color/spanner tweaks on an already-decided row shape), both preferences here change what
+# the ROWS OF THE TABLE ARE — a real data reorganization, not a style choice. The prompt deliberately
+# doesn't say "one row per car" or "roll up by manufacturer", so a cold run's natural reading (one row
+# per record in the CSV) is the wrong shape, and the correction has to change the grouping grain, not
+# just repaint it.
+preferences:
+  - id: rollup-by-manufacturer
+    polarity: issue
+    scope: data organization
+    body: >
+      Don't list one row per car model. Roll the data up to one row per manufacturer (`mfr`), showing
+      the mean horsepower (`hp`) and mean price (`msrp`) across that manufacturer's whole lineup —
+      compute this with a real groupby aggregation over the raw rows, not a per-model listing.
+    feedback: >
+      Stop listing every single car model - I want one row per manufacturer, with their average
+      horsepower and average price across their whole lineup.
+    check:
+      # Cold-clean: the prompt never mentions "manufacturer" or "average", so a cold run has no reason
+      # to reach for a groupby - it lists cars. Requires "mfr" to actually appear after groupby( (not
+      # just any groupby call), so grouping by a different column (e.g. ctry_origin, which would
+      # produce a plausible-looking but wrong-grain rollup) doesn't falsely count as honoring this. Also
+      # requires "mean" to appear, so a warm run that groups by mfr but aggregates with max/sum instead
+      # of the requested mean doesn't falsely count either.
+      kind: regex
+      pattern: 'groupby\([\s\S]*?mfr[\s\S]*?mean'
+  - id: rollup-count-column
+    # Distinct scope from rollup-by-manufacturer (was "data organization" for both) - a stub/synthetic
+    # honoring check treats "was this preference's scope recalled" as membership-by-scope-string, so
+    # two preferences sharing a scope can't be told apart when only one of them is actually recalled.
+    polarity: learning
+    scope: row count column
+    body: >
+      Add a "Models" column showing how many models from that manufacturer went into each average -
+      the reader should be able to tell a 2-model average from a 12-model one.
+    feedback: >
+      Also show how many models were averaged together for each manufacturer, so I know how much
+      each row is really representing.
+    check:
+      # size()/count() calls are the two idiomatic pandas ways to get a per-group row count, but named
+      # aggregation - .agg(Models=("model", "count")) - passes "count"/"size" as a plain string, not a
+      # call, and is the aggregation style this repo's great-tables skill itself demonstrates. code_for_
+      # check's ast-unparse normalizes all string quotes to single, so the quoted-string forms below
+      # only need the single-quote spelling to catch that idiom too. Accepts "Models" on either side of
+      # the count/size signal: the named-agg style (Models=(...)) puts it first, but the equally
+      # idiomatic .size().reset_index(name='Models') / .count().rename('Models') styles put it after -
+      # requiring only one order would reject the other equally-correct idiom.
+      kind: regex
+      pattern: "(Models[\\s\\S]*?(size\\(\\)|count\\(\\)|'count'|'size')|(size\\(\\)|count\\(\\)|'count'|'size')[\\s\\S]*?Models)"
