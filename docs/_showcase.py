@@ -166,24 +166,87 @@ def learned_layer_html(scenario: str) -> str:
     )
 
 
-def triptych_html(scenario: str) -> str:
-    """Before / after tables side by side, with the learned layer full-width beneath them.
+def _pref_feedback_block(pref_meta: dict, pref_summary: dict | None) -> str:
+    """One preference's quoted correction plus a concrete "when it stuck" statement.
 
-    ``minmax(0,1fr)`` + ``min-width:0`` on the children let the two table columns shrink below their
-    content's intrinsic width so a wide table scrolls inside its own panel (via ``_scroll``) instead
-    of widening the grid past the page / TOC. The learned layer sits below at full width, where its
-    injected text has room to wrap rather than run off to the right."""
+    ``pref_meta`` is the raw preference mapping from the scenario YAML (has ``feedback``, the
+    scripted natural-language correction); ``pref_summary`` is that same preference's entry from
+    the committed ``summary.json`` (has ``runs_to_stick``/``cold_honored``), or ``None`` if the
+    scenario hasn't been generated with a version of the runner that recorded it.
+    """
+    feedback = (pref_meta.get("feedback") or "").strip()
+    html = f"<blockquote>&ldquo;{_html.escape(feedback)}&rdquo;</blockquote>" if feedback else ""
+    if not pref_summary:
+        return html
+    runs_to_stick = pref_summary.get("runs_to_stick")
+    if runs_to_stick is not None:
+        note = f"This stuck starting at run {runs_to_stick} — honored from then on."
+    else:
+        note = "This hadn't stuck yet within the run budget shown here."
+    if pref_summary.get("cold_honored"):
+        prefix = "The cold run already happened to satisfy this by chance, but "
+        note = prefix + note[0].lower() + note[1:]
+    return html + f"<p><small>{_html.escape(note)}</small></p>"
+
+
+def scenario_meta(scenario: str) -> dict | None:
+    """The parsed scenario YAML (``harness/scenarios/<scenario>.yaml``) for one scenario slug.
+
+    A thin per-scenario lookup over :func:`scenarios_meta`, the existing "read the committed YAML
+    directly" loader (already used by the methodology table) — so the walkthrough's quoted user
+    feedback comes from the same source of truth, not a paraphrase.
+    """
+    return next((m for m in scenarios_meta() if m.get("name") == scenario), None)
+
+
+def triptych_html(scenario: str) -> str:
+    """A 3-step guided walkthrough: what it produced, what wasn't good, what changed.
+
+    Each step is a ``.ws-step`` inside a single-column ``.ws-steps`` (reusing the numbered-badge
+    styling from ``docs/index.qmd``'s "how it works" section, forced to one column since each step
+    here carries a full artifact panel), and each step also carries ``.ws-reveal`` individually —
+    ``site.js`` observes every ``.ws-reveal`` element on its own, so the three steps fade in one at
+    a time as the reader scrolls, rather than the whole group appearing together.
+
+    1. **Here's what it produced** — the cold artifact (empty store).
+    2. **Here's what wasn't good** — the scripted user correction(s), quoted verbatim from the
+       scenario YAML's ``preferences[].feedback`` (not the raw recall/learned-layer dump), one per
+       preference alongside a concrete "stuck starting at run N" statement from ``summary.json``.
+    3. **Here's what changed** — the warm artifact (learned layer applied). The raw learned
+       layer/recall payload is still available, demoted to a collapsed ``<details>`` — proof, not
+       story.
+    """
+    meta = scenario_meta(scenario) or {}
+    summary = load_summary(scenario) or {}
+    prefs_summary = summary.get("preferences", {})
+    prefs_meta = meta.get("preferences") or []
+    feedback_html = "".join(
+        _pref_feedback_block(p, prefs_summary.get(p.get("id", "")))
+        for p in prefs_meta
+    ) or "<em>no scripted feedback recorded for this scenario</em>"
+
     return (
-        '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;'
-        'align-items:start;margin:0.5rem 0 1rem">'
-        f'<div style="min-width:0"><h4>Before <small>(empty store)</small></h4>'
-        f'{_panel_body(scenario, "cold")}</div>'
-        f'<div style="min-width:0"><h4>After <small>(learned layer applied)</small></h4>'
-        f'{_panel_body(scenario, "warm")}</div>'
+        '<div class="ws-steps" style="grid-template-columns:1fr">'
+        '<div class="ws-step ws-reveal">'
+        '<div class="ws-step-title">Here&rsquo;s what it produced</div>'
+        '<p class="ws-step-body">The skill runs against an <strong>empty</strong> Whetstone '
+        "store — nothing has been taught yet.</p>"
+        f"{_panel_body(scenario, 'cold')}"
         "</div>"
-        '<div style="min-width:0;margin:0 0 2rem">'
-        '<h4>The learned layer <small>(injected into the warm run, verbatim)</small></h4>'
-        f"{learned_layer_html(scenario)}</div>"
+        '<div class="ws-step ws-reveal">'
+        '<div class="ws-step-title">Here&rsquo;s what wasn&rsquo;t good</div>'
+        '<p class="ws-step-body">The user corrects it, in their own words:</p>'
+        f"{feedback_html}"
+        "</div>"
+        '<div class="ws-step ws-reveal">'
+        '<div class="ws-step-title">Here&rsquo;s what changed</div>'
+        '<p class="ws-step-body">The same task, generated again once the learned layer is '
+        "applied.</p>"
+        f"{_panel_body(scenario, 'warm')}"
+        "<details><summary>Show the raw learned layer</summary>"
+        f"{learned_layer_html(scenario)}</details>"
+        "</div>"
+        "</div>"
     )
 
 
