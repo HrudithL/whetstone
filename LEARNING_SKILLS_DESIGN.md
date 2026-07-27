@@ -145,8 +145,17 @@ Called blindly at the start of any task that might have precedent; returns empty
     { "id": "I3", "rule": "Never apply heavy row banding to tables under 10 rows.", "scope": "small tables" }
   ],
   "how_to_use": "Learnings have a 0–1 weight = how firmly to apply. Issues have NO weight — every issue returned is MANDATORY and must be handled before you complete, regardless of anything else.",
-  "capture_contract": "When the user reviews this output and asks for a change, the moment you implement that change also record it: `capture` for something new, `revise` for something already listed above (use its id). Pass this `run_id` on that `capture`/`revise` so the correction joins this run. A preference → a learning; a mistake or an 'always/never' rule → an issue."
+  "capture_contract": "When the user reviews this output and asks for a change, the moment you implement that change also record it: `capture` for something new, `revise` for something already listed above (use its id). Pass this `run_id` on that `capture`/`revise` so the correction joins this run. A preference → a learning; a mistake or an 'always/never' rule → an issue.",
+  "conflicts": []
 }
+```
+
+**`conflicts`** (§M7b) is a purely additive, read-only OBSERVER pass over the *finalized* returned set above (after any skill/global union) — it never changes what was retrieved, ranked, capped (MMR), or the fallback floor. It flags pairs where a returned **learning affirms what a co-returned issue forbids** (the same prohibition-heuristic + cosine-cutoff test `capture` already applies at write time, §7, run pairwise over the small set instead of one-candidate-vs-whole-store). Each item is `{"a": <learning id>, "b": <issue id>, "note": "…"}`; the field is **always present**, `[]` when nothing conflicts. Same-polarity (learning↔learning) contradiction detection is a separate, later concern and is not covered here. Example with a real conflict:
+
+```json
+"conflicts": [
+  { "a": "L12", "b": "I3", "note": "Learning L12 affirms what issue I3 forbids — the issue is mandatory (§5.2) and wins; consider `revise`-ing one side." }
+]
 ```
 *Description (read by the model):* "Call at the START of any task that might use an attached skill — call it blindly; empty is fine. **Pass `intent` as a concrete, elaborated description of what you are about to produce, expanding vague requests into their specific dimensions (e.g. 'styling a table: color palette, number formatting, column alignment, row banding, density') — do NOT pass the user's raw words.** Returns learnings (preferences, weighted) and issues (mandatory constraints)."
 

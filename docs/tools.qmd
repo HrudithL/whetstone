@@ -55,6 +55,10 @@ come back. Each entry is tagged with its `origin` — `"skill"` (this skill's ow
 `"global"` (a preference promoted to the cross-skill **[learned global layer](concepts.qmd#global-layer)**);
 prefer the more specific `"skill"` entry when the two disagree.
 
+The payload also carries `conflicts` — an always-present list (`[]` when clean) flagging pairs,
+within the entries just returned, where a learning affirms what a co-returned issue forbids. It's a
+read-only annotation over the finalized set (never a retrieval decision): the issue always wins.
+
 ## `capture` {#capture}
 
 ```python

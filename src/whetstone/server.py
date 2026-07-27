@@ -23,7 +23,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import Config, load_config
 from .embeddings import cosine, get_backend
 from .metrics import compute_metrics
-from .retrieval import retrieve
+from .retrieval import RecalledIssue, RecalledLearning, retrieve
 from .store import index
 from .store.access import (
     demote_issue_to_learning,
@@ -116,6 +116,12 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
 
     When you apply a returned learning/issue to your output, briefly NAME it to the user (e.g.
     "using your saved preference for muted palettes") so the learned layer is visible, not silent.
+
+    ``conflicts`` (§M7b) flags pairs, within the entries just returned, where a learning affirms
+    what a co-returned issue forbids — e.g. a "right-align currency" learning alongside a "never
+    right-align currency" issue. Each item is ``{"a": <learning id>, "b": <issue id>, "note": ..}``.
+    Always present (``[]`` when nothing conflicts). The issue always wins (§5.2) — resolve the
+    tension in your output, and consider `revise`-ing the losing side.
     """
     config = load_config()
     ensure_store(skill, config)
@@ -147,6 +153,15 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
             )
         learnings = learnings + [replace(x, origin="global") for x in g_learnings]
         issues = issues + [replace(x, origin="global") for x in g_issues]
+
+    # M7b — conflict visibility. Purely additive, read-only OBSERVER pass over the finalized
+    # learnings/issues (after the skill/global union above): it never changes what was retrieved,
+    # how it was ranked/capped (MMR), or the fallback floor (see the M5e comment above — retrieval
+    # logic itself is never touched here either). It only annotates the payload already decided.
+    conflicts = (
+        _recall_conflicts(loc, g_loc, learnings, issues, config) if learnings and issues else []
+    )
+
     return {
         "skill": skill,
         "run_id": run_id,
@@ -154,6 +169,7 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
         "issues": [asdict(x) for x in issues],
         "how_to_use": _HOW_TO_USE,
         "capture_contract": _CAPTURE_CONTRACT,
+        "conflicts": conflicts,
     }
 
 
@@ -833,6 +849,85 @@ _PROHIBITION = re.compile(
 
 def _is_prohibition(title: str, body: str) -> bool:
     return bool(_PROHIBITION.search(f"{title} {body}"))
+
+
+def _entries_by_id(loc: StoreLocation, origin: str) -> dict[tuple[str, str], IndexedEntry]:
+    """``(origin, id) -> IndexedEntry`` (title/body/vector) for every entry in ``loc``'s index.
+
+    ``RecalledLearning``/``RecalledIssue`` don't carry title or vector — ``retrieve()`` reduces them
+    away before returning (§M7b) — but the index they were drawn from still does. This is a cheap
+    point lookup against the already-built index, keyed by ``origin`` too since the skill store and
+    the global store mint ids from independent counters and can collide (both may have an "L1").
+    """
+    entries = index.load_entries(loc, "learning") + index.load_entries(loc, "issue")
+    return {(origin, e.id): e for e in entries}
+
+
+def _pairwise_conflict(
+    learning: RecalledLearning,
+    issue: RecalledIssue,
+    entries: dict[tuple[str, str], IndexedEntry],
+    config: Config,
+) -> dict | None:
+    """The nearest write-time conflict test (§7's ``_find_conflict``), applied to ONE learning/issue
+    pair instead of one-candidate-vs-whole-store (§M7b).
+
+    A conflict requires the ISSUE side to be a prohibition (``_is_prohibition`` on its title/body)
+    and the LEARNING side to NOT be one — an avoidance learning agrees with a prohibiting issue
+    rather than conflicting with it, mirroring ``_find_conflict``'s own asymmetry check — plus their
+    vectors clearing ``config.conflict_similarity``. Returns ``None`` when either id can't be
+    resolved back to an indexed entry (defensive; should not happen for a set `recall` just
+    returned).
+    """
+    l_entry = entries.get(("global" if learning.origin == "global" else "skill", learning.id))
+    i_entry = entries.get(("global" if issue.origin == "global" else "skill", issue.id))
+    if l_entry is None or i_entry is None:
+        return None
+    if _is_prohibition(l_entry.title, l_entry.body):
+        return None
+    if not _is_prohibition(i_entry.title, i_entry.body):
+        return None
+    if cosine(l_entry.vector, i_entry.vector) < config.conflict_similarity:
+        return None
+    return {
+        "a": learning.id,
+        "b": issue.id,
+        "note": (
+            f"Learning {learning.id} affirms what issue {issue.id} forbids — the issue is "
+            "mandatory (§5.2) and wins; consider `revise`-ing one side."
+        ),
+    }
+
+
+def _recall_conflicts(
+    loc: StoreLocation,
+    g_loc: StoreLocation,
+    learnings: list[RecalledLearning],
+    issues: list[RecalledIssue],
+    config: Config,
+) -> list[dict]:
+    """Many-vs-many conflict scan over ``recall``'s finalized returned set (§M7b).
+
+    An OBSERVER pass, not a retrieval decision: called only after the skill/global union has already
+    decided what to return, over that small already-selected list — never a whole-store scan, and it
+    never feeds back into ranking/MMR/the fallback floor. Only learning-vs-issue pairs are checked,
+    mirroring the worked example this slice targets (a learning affirming what a co-returned issue
+    forbids); issue-vs-issue and learning-vs-learning contradictions are out of scope here (the
+    latter is a later slice, §M7c).
+
+    Every pair here is (one learning, one issue) from two disjoint lists, so no symmetric A-vs-B /
+    B-vs-A duplicate can arise structurally — nothing further to dedupe.
+    """
+    entries = _entries_by_id(loc, "skill")
+    if any(x.origin == "global" for x in learnings + issues):
+        entries.update(_entries_by_id(g_loc, "global"))
+    conflicts: list[dict] = []
+    for learning in learnings:
+        for issue in issues:
+            hit = _pairwise_conflict(learning, issue, entries, config)
+            if hit is not None:
+                conflicts.append(hit)
+    return conflicts
 
 
 def _find_conflict(

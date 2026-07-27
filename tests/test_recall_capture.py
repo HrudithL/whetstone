@@ -6,7 +6,11 @@ import subprocess
 
 import pytest
 
+from conftest import make_learning, seed
+from whetstone.config import load_config
+from whetstone.embeddings import get_backend
 from whetstone.server import capture, recall
+from whetstone.store import index
 from whetstone.store.layout import store_location
 
 
@@ -52,6 +56,7 @@ def test_recall_payload_shape_matches_spec(env):
         "issues",
         "how_to_use",
         "capture_contract",
+        "conflicts",
     }
     assert result["skill"] == "gt"
     assert result["run_id"].startswith("r-")
@@ -65,6 +70,8 @@ def test_recall_payload_shape_matches_spec(env):
     issue = result["issues"][0]
     assert set(issue) == {"id", "rule", "scope", "origin"}
     assert issue["origin"] == "skill"
+    # Neither entry here forbids what the other affirms (different scopes) -> no conflict.
+    assert result["conflicts"] == []
 
 
 def test_recall_on_empty_store_returns_empty_lists(env):
@@ -78,6 +85,46 @@ def test_recall_creates_store_lazily(env):
     recall("never-attached", "an elaborated intent")
     slug = store_location("never-attached").slug
     assert (env / slug / ".git").is_dir()
+
+
+# --------------------------------------------------------------------------- conflicts (§M7b)
+
+
+def test_recall_surfaces_a_conflict_between_co_returned_learning_and_issue(env):
+    """A learning and an issue that clash — same pattern as test_capture_conflict.py's fixture —
+    both end up in the returned set (seeded directly so `capture`'s own write-time conflict check,
+    which would otherwise refuse the second one, never runs), and `recall`'s post-union pass must
+    flag the pair.
+    """
+    capture("gt", "issue", "Never right-align the currency columns.", "currency columns", "prov")
+
+    loc = store_location("gt")
+    config = load_config()
+    learning = make_learning("L1", "Right-align the currency columns.", "currency columns")
+    seed(loc, learnings=[learning])
+    index.rebuild_index(loc, get_backend(config))
+
+    result = recall("gt", "right-align the currency columns")
+
+    learning_ids = {x["id"] for x in result["learnings"]}
+    issue_ids = {x["id"] for x in result["issues"]}
+    assert "L1" in learning_ids, "the conflicting learning should be in the returned set"
+    assert "I1" in issue_ids, "the conflicting issue should be in the returned set"
+
+    assert result["conflicts"] == [{"a": "L1", "b": "I1", "note": result["conflicts"][0]["note"]}]
+    assert result["conflicts"][0]["note"]  # a non-empty human-readable explanation
+
+
+def test_recall_conflicts_is_empty_for_a_clean_returned_set(env):
+    # A learning and an issue in unrelated scopes -> no tension, `conflicts` stays [].
+    capture("gt", "learning", "Prefer a serif typeface for captions.", "typography", "prov")
+    capture("gt", "issue", "Never band tables under ten rows.", "small tables", "prov")
+
+    result = recall("gt", "caption typography and row banding for small tables")
+
+    assert result["learnings"]
+    assert result["issues"]
+    assert result["conflicts"] == []
 
 
 # --------------------------------------------------------------------------- capture
