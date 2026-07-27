@@ -4,8 +4,10 @@ subtitle: "The five MCP tools Whetstone exposes, plus the out-of-band maintenanc
 ---
 
 Whetstone is a stdio MCP server. A skill (or your agent) calls these tools around each task — you
-rarely call them by hand. All state is a git-tracked, per-skill store (see
-**[Concepts](concepts.qmd)**).
+rarely call them by hand. All state is a git-tracked, per-skill store, organized into **learnings**
+(soft preferences) and **issues** (mandatory rules) grouped by **scope** (a short label for what a
+preference is about, e.g. `currency-formatting`) — see **[Concepts](concepts.qmd)** for the full
+vocabulary this page assumes.
 
 ```{=html}
 <div class="ws-cards" style="margin-top:1.5rem;">
@@ -28,11 +30,11 @@ rarely call them by hand. All state is a git-tracked, per-skill store (see
 attach(skill: str, path: str | None = None) -> dict
 ```
 
-Register a skill so Whetstone tracks its learned layer. Scaffolds a git-tracked, scope-organized
-store for `skill` and records it in the registry. **Idempotent** — attaching an already-attached
-skill is a no-op that reports `already_attached`. `recall` / `capture` create a store lazily if you
-skip this, so `attach` is optional setup. `path` is an optional reference to the target skill's
-location, recorded as provenance.
+Register a skill so Whetstone tracks its learned layer. Scaffolds a git-tracked store for `skill`,
+organized by **[scope](concepts.qmd#scopes)**, and records it in the registry. **Idempotent** —
+attaching an already-attached skill is a no-op that reports `already_attached`. `recall` / `capture`
+create a store lazily if you skip this, so `attach` is optional setup. `path` is an optional
+reference to the target skill's location, recorded as provenance.
 
 Returns a summary: `skill`, `slug`, `path` (store dir), and `created`.
 

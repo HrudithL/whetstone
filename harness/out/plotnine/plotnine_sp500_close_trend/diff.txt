@@ -1,65 +1,81 @@
 --- cold/plot.py
 +++ warm/plot.py
-@@ -1,33 +1,37 @@
+@@ -3,6 +3,7 @@
+ from pathlib import Path
+ 
  import pandas as pd
++from mizani.labels import label_currency
  from plotnine import (
--    ggplot, aes, geom_line, labs, theme_minimal,
--    theme, element_text, element_line, element_blank,
--    scale_x_date, scale_y_continuous
-+    ggplot, aes, geom_line, labs, theme, theme_minimal,
-+    element_text, element_line, element_blank, scale_y_continuous
+     aes,
+     geom_line,
+@@ -11,33 +12,39 @@
+     scale_x_date,
+     scale_y_continuous,
  )
--from mizani.labels import label_comma
-+from mizani.labels import label_comma, label_date
-+import datetime
+-from mizani.labels import label_currency
  
--# Load data
-+# Step 1: Load and clean data
+-# House style helper (theme, mark sizes, save) lives with the skill.
+-sys.path.insert(
+-    0,
+-    str(Path(".claude/skills/plotnine/scripts").resolve()),
+-)
+-from pn_house_style import HOUSE_STYLE, apply_house_style, humanize_labels, save_plot
++# House style helper (single source of truth for theme/frame/mark sizes).
++SKILL_SCRIPTS = Path(".claude/skills/plotnine/scripts")
++sys.path.insert(0, str(SKILL_SCRIPTS))
++from pn_house_style import apply_house_style, humanize_labels, save_plot  # noqa: E402
+ 
+-# --- Step 1: understand & clean the data -> one tidy, correctly-typed frame ---
++# ---------------------------------------------------------------------------
++# Step 1 — UNDERSTAND & CLEAN THE DATA -> one tidy, correctly-typed frame.
++# ---------------------------------------------------------------------------
  df = pd.read_csv("sp500.csv")
--
--# Parse date to datetime
  df["date"] = pd.to_datetime(df["date"])
+ df["close"] = pd.to_numeric(df["close"], errors="coerce")
+-df = df.dropna(subset=["date", "close"])
++df = df.dropna(subset=["date", "close"]).sort_values("date")
  
--# Filter to most recent year of data
-+# Filter to the most recent year
- max_date = df["date"].max()
- one_year_ago = max_date - pd.Timedelta(days=365)
--df_recent = df[df["date"] >= one_year_ago].copy()
-+df_year = df[df["date"] >= one_year_ago].copy()
+-# Most recent year of data: last 365 days up to the latest observation.
++# Most recent year of data: the last 365 days up to the latest observation.
+ latest = df["date"].max()
+-recent = df[df["date"] >= latest - pd.DateOffset(years=1)].sort_values("date")
++recent = df[df["date"] >= latest - pd.Timedelta(days=365)].copy()
  
--# Build plot
-+# Sort by date for line plot
-+df_year = df_year.sort_values("date").reset_index(drop=True)
-+
-+# Step 2 & 3: Build the plot with geom_line and single accent color
+-# Span is ~1 year (>90 days and <=2 years) -> date_breaks "2 months", labels "%b %Y".
++# Date span for the pinned date-axis defaults (api.md): ~1 year here
++# -> > 90 days and <= 2 years -> "2 months" / "%b %Y".
++lab = humanize_labels("date", "close", overrides={"close": "Closing Price (USD)",
++                                                  "date": "Date"})
+ 
+-# --- Steps 2-4: single-series line, house accent (no hero color variable) ---
+-lab = humanize_labels("date", "close", overrides={"close": "Closing Price (USD)"})
++# ---------------------------------------------------------------------------
++# Steps 2-4 — FORM (trend -> geom_line), BIG COLOR (single series, no hero
++# variable -> constant accent, no legend; user prefers crimson + thicker line),
++# SCALES & LABELS (currency y, pinned date breaks, templated title).
++# ---------------------------------------------------------------------------
++TREND_COLOR = "#D1495B"  # crimson (taught preference, overrides house accent)
+ 
  p = (
--    ggplot(df_recent, aes(x="date", y="close"))
--    + geom_line(color="#2C6FB3", size=0.8)
-+    ggplot(df_year, aes(x="date", y="close"))
-+    + geom_line(color="#D1495B", size=1.5)  # L1: crimson, L2: thicker stroke
-+
-+    # Step 4: Labels and scales
+     ggplot(recent, aes(x="date", y="close"))
+-    + geom_line(color=HOUSE_STYLE["accent"], size=HOUSE_STYLE["line_size"])
++    + geom_line(color=TREND_COLOR, size=1.5)
+     + scale_x_date(date_breaks="2 months", date_labels="%b %Y")
+     + scale_y_continuous(labels=label_currency(prefix="$", precision=0))
      + labs(
-         title="S&P 500 Closing Price Trend",
-         x="Date",
-         y="Closing Price ($)"
-     )
--    + scale_x_date(date_labels="%b %Y", date_breaks="1 month")
-     + scale_y_continuous(labels=label_comma())
-+
-+    # Step 5: Theme
-     + theme_minimal(base_size=12)
-     + theme(
-         figure_size=(8, 5),
-@@ -36,10 +40,9 @@
-         axis_text=element_text(size=10, color="#222222"),
-         panel_grid_major=element_line(color="#E6E6E6", size=0.4),
-         panel_grid_minor=element_blank(),
--        axis_line=element_line(color="#E6E6E6", size=0.4)
+@@ -47,8 +54,13 @@
      )
  )
  
--# Render
-+# Step 6: Render to PNG
- p.save("plot.png", width=8, height=5, dpi=200, verbose=False)
- print("Plot saved to plot.png")
+-# --- Step 5: house theme, no legend (single un-grouped series) ---
++# ---------------------------------------------------------------------------
++# Step 5 — SMALL COLOR / THEME (no legend for a constant-color single series).
++# ---------------------------------------------------------------------------
+ p = apply_house_style(p, legend_position="none")
+ 
+-# --- Step 6: render (the only renderer) ---
++# ---------------------------------------------------------------------------
++# Step 6 — RENDER (the skill's only renderer).
++# ---------------------------------------------------------------------------
+ save_plot(p, "plot.png")
++print("wrote plot.png")

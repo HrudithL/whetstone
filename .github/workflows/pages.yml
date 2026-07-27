@@ -14,6 +14,7 @@ on:
       - "harness/scenarios/**"
       - "great-docs.yml"
       - "src/**"
+      - ".github/scripts/fix_mcp_manifest.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -59,12 +60,18 @@ jobs:
       - name: Build great-docs reference (great-docs/_site)
         env:
           QUARTO_PYTHON: python
-        # NATIVE build — no post-processing, no workarounds. Introspects the installed whetstone
-        # package and auto-generates the MCP tool reference from the FastMCP @mcp.tool() functions.
-        # This deploys exactly what `great-docs build` produces out of the box, so /docs shows the
-        # unmodified native output, warts and all. The gaps in that output are catalogued in
-        # GREAT_DOCS_NATIVE_GAPS.md — deliberately NOT fixed here.
+        # Mostly-NATIVE build. Introspects the installed whetstone package and auto-generates the MCP
+        # tool reference from the FastMCP @mcp.tool() functions. This deploys what `great-docs build`
+        # produces out of the box, warts and all -- the cosmetic/rendering gaps catalogued in
+        # GREAT_DOCS_NATIVE_GAPS.md are deliberately NOT fixed here. The one exception is the
+        # immediately-following step, which corrects two fabricated/inaccurate manifest fields.
         run: great-docs build
+
+      - name: Fix mcp.json install/run fields (upstream gap workaround, Bug B1)
+        # great-docs hard-codes installation.install to `pip install {package}[mcp]` (Whetstone has no
+        # `[mcp]` extra) and server.run to `python -m <module>` (not the documented console-script
+        # entry point). No config override exists upstream -- see GREAT_DOCS_NATIVE_GAPS.md, Bug B1.
+        run: python .github/scripts/fix_mcp_manifest.py great-docs/_site
 
       - name: Assemble combined tree (root showcase + great-docs at /docs)
         run: |

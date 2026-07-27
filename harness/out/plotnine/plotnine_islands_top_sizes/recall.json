@@ -5,7 +5,8 @@
       "rule": "Use plotnine's `theme_classic()` as the base theme instead of the house `theme_minimal`.",
       "scope": "theme",
       "recurrence": 2,
-      "weight": 0.6667
+      "weight": 0.6667,
+      "origin": "skill"
     }
   ],
   "issues": []

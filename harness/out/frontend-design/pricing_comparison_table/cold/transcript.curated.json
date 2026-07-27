@@ -1,0 +1,272 @@
+[
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "I'll start by reading the brief and invoking the frontend-design skill."
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 496,
+      "cache_read_input_tokens": 4631,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 496
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjgHXB66qd3gz7PnVjc",
+    "stop_reason": null,
+    "session_id": "7f006f08-843d-418e-a1d3-7c27102d15ce",
+    "uuid": "1aad547a-32a4-46e0-8e99-1f6b0f2175b0"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Read"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 496,
+      "cache_read_input_tokens": 4631,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 496
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjgHXB66qd3gz7PnVjc",
+    "stop_reason": null,
+    "session_id": "7f006f08-843d-418e-a1d3-7c27102d15ce",
+    "uuid": "cfdb2237-5e55-4dbc-a2fb-a1b92c3ee7ce"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool result"
+      }
+    ],
+    "uuid": "e04ab9db-8016-4dec-af7b-fbe435d3032b",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "elided",
+      "reason": "tool result"
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Skill"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 496,
+      "cache_read_input_tokens": 4631,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 496
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjgHXB66qd3gz7PnVjc",
+    "stop_reason": null,
+    "session_id": "7f006f08-843d-418e-a1d3-7c27102d15ce",
+    "uuid": "41c17ac7-b80b-4c6d-83bb-ba93e0d1b9cd"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool result"
+      }
+    ],
+    "uuid": "720f98bf-2d77-406f-8967-2c2ba6991fe1",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "elided",
+      "reason": "tool result"
+    }
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "long text",
+        "length": 2822
+      }
+    ],
+    "uuid": "3a865aed-973d-4c69-ab3d-74d4967d80f3",
+    "parent_tool_use_id": null,
+    "tool_use_result": null
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "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"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 1,
+      "cache_creation_input_tokens": 1554,
+      "cache_read_input_tokens": 5127,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 1554
+      },
+      "output_tokens": 5,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjgazQbEFCejAzCAsRR",
+    "stop_reason": null,
+    "session_id": "7f006f08-843d-418e-a1d3-7c27102d15ce",
+    "uuid": "bcf624c4-6033-47a8-8b80-59a50c2127d2"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01B8E9LN76bF3YbgHXdQANSr",
+        "name": "Write",
+        "input": {
+          "file_path": "index.html",
+          "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Marrow \u2014 Pricing</title>\n<style>\n  /* ============ Marrow \u00b7 pricing ============\n     Subject: a test-coverage-mapping CLI. The design borrows from the tool's\n     own artifact \u2014 the coverage grid: a matrix of cells, lit where tests reach.\n     Palette: deep terminal ink + warm \"bone\" type + a single marrow-coral accent.\n  */\n  :root{\n    --ink:      #0C0F14;\n    --panel:    #12161D;\n    --panel-2:  #161B23;\n    --line:     #232B36;\n    --bone:     #ECE6D9;\n    --muted:    #8A93A1;\n    --dim:      #5C6472;\n    --accent:   #FF6A3D;\n    --accent-d: #C74A26;\n    --covered:  #57C7A6;\n    --radius:   14px;\n    --mono: ui-monospace, \"SF Mono\", \"SFMono-Regular\", Menlo, Consolas, \"Liberation Mono\", monospace;\n    --sans: system-ui, -apple-system, \"Segoe UI\", Helvetica, Arial, sans-serif;\n  }\n\n  *{ box-sizing:border-box; }\n\n  html{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }\n\n  body{\n    margin:0;\n    background:\n      radial-gradient(1200px 600px at 80% -10%, rgba(255,106,61,.10), transparent 60%),\n      radial-gradient(900px 500px at 0% 110%, rgba(87,199,166,.06), transparent 55%),\n      var(--ink);\n    color:var(--bone);\n    font-family:var(--sans);\n    line-height:1.5;\n    min-height:100vh;\n  }\n\n  .wrap{\n    max-width:1120px;\n    margin:0 auto;\n    padding:clamp(56px,9vw,120px) clamp(20px,5vw,40px);\n  }\n\n  /* ---------- Section heading ---------- */\n  .head{ margin-bottom:clamp(40px,6vw,72px); }\n\n  .kicker{\n    font-family:var(--mono);\n    font-size:12.5px;\n    letter-spacing:.14em;\n    color:var(--accent);\n    display:inline-flex;\n    align-items:center;\n    gap:.6em;\n    margin:0 0 20px;\n  }\n  .kicker::before{\n    content:\"\";\n    width:26px; height:1px;\n    background:linear-gradient(90deg, var(--accent), transparent);\n  }\n  .kicker .caret{ color:var(--dim); }\n\n  h1{\n    font-size:clamp(42px,7vw,74px);\n    line-height:.98;\n    letter-spacing:-.03em;\n    font-weight:680;\n    margin:0 0 18px;\n  }\n\n  .sub{\n    font-size:clamp(16px,2vw,18.5px);\n    color:var(--muted);\n    max-width:34ch;\n    margin:0;\n  }\n  .sub b{ color:var(--bone); font-weight:600; }\n\n  /* ---------- Card grid ---------- */\n  .grid{\n    display:grid;\n    grid-template-columns:repeat(3, 1fr);\n    gap:20px;\n    align-items:stretch;\n  }\n\n  .card{\n    position:relative;\n    display:flex;\n    flex-direction:column;\n    background:linear-gradient(180deg, var(--panel-2), var(--panel));\n    border:1px solid var(--line);\n    border-radius:var(--radius);\n    padding:30px 28px 32px;\n    overflow:hidden;\n    transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s;\n  }\n  .card:hover{\n    transform:translateY(-6px);\n    border-color:#33404f;\n    box-shadow:0 24px 60px -30px rgba(0,0,0,.8);\n  }\n\n  /* Recommended tier \u2014 lit, elevated */\n  .card.reco{\n    border-color:rgba(255,106,61,.42);\n    background:\n      linear-gradient(180deg, rgba(255,106,61,.08), transparent 220px),\n      linear-gradient(180deg, var(--panel-2), var(--panel));\n    box-shadow:0 30px 70px -34px rgba(255,106,61,.35);\n    z-index:2;\n  }\n  @media(min-width:861px){ .card.reco{ transform:translateY(-14px); } .card.reco:hover{ transform:translateY(-20px); } }\n\n  /* coverage-grid motif in the top-right of each card */\n  .covmap{\n    position:absolute;\n    top:24px; right:22px;\n    display:grid;\n    grid-template-columns:repeat(5, 6px);\n    grid-auto-rows:6px;\n    gap:3px;\n    opacity:.55;\n  }\n  .covmap i{ background:var(--line); border-radius:1.5px; }\n  .covmap i.on{ background:var(--dim); }\n  .card.reco .covmap i.on{ background:var(--accent); box-shadow:0 0 6px rgba(255,106,61,.6); }\n  .card.reco .covmap i.half{ background:var(--accent-d); }\n\n  .badge{\n    position:absolute;\n    top:0; left:28px;\n    transform:translateY(-50%);\n    font-family:var(--mono);\n    font-size:11px;\n    letter-spacing:.13em;\n    color:var(--ink);\n    background:var(--accent);\n    padding:5px 11px;\n    border-radius:100px;\n    font-weight:600;\n  }\n\n  .tier{\n    font-family:var(--mono);\n    font-size:13px;\n    letter-spacing:.16em;\n    text-transform:uppercase;\n    color:var(--muted);\n    margin:2px 0 22px;\n  }\n  .card.reco .tier{ color:var(--accent); }\n\n  .price{\n    display:flex;\n    align-items:baseline;\n    gap:8px;\n    flex-wrap:wrap;\n    margin-bottom:26px;\n    min-height:52px;\n  }\n  .amount{\n    font-size:46px;\n    font-weight:680;\n    letter-spacing:-.03em;\n    line-height:1;\n    font-family:var(--sans);\n  }\n  .period{\n    font-family:var(--mono);\n    font-size:13px;\n    color:var(--dim);\n    letter-spacing:.02em;\n  }\n\n  /* ---------- CTA ---------- */\n  .cta{\n    display:block;\n    width:100%;\n    text-align:center;\n    font-family:var(--mono);\n    font-size:14px;\n    letter-spacing:.02em;\n    padding:14px 16px;\n    border-radius:10px;\n    border:1px solid var(--line);\n    background:transparent;\n    color:var(--bone);\n    cursor:pointer;\n    text-decoration:none;\n    transition:background .25s, border-color .25s, color .25s, transform .1s;\n  }\n  .cta:hover{ background:rgba(255,255,255,.04); border-color:#3a4757; }\n  .cta:active{ transform:translateY(1px); }\n  .cta.primary{\n    background:var(--accent);\n    border-color:var(--accent);\n    color:#1a0d07;\n    font-weight:600;\n  }\n  .cta.primary:hover{ background:#ff7d55; border-color:#ff7d55; }\n  .cta::before{ content:\"\u203a \"; color:currentColor; opacity:.55; }\n\n  /* ---------- Features ---------- */\n  .divider{\n    height:1px;\n    background:var(--line);\n    margin:28px 0 22px;\n  }\n  .feat{\n    list-style:none;\n    margin:0; padding:0;\n    display:flex;\n    flex-direction:column;\n    gap:14px;\n    flex-grow:1;\n  }\n  .feat li{\n    display:flex;\n    align-items:flex-start;\n    gap:11px;\n    font-size:14.5px;\n    color:var(--bone);\n  }\n  /* coverage-cell bullet */\n  .feat li::before{\n    content:\"\";\n    flex:none;\n    width:9px; height:9px;\n    margin-top:5px;\n    border-radius:2px;\n    background:var(--covered);\n    box-shadow:0 0 0 1px rgba(87,199,166,.25);\n  }\n  .card.reco .feat li::before{ background:var(--accent); box-shadow:0 0 0 1px rgba(255,106,61,.3); }\n\n  /* \"Everything in X\" \u2014 an inherited line, styled distinctly */\n  .feat li.inherit{\n    font-family:var(--mono);\n    font-size:12.5px;\n    letter-spacing:.02em;\n    color:var(--muted);\n    padding-bottom:2px;\n  }\n  .feat li.inherit::before{\n    content:\"+\";\n    background:none;\n    box-shadow:none;\n    width:auto; height:auto;\n    margin-top:0;\n    color:var(--dim);\n    font-family:var(--mono);\n    font-size:14px;\n    line-height:1.4;\n  }\n  .feat li.inherit b{ color:var(--bone); font-weight:600; }\n\n  /* ---------- entrance motion ---------- */\n  @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }\n  .card{ animation:rise .6s cubic-bezier(.2,.7,.2,1) both; }\n  .card:nth-child(1){ animation-delay:.05s; }\n  .card:nth-child(2){ animation-delay:.13s; }\n  .card:nth-child(3){ animation-delay:.21s; }\n  .covmap i.on{ animation:cell .5s ease both; }\n  @keyframes cell{ from{ opacity:0; } to{ opacity:1; } }\n\n  .foot{\n    margin-top:36px;\n    font-family:var(--mono);\n    font-size:12.5px;\n    color:var(--dim);\n    letter-spacing:.02em;\n  }\n  .foot .dot{ color:var(--covered); }\n\n  /* ---------- responsive ---------- */\n  @media(max-width:860px){\n    .grid{ grid-template-columns:1fr; max-width:440px; }\n    .card.reco{ order:-1; }\n  }\n\n  /* ---------- focus + reduced motion ---------- */\n  a:focus-visible, .cta:focus-visible{\n    outline:2px solid var(--accent);\n    outline-offset:3px;\n  }\n  @media(prefers-reduced-motion:reduce){\n    *{ animation:none !important; transition:none !important; }\n    .card:hover, .card.reco{ transform:none; }\n  }\n</style>\n</head>\n<body>\n  <main class=\"wrap\">\n    <header class=\"head\">\n      <p class=\"kicker\"><span class=\"caret\">$</span> marrow plans <span class=\"caret\">--all</span></p>\n      <h1>Pricing</h1>\n      <p class=\"sub\"><b>Start free.</b> Upgrade when your team does.</p>\n    </header>\n\n    <section class=\"grid\" aria-label=\"Pricing tiers\">\n\n      <!-- Solo -->\n      <article class=\"card\">\n        <div class=\"covmap\" aria-hidden=\"true\">\n          <i class=\"on\"></i><i></i><i></i><i></i><i></i>\n          <i></i><i></i><i></i><i></i><i></i>\n          <i></i><i></i><i></i><i></i><i></i>\n        </div>\n        <h2 class=\"tier\">Solo</h2>\n        <div class=\"price\">\n          <span class=\"amount\">$0</span>\n          <span class=\"period\">/ forever</span>\n        </div>\n        <a class=\"cta\" href=\"#\">Start free</a>\n        <div class=\"divider\"></div>\n        <ul class=\"feat\">\n          <li>1 developer</li>\n          <li>Local test maps</li>\n          <li>Community support</li>\n        </ul>\n      </article>\n\n      <!-- Team (recommended) -->\n      <article class=\"card reco\" aria-label=\"Team \u2014 recommended\">\n        <span class=\"badge\">RECOMMENDED</span>\n        <div class=\"covmap\" aria-hidden=\"true\">\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"half\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"half\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"half\"></i><i class=\"on\"></i>\n        </div>\n        <h2 class=\"tier\">Team</h2>\n        <div class=\"price\">\n          <span class=\"amount\">$12</span>\n          <span class=\"period\">/ user / month</span>\n        </div>\n        <a class=\"cta primary\" href=\"#\">Start 14-day trial</a>\n        <div class=\"divider\"></div>\n        <ul class=\"feat\">\n          <li class=\"inherit\">Everything in <b>Solo</b></li>\n          <li>Shared team maps</li>\n          <li>CI integration</li>\n          <li>Email support</li>\n        </ul>\n      </article>\n\n      <!-- Enterprise -->\n      <article class=\"card\">\n        <div class=\"covmap\" aria-hidden=\"true\">\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n        </div>\n        <h2 class=\"tier\">Enterprise</h2>\n        <div class=\"price\">\n          <span class=\"amount\">Custom</span>\n        </div>\n        <a class=\"cta\" href=\"#\">Contact sales</a>\n        <div class=\"divider\"></div>\n        <ul class=\"feat\">\n          <li class=\"inherit\">Everything in <b>Team</b></li>\n          <li>SSO / SAML</li>\n          <li>Self-hosted option</li>\n          <li>Dedicated support</li>\n        </ul>\n      </article>\n\n    </section>\n\n    <p class=\"foot\"><span class=\"dot\">\u25a0</span> coverage mapped across every tier \u2014 no card by card lock-in.</p>\n  </main>\n</body>\n</html>\n"
+        }
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 1,
+      "cache_creation_input_tokens": 1554,
+      "cache_read_input_tokens": 5127,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 1554
+      },
+      "output_tokens": 5,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjgazQbEFCejAzCAsRR",
+    "stop_reason": null,
+    "session_id": "7f006f08-843d-418e-a1d3-7c27102d15ce",
+    "uuid": "aa5edac5-9b9f-4a5e-935a-488bf082d8e5"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01B8E9LN76bF3YbgHXdQANSr",
+        "content": "File created successfully at: index.html (file state is current in your context \u2014 no need to Read it back)",
+        "is_error": null
+      }
+    ],
+    "uuid": "8748f5b8-1f58-4492-a5e9-4cccde271b03",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "create",
+      "filePath": "index.html",
+      "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Marrow \u2014 Pricing</title>\n<style>\n  /* ============ Marrow \u00b7 pricing ============\n     Subject: a test-coverage-mapping CLI. The design borrows from the tool's\n     own artifact \u2014 the coverage grid: a matrix of cells, lit where tests reach.\n     Palette: deep terminal ink + warm \"bone\" type + a single marrow-coral accent.\n  */\n  :root{\n    --ink:      #0C0F14;\n    --panel:    #12161D;\n    --panel-2:  #161B23;\n    --line:     #232B36;\n    --bone:     #ECE6D9;\n    --muted:    #8A93A1;\n    --dim:      #5C6472;\n    --accent:   #FF6A3D;\n    --accent-d: #C74A26;\n    --covered:  #57C7A6;\n    --radius:   14px;\n    --mono: ui-monospace, \"SF Mono\", \"SFMono-Regular\", Menlo, Consolas, \"Liberation Mono\", monospace;\n    --sans: system-ui, -apple-system, \"Segoe UI\", Helvetica, Arial, sans-serif;\n  }\n\n  *{ box-sizing:border-box; }\n\n  html{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }\n\n  body{\n    margin:0;\n    background:\n      radial-gradient(1200px 600px at 80% -10%, rgba(255,106,61,.10), transparent 60%),\n      radial-gradient(900px 500px at 0% 110%, rgba(87,199,166,.06), transparent 55%),\n      var(--ink);\n    color:var(--bone);\n    font-family:var(--sans);\n    line-height:1.5;\n    min-height:100vh;\n  }\n\n  .wrap{\n    max-width:1120px;\n    margin:0 auto;\n    padding:clamp(56px,9vw,120px) clamp(20px,5vw,40px);\n  }\n\n  /* ---------- Section heading ---------- */\n  .head{ margin-bottom:clamp(40px,6vw,72px); }\n\n  .kicker{\n    font-family:var(--mono);\n    font-size:12.5px;\n    letter-spacing:.14em;\n    color:var(--accent);\n    display:inline-flex;\n    align-items:center;\n    gap:.6em;\n    margin:0 0 20px;\n  }\n  .kicker::before{\n    content:\"\";\n    width:26px; height:1px;\n    background:linear-gradient(90deg, var(--accent), transparent);\n  }\n  .kicker .caret{ color:var(--dim); }\n\n  h1{\n    font-size:clamp(42px,7vw,74px);\n    line-height:.98;\n    letter-spacing:-.03em;\n    font-weight:680;\n    margin:0 0 18px;\n  }\n\n  .sub{\n    font-size:clamp(16px,2vw,18.5px);\n    color:var(--muted);\n    max-width:34ch;\n    margin:0;\n  }\n  .sub b{ color:var(--bone); font-weight:600; }\n\n  /* ---------- Card grid ---------- */\n  .grid{\n    display:grid;\n    grid-template-columns:repeat(3, 1fr);\n    gap:20px;\n    align-items:stretch;\n  }\n\n  .card{\n    position:relative;\n    display:flex;\n    flex-direction:column;\n    background:linear-gradient(180deg, var(--panel-2), var(--panel));\n    border:1px solid var(--line);\n    border-radius:var(--radius);\n    padding:30px 28px 32px;\n    overflow:hidden;\n    transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s;\n  }\n  .card:hover{\n    transform:translateY(-6px);\n    border-color:#33404f;\n    box-shadow:0 24px 60px -30px rgba(0,0,0,.8);\n  }\n\n  /* Recommended tier \u2014 lit, elevated */\n  .card.reco{\n    border-color:rgba(255,106,61,.42);\n    background:\n      linear-gradient(180deg, rgba(255,106,61,.08), transparent 220px),\n      linear-gradient(180deg, var(--panel-2), var(--panel));\n    box-shadow:0 30px 70px -34px rgba(255,106,61,.35);\n    z-index:2;\n  }\n  @media(min-width:861px){ .card.reco{ transform:translateY(-14px); } .card.reco:hover{ transform:translateY(-20px); } }\n\n  /* coverage-grid motif in the top-right of each card */\n  .covmap{\n    position:absolute;\n    top:24px; right:22px;\n    display:grid;\n    grid-template-columns:repeat(5, 6px);\n    grid-auto-rows:6px;\n    gap:3px;\n    opacity:.55;\n  }\n  .covmap i{ background:var(--line); border-radius:1.5px; }\n  .covmap i.on{ background:var(--dim); }\n  .card.reco .covmap i.on{ background:var(--accent); box-shadow:0 0 6px rgba(255,106,61,.6); }\n  .card.reco .covmap i.half{ background:var(--accent-d); }\n\n  .badge{\n    position:absolute;\n    top:0; left:28px;\n    transform:translateY(-50%);\n    font-family:var(--mono);\n    font-size:11px;\n    letter-spacing:.13em;\n    color:var(--ink);\n    background:var(--accent);\n    padding:5px 11px;\n    border-radius:100px;\n    font-weight:600;\n  }\n\n  .tier{\n    font-family:var(--mono);\n    font-size:13px;\n    letter-spacing:.16em;\n    text-transform:uppercase;\n    color:var(--muted);\n    margin:2px 0 22px;\n  }\n  .card.reco .tier{ color:var(--accent); }\n\n  .price{\n    display:flex;\n    align-items:baseline;\n    gap:8px;\n    flex-wrap:wrap;\n    margin-bottom:26px;\n    min-height:52px;\n  }\n  .amount{\n    font-size:46px;\n    font-weight:680;\n    letter-spacing:-.03em;\n    line-height:1;\n    font-family:var(--sans);\n  }\n  .period{\n    font-family:var(--mono);\n    font-size:13px;\n    color:var(--dim);\n    letter-spacing:.02em;\n  }\n\n  /* ---------- CTA ---------- */\n  .cta{\n    display:block;\n    width:100%;\n    text-align:center;\n    font-family:var(--mono);\n    font-size:14px;\n    letter-spacing:.02em;\n    padding:14px 16px;\n    border-radius:10px;\n    border:1px solid var(--line);\n    background:transparent;\n    color:var(--bone);\n    cursor:pointer;\n    text-decoration:none;\n    transition:background .25s, border-color .25s, color .25s, transform .1s;\n  }\n  .cta:hover{ background:rgba(255,255,255,.04); border-color:#3a4757; }\n  .cta:active{ transform:translateY(1px); }\n  .cta.primary{\n    background:var(--accent);\n    border-color:var(--accent);\n    color:#1a0d07;\n    font-weight:600;\n  }\n  .cta.primary:hover{ background:#ff7d55; border-color:#ff7d55; }\n  .cta::before{ content:\"\u203a \"; color:currentColor; opacity:.55; }\n\n  /* ---------- Features ---------- */\n  .divider{\n    height:1px;\n    background:var(--line);\n    margin:28px 0 22px;\n  }\n  .feat{\n    list-style:none;\n    margin:0; padding:0;\n    display:flex;\n    flex-direction:column;\n    gap:14px;\n    flex-grow:1;\n  }\n  .feat li{\n    display:flex;\n    align-items:flex-start;\n    gap:11px;\n    font-size:14.5px;\n    color:var(--bone);\n  }\n  /* coverage-cell bullet */\n  .feat li::before{\n    content:\"\";\n    flex:none;\n    width:9px; height:9px;\n    margin-top:5px;\n    border-radius:2px;\n    background:var(--covered);\n    box-shadow:0 0 0 1px rgba(87,199,166,.25);\n  }\n  .card.reco .feat li::before{ background:var(--accent); box-shadow:0 0 0 1px rgba(255,106,61,.3); }\n\n  /* \"Everything in X\" \u2014 an inherited line, styled distinctly */\n  .feat li.inherit{\n    font-family:var(--mono);\n    font-size:12.5px;\n    letter-spacing:.02em;\n    color:var(--muted);\n    padding-bottom:2px;\n  }\n  .feat li.inherit::before{\n    content:\"+\";\n    background:none;\n    box-shadow:none;\n    width:auto; height:auto;\n    margin-top:0;\n    color:var(--dim);\n    font-family:var(--mono);\n    font-size:14px;\n    line-height:1.4;\n  }\n  .feat li.inherit b{ color:var(--bone); font-weight:600; }\n\n  /* ---------- entrance motion ---------- */\n  @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }\n  .card{ animation:rise .6s cubic-bezier(.2,.7,.2,1) both; }\n  .card:nth-child(1){ animation-delay:.05s; }\n  .card:nth-child(2){ animation-delay:.13s; }\n  .card:nth-child(3){ animation-delay:.21s; }\n  .covmap i.on{ animation:cell .5s ease both; }\n  @keyframes cell{ from{ opacity:0; } to{ opacity:1; } }\n\n  .foot{\n    margin-top:36px;\n    font-family:var(--mono);\n    font-size:12.5px;\n    color:var(--dim);\n    letter-spacing:.02em;\n  }\n  .foot .dot{ color:var(--covered); }\n\n  /* ---------- responsive ---------- */\n  @media(max-width:860px){\n    .grid{ grid-template-columns:1fr; max-width:440px; }\n    .card.reco{ order:-1; }\n  }\n\n  /* ---------- focus + reduced motion ---------- */\n  a:focus-visible, .cta:focus-visible{\n    outline:2px solid var(--accent);\n    outline-offset:3px;\n  }\n  @media(prefers-reduced-motion:reduce){\n    *{ animation:none !important; transition:none !important; }\n    .card:hover, .card.reco{ transform:none; }\n  }\n</style>\n</head>\n<body>\n  <main class=\"wrap\">\n    <header class=\"head\">\n      <p class=\"kicker\"><span class=\"caret\">$</span> marrow plans <span class=\"caret\">--all</span></p>\n      <h1>Pricing</h1>\n      <p class=\"sub\"><b>Start free.</b> Upgrade when your team does.</p>\n    </header>\n\n    <section class=\"grid\" aria-label=\"Pricing tiers\">\n\n      <!-- Solo -->\n      <article class=\"card\">\n        <div class=\"covmap\" aria-hidden=\"true\">\n          <i class=\"on\"></i><i></i><i></i><i></i><i></i>\n          <i></i><i></i><i></i><i></i><i></i>\n          <i></i><i></i><i></i><i></i><i></i>\n        </div>\n        <h2 class=\"tier\">Solo</h2>\n        <div class=\"price\">\n          <span class=\"amount\">$0</span>\n          <span class=\"period\">/ forever</span>\n        </div>\n        <a class=\"cta\" href=\"#\">Start free</a>\n        <div class=\"divider\"></div>\n        <ul class=\"feat\">\n          <li>1 developer</li>\n          <li>Local test maps</li>\n          <li>Community support</li>\n        </ul>\n      </article>\n\n      <!-- Team (recommended) -->\n      <article class=\"card reco\" aria-label=\"Team \u2014 recommended\">\n        <span class=\"badge\">RECOMMENDED</span>\n        <div class=\"covmap\" aria-hidden=\"true\">\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"half\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"half\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"half\"></i><i class=\"on\"></i>\n        </div>\n        <h2 class=\"tier\">Team</h2>\n        <div class=\"price\">\n          <span class=\"amount\">$12</span>\n          <span class=\"period\">/ user / month</span>\n        </div>\n        <a class=\"cta primary\" href=\"#\">Start 14-day trial</a>\n        <div class=\"divider\"></div>\n        <ul class=\"feat\">\n          <li class=\"inherit\">Everything in <b>Solo</b></li>\n          <li>Shared team maps</li>\n          <li>CI integration</li>\n          <li>Email support</li>\n        </ul>\n      </article>\n\n      <!-- Enterprise -->\n      <article class=\"card\">\n        <div class=\"covmap\" aria-hidden=\"true\">\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n          <i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i>\n        </div>\n        <h2 class=\"tier\">Enterprise</h2>\n        <div class=\"price\">\n          <span class=\"amount\">Custom</span>\n        </div>\n        <a class=\"cta\" href=\"#\">Contact sales</a>\n        <div class=\"divider\"></div>\n        <ul class=\"feat\">\n          <li class=\"inherit\">Everything in <b>Team</b></li>\n          <li>SSO / SAML</li>\n          <li>Self-hosted option</li>\n          <li>Dedicated support</li>\n        </ul>\n      </article>\n\n    </section>\n\n    <p class=\"foot\"><span class=\"dot\">\u25a0</span> coverage mapped across every tier \u2014 no card by card lock-in.</p>\n  </main>\n</body>\n</html>\n",
+      "structuredPatch": [],
+      "originalFile": null,
+      "userModified": false
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "EuIFCokBCBAYAipAeTY/BCGblYq2vUuTb6vIR9VjmmL0hxhm2jqH18Nd48i6+GJlEOeFzVPqkC0q3yMnQiTbHCq+g4OJvP14qqlXUzIPY2xhdWRlLW9wdXMtNC04OABCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDOxJYCxKx9k087nJUBoMocAa42ZlsU3IJl2zIjCrVHcwK3/T6wzw0/z7aJ3Mcy9raug3DQ/D8/cgfSv0lwk8Z1FlYheZ995/O9Tg6BQqhQReOwZ7vsEHEtmzYOQ71F8h3VZvXPhxqZD6d4wvHlAwnclxp2mXt14yoG25N2btMiN2/NyYLncBXs++XqY68TxF4xTUAkmCimxbmU7tjkHhOJK5ll8VFOfPsTjCAJKF9Kvy2EAxqhK8ME4VG4egQmEn0MiKHDWZ7LI+R9sMHdjNPcSHNqSY/D36ZtcTMnQuMwMOGzJgCSkVlkYuGe6XgQsVl2ffeEWmlXWyK7TVvlOmInuPNAgan/1igrwlCVS4wHwPEkzSXOHjpzs07NbqzHI1N6/lUfI3zL2DcYt9CvfXjDm2rS8mIkByAsS/sTcUz4LPkUpyGg3LOmXQQzsXqzEi62bALVHoj5BSRATV2QVHg8P+XO1zX9oFAlm/5UVLbxEbEacrKzWA22Edo0n6F/b4LYwI+PBcZMxy9r0cdNOWQhIl9nnCSNvDw7Ql2m4FeRmljsgPrOFZpxPgaYg4VhMrK6mzjpk7WALK+LRbLAV+NPFQqlHgKZ7WQcx40J3L6eCJ6zy9rS6LLSiumIjrQt9VdugjW7bizJ/WXJc16TSTDMt30Uh2lRdH59Uh+9HJ8L1/aCID7S7pDwJ0E1iTd0gBO7kfuuJYCSJ72/mXYjRJiTmWRqqPv0DU+ZCRpJiYlk2YHo8KG9F8wvLhgWLqlLI1Alj5gS8C3O/aUfUzF9A0rIMV79uiGAE="
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 6295,
+      "cache_read_input_tokens": 6681,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 6295
+      },
+      "output_tokens": 7,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjn6pQw872EYQmXDhSG",
+    "stop_reason": null,
+    "session_id": "7f006f08-843d-418e-a1d3-7c27102d15ce",
+    "uuid": "8ca13e23-fd80-4438-b511-35eb4bfb6d24"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "long text",
+        "length": 1493
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 6295,
+      "cache_read_input_tokens": 6681,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 6295
+      },
+      "output_tokens": 7,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdSjn6pQw872EYQmXDhSG",
+    "stop_reason": null,
+    "session_id": "7f006f08-843d-418e-a1d3-7c27102d15ce",
+    "uuid": "8332d70f-2e0f-49a3-b85e-5db9e4ba3452"
+  }
+]

@@ -23,7 +23,9 @@ p = (
     ggplot(df, aes("Month", "Temp", fill="Month"))
     + geom_boxplot(alpha=0.85, outlier_alpha=0.4)
     + house_palette("qualitative", aes="fill", name="Month")
-    + labs(title="Temperature distribution by month",
+    # title template (geoms.md): distribution compared across a group ->
+    # "Distribution of {Y} by {X}"
+    + labs(title="Distribution of Temperature (°F) by Month",
            x="", y="Temperature (°F)")
 )
 p = apply_house_style(p, legend_position="none")  # x already labels the groups

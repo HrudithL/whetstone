@@ -291,6 +291,9 @@ after every change — so the repo *is* the full history of your taste.
 
 ### How recall finds the right preferences (embeddings + retrieval)
 
+> Implementation detail — skip this section if you just want to use Whetstone. Nothing here changes
+> how you call the tools; it's for readers curious how retrieval actually works under the hood.
+
 The markdown is the source of truth; **embeddings live in a derived `index.sqlite`** that any call
 can rebuild from the markdown. Per store it holds:
 
@@ -358,7 +361,9 @@ config):
   next_ids.json               per-store id counters (git-tracked; prevents id reuse)
   index.sqlite                derived embedding cache (rebuildable, git-ignored)
   events.jsonl                per-run telemetry for metrics (git-ignored)
+  compact-report.md           latest advisory mining findings (git-ignored)
   .git/                       full version history of the markdown
+<store-root>/__global__/      the cross-skill learned global layer — same structure, its own git repo
 ```
 
 Configuration is read from `~/.config/whetstone/config.toml`; every key also has a `WHETSTONE_*`

@@ -1,0 +1,4 @@
+You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
+
+Issues (mandatory constraints):
+  - [I1] (layout structure) Don't lay the tiers out as three side-by-side cards. Restructure this as a single comparison table instead: one row per feature, one column per tier, so a reader can scan across a row and compare the tiers directly at a glance.

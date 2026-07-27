@@ -1,0 +1,69 @@
+name: pitch_deck_reorder
+skill: pptx
+difficulty: hard
+prompt: >
+  Build the 5-slide "Marrow" pitch deck described in the outline, in the order given. Write deck.py
+  using python-pptx and run it to produce deck.pptx.
+data: data/pitch_deck_outline.md
+# COMPLEX-STRUCTURAL anchor: this harness's other pptx scenario (pitch_deck.yaml) teaches font/aspect-
+# ratio - a deck-level style setting layered on top of an unchanged slide sequence. Both preferences
+# here instead change the SLIDE SEQUENCE ITSELF (reorder + insert), which is a real restructuring of
+# the deck's narrative, not a cosmetic pass over the same 5 slides.
+preferences:
+  - id: cta-second
+    polarity: issue
+    scope: slide order
+    body: >
+      Don't save the call-to-action for last. Move the "Install Marrow" call-to-action slide to be
+      the SECOND slide - right after the title, before the problem/idea/how-it-works slides. Lead
+      with the install command, then explain why it matters.
+    feedback: >
+      Put the "Install Marrow" slide right after the title - don't bury the call-to-action at the
+      end, lead with it.
+    check:
+      # Literal source-text order alone is a weak proxy for slide-build order - a helper defined near
+      # the top of the script could contain "Install Marrow" while still being called last, so a bare
+      # "Install Marrow ... Big test suites" order check could pass on a deck that was never reordered.
+      # Requiring two "add_slide(" calls before "Install Marrow" ties it to the actual slide-add call
+      # sequence (proving the CTA text isn't part of slide 1), on top of the existing before-the-
+      # problem-slide check. Accepted residual gap, tried and reverted: an "exactly the second slide"
+      # version (tempered-greedy-token gating every gap, anchored to the start of the source) correctly
+      # rejects a Title -> Agenda -> Install Marrow -> Problem adversarial sample in a real deck.py, but
+      # the `^`-anchor that makes it work there is incompatible with how this harness's --stub sampler
+      # embeds a check's literal deep inside a wrapper statement (never at position 0 of the "source"),
+      # so that stricter version can never self-satisfy under `--stub` - a materially worse trade than
+      # this "at least 2" version's narrower gap (an unasked-for extra slide inserted before the CTA,
+      # which the prompt gives a real model no reason to invent). This assumes the straightforward,
+      # single top-to-bottom script a 5-slide deck like this one is expected to produce (consistent
+      # with pitch_deck.yaml's checks, which assume the same non-abstracted style) - not airtight
+      # against a deliberately indirect helper-function structure, but this harness's checks work over
+      # generated source text, not a rendered deck, so a perfect structural guarantee isn't available.
+      # Cold-clean: the outline lists the CTA last and the prompt says "in the order given", so a cold
+      # run reproduces that order (CTA content after problem content, and after only 1 add_slide call).
+      kind: regex
+      pattern: 'add_slide\([\s\S]*?add_slide\([\s\S]*?Install Marrow[\s\S]*?Big test suites'
+  - id: why-now-slide
+    polarity: learning
+    scope: slide structure
+    body: >
+      Insert a new slide titled "Why now" between "The idea" and "How it works", making the case that
+      test suites have grown large enough that manual coverage tracking has become untenable - this
+      is new content the outline doesn't ask for, added because it strengthens the pitch.
+    feedback: >
+      Add a "Why now" slide in between the idea and how-it-works slides - explain why this problem
+      is urgent today, not just that it exists.
+    check:
+      # A bare presence check would count "Why now" text added anywhere - even as extra text bolted
+      # onto the existing idea or how-it-works slide rather than a genuinely new slide - as honoring a
+      # preference that specifically asks for a SEPARATE slide BETWEEN the idea and how-it-works
+      # slides. The tempered-greedy-token group `(?:(?!add_slide\()[\s\S])*?` ties the required
+      # "add_slide(" to being the one IMMEDIATELY followed by "Why now" (not just any add_slide(
+      # anywhere earlier), so a script that creates the how-it-works slide first and only then adds a
+      # "Why now" subtitle/eyebrow onto IT doesn't falsely match - that adversarial ordering was caught
+      # and fixed after an earlier, looser version of this check wrongly accepted it. Anchoring on
+      # "Watch one run" (the idea slide's own on-slide tagline, per the outline) and "How it works"
+      # (that slide's on-slide title - the outline gives it no separate quoted tagline, so the model has
+      # every reason to reuse this literal label) proves the new slide falls between them. Cold-clean:
+      # the outline has no "Why now" slide at all, so a cold run never produces this whole sequence.
+      kind: regex
+      pattern: 'Watch one run[\s\S]*?add_slide\((?:(?!add_slide\()[\s\S])*?Why now[\s\S]*How it works'

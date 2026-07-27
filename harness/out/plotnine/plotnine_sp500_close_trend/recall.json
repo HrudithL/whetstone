@@ -5,14 +5,16 @@
       "rule": "Draw the single trend line in crimson `#D1495B`, not the house blue accent.",
       "scope": "color encoding",
       "recurrence": 2,
-      "weight": 0.6667
+      "weight": 0.6667,
+      "origin": "skill"
     },
     {
       "id": "L2",
       "rule": "Give the trend line a thicker stroke, `size=1.5`, in geom_line.",
       "scope": "geoms",
       "recurrence": 2,
-      "weight": 0.6667
+      "weight": 0.6667,
+      "origin": "skill"
     }
   ],
   "issues": []

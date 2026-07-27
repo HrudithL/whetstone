@@ -1,21 +1,23 @@
 ---
 title: "Before / After"
-subtitle: "See the learned layer change the output."
+subtitle: "Walk through how a correction becomes a durable preference."
 ---
 
-Each scenario runs **one skill** three ways. **Before** and **After** are shown side by side, with
-**the learned layer** beneath them:
+Each scenario walks through **one skill** and one or more corrections, in three steps:
 
-1. **Before** — the output generated with an **empty** Whetstone store. The subjective preference we
-   later teach is (typically) not honored.
-2. **After** — the output generated once that learned layer was applied. The preference is honored.
-3. **The learned layer** — the **exact text injected into the warm run's prompt** (rendered by
-   Whetstone from the recalled learnings and issues, with their ids, scopes, and weights). This is
-   verbatim what the model was told — not a paraphrase.
+1. **Here's what it produced** — the output generated with an **empty** Whetstone store. The
+   subjective preferences we later teach are (typically) not honored.
+2. **Here's what wasn't good** — the scripted correction(s), quoted verbatim as the user would
+   actually say them, plus the run each one started sticking on.
+3. **Here's what changed** — the same task, generated again once the learned layer was applied. Most
+   preferences are honored; when one genuinely isn't (a miss in retrieval, or a correction that hasn't
+   stuck within the run budget yet), that's shown too, not hidden. The raw learned layer Whetstone
+   injected is one click away if you want the receipts.
 
 The scenarios span four skills — **Great Tables**, **frontend design**, **plotnine**, and
-**PowerPoint decks** — each carrying its own arbitrary house-style preference. The substrate is the
-same for all four; only the skill and the taught preference change.
+**PowerPoint decks** — each carrying one or more arbitrary house-style preferences (most scenarios
+teach two; `plotnine_gtcars_hp_msrp` teaches five). The substrate is the same for all four; only the
+skill and the taught preferences change.
 
 *The panels render each skill's output natively from the committed artifacts under `harness/out/`:
 Great Tables tables inline, self-contained web pages sandboxed in an iframe, plotnine plots as
@@ -54,5 +56,5 @@ for skill, label, note in SKILLS:
         display(Markdown(f"## {n}"))
         display(HTML(triptych_html(n)))
 if not any_shown:
-    display(not_generated_note("The before / learned-layer / after panels"))
+    display(not_generated_note("The step-by-step before/after walkthroughs"))
 ```

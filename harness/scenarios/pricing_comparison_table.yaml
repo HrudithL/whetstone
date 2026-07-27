@@ -1,0 +1,54 @@
+name: pricing_comparison_table
+skill: frontend-design
+difficulty: hard
+prompt: >
+  Build the pricing section described in the brief. Produce a single self-contained index.html.
+data: data/pricing_brief.md
+# COMPLEX-STRUCTURAL anchor: this harness's other frontend-design pricing scenario (pricing_cards.yaml)
+# teaches font/corner-radius on top of an unchanged 3-card layout. Both preferences here instead change
+# the LAYOUT SHAPE - cards become a table, and the column order itself is reorganized - a real DOM
+# restructuring, not a visual pass over the same three cards.
+preferences:
+  - id: cards-to-comparison-table
+    polarity: issue
+    scope: layout structure
+    body: >
+      Don't lay the tiers out as three side-by-side cards. Restructure this as a single comparison
+      table instead: one row per feature, one column per tier, so a reader can scan across a row and
+      compare the tiers directly at a glance.
+    feedback: >
+      Stop doing three separate cards - I want a single comparison table, features as rows and tiers
+      as columns, so I can compare across a row instead of hunting through three boxes.
+    check:
+      # Cold-clean: the brief itself says "a row of three cards", so a cold run has every reason to
+      # build cards (divs), not a <table>. Presence of a real <table> element is a direct, honest
+      # signal the layout actually changed shape. Accepted residual gap: this doesn't prove the old
+      # card markup was REMOVED (only that a table now also exists) - ruling that out would mean
+      # guessing at a specific card/div class name the model might use, which trades one fragility
+      # (false positive on co-existing markup) for a worse one (false negative from a wrong guess);
+      # this matches the "light but honest signal, not exhaustive proof" check style used throughout
+      # this harness (e.g. a bare `Dark2`/`PuRd`/`tab_spanner` presence check elsewhere).
+      kind: code_contains
+      pattern: <table
+  - id: enterprise-before-team
+    polarity: learning
+    scope: column order
+    body: >
+      Order the tier columns as Solo, Enterprise, Team - not Solo, Team, Enterprise. Lead with the
+      free tier, then the ceiling (Enterprise), and put the recommended middle tier (Team) last so
+      it's the final impression the reader leaves with.
+    feedback: >
+      Reorder the columns - Solo, then Enterprise, then Team last, not Team stuck in the middle.
+    check:
+      # NOT anchored on the tier NAMES: the Enterprise card's own bullet list says "Everything in
+      # Team" (comparing tiers), so "Enterprise[\s\S]*Team" would false-positive on an unchanged cold
+      # page (Enterprise's title, followed later by that bullet's "...in Team", satisfies the pattern
+      # even though Team's card/column still comes first). Anchored on each tier's CTA text instead -
+      # "Start free" (Solo), "Contact sales" (Enterprise), "Start 14-day trial" (Team) are tier-
+      # exclusive strings that don't cross-reference other tiers. Chaining all three (not just
+      # Enterprise-before-Team) also rules out an Enterprise/Solo/Team ordering, which a two-way check
+      # would have wrongly accepted since Enterprise still precedes Team there.
+      # Cold-clean: the brief lists CTAs in Solo/Team/Enterprise order, so a cold run naturally puts
+      # "Start 14-day trial" before "Contact sales" and this check fails on it.
+      kind: regex
+      pattern: 'Start free[\s\S]*Contact sales[\s\S]*Start 14-day trial'
