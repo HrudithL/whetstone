@@ -125,8 +125,9 @@ boundary.
 
 ```sh
 whetstone compact <skill>          # tidy one store + report advisory behavioral findings
-whetstone compact --all            # tidy every store, then promote cross-skill preferences
+whetstone compact --all            # tidy every store, then *report* cross-skill candidates
 whetstone promote <skill> <id>     # lift one learning/issue into the learned global layer
+whetstone promote <skill> <id> --cluster  # enact one reported cross-skill candidate, by hand
 whetstone export <skill>           # write a shareable preference pack (.tar.gz)
 whetstone import <skill> <pack>    # import a pack (dedup-aware: --merge default | --replace)
 whetstone doctor <skill>           # read-only health check for the learned loop
@@ -150,18 +151,24 @@ Findings are printed and written to a git-ignored `compact-report.md`; enacting 
 `revise`. Only the safe structural pass ever mutates automatically — the same conservatism `compact`
 has always had. See **[Concepts → Maintenance](concepts.qmd#maintenance)**.
 
-### `compact --all` — promote cross-skill preferences
+### `compact --all` — report cross-skill promotion candidates
 
 With `--all`, `compact` runs over every attached skill and then looks for a preference you have
-taught in several skills. When the same learning recurs across enough distinct skills, it is
-**promoted into the learned global layer** and the per-skill copies are retired, so a broad taste is
-stored once and applied everywhere. This is the automatic writer for the global layer.
+taught in several skills. When the same learning recurs across enough distinct skills, it comes back
+as a fifth, advisory `global_candidate` finding — never auto-applied. Promotion always asks a human,
+regardless of supervision mode, and `--all` is no exception: it **never writes to the global store
+itself**. The finding names a representative entry and the exact command to enact it:
+`whetstone promote <skill> <id> --cluster`.
 
-### `promote` — lift one preference by hand
+### `promote` — lift a preference by hand
 
 `whetstone promote <skill> <id>` moves a single learning or issue into the
 **[learned global layer](concepts.qmd#global-layer)** deliberately, re-minting its id there. Use it
 when you already know a preference is cross-cutting and don't want to wait for `--all` to notice.
+Add `--cluster` to instead enact a whole cross-skill cluster reported by `compact --all` as a
+`global_candidate` finding — `<skill> <id>` then name that cluster's representative entry, and the
+command writes the representative into the global store and retires every per-skill copy in the
+cluster, across all its skills.
 
 ### `export` / `import` — preference packs
 

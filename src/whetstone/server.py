@@ -1123,7 +1123,7 @@ def _find_duplicate(
 
 
 _USAGE = (
-    "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id> | "
+    "usage: whetstone [serve | compact (<skill> | --all) | promote <skill> <id> [--cluster] | "
     "export <skill> [--out <path>] | import <skill> <pack> [--merge|--replace] | doctor <skill>]"
 )
 
@@ -1135,10 +1135,13 @@ def main(argv: list[str] | None = None) -> None:
     are periodic/deliberate operator actions, never fired mid-task by the model):
 
     - ``compact <skill>`` — the maintenance pass (§7) + the M5a advisory behavioral report.
-    - ``compact --all`` — compact every registered skill, then promote cross-skill preference
-      clusters into the learned global layer (§M5e).
+    - ``compact --all`` — compact every registered skill, then report cross-skill preference
+      clusters as advisory ``global_candidate`` findings (§M5e). It never writes to the global
+      store itself (§M7a) — promotion always asks a human; enact one with ``promote --cluster``.
     - ``promote <skill> <id>`` — lift one learning/issue into the learned global layer by hand
       (§M5e).
+    - ``promote <skill> <id> --cluster`` — enact one cross-skill cluster a ``compact --all``
+      ``global_candidate`` finding reported, naming its representative entry (§M7a).
     - ``export <skill> [--out <path>]`` — write a shareable preference pack (§M5c).
     - ``import <skill> <pack> [--merge|--replace]`` — import a preference pack, dedup-aware (§M5c).
     - ``doctor <skill>`` — read-only health check for the learned loop (§M5d); never edits anything.
@@ -1163,12 +1166,25 @@ def main(argv: list[str] | None = None) -> None:
         print(_USAGE, file=sys.stderr)
         raise SystemExit(2)
     if args[0] == "promote":
-        if len(args) != 3:
+        # `--cluster` is a flag in a FIXED trailing slot (`promote <skill> <id> [--cluster]`), not
+        # filtered out of the argument list wherever it appears — a skill name is otherwise
+        # unrestricted text, so a skill literally named "--cluster" must still parse as a normal
+        # positional `skill` when it's not in that trailing slot.
+        rest = args[1:]
+        cluster = len(rest) == 3 and rest[2] == "--cluster"
+        positional = rest[:2] if cluster else rest
+        if len(positional) != 2:
             print(_USAGE, file=sys.stderr)
             raise SystemExit(2)
-        from .promotion import promote_to_global
+        skill_arg, id_arg = positional
+        if cluster:
+            from .promotion import promote_cluster
 
-        print(json.dumps(promote_to_global(args[1], args[2]), indent=2))
+            print(json.dumps(promote_cluster(skill_arg, id_arg), indent=2))
+        else:
+            from .promotion import promote_to_global
+
+            print(json.dumps(promote_to_global(skill_arg, id_arg), indent=2))
         return
     if args[0] == "export":
         rest = args[1:]

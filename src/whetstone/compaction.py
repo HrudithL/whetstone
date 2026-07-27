@@ -32,10 +32,14 @@ auto-applied. Enacting one is a manual ``revise``/``whetstone`` call. Only the s
 subset above ever mutates automatically — the same conservatism ``compact`` has always had.
 
 **``compact --all``** (``compact(all_skills=True)``) runs the per-skill pass over every registered
-skill, then detects near-duplicate learnings that recur across ``global_skill_count`` distinct
-skills and **promotes** each such cluster into the learned global layer (§M5e), retiring the
-per-skill copies. This cross-skill promotion is the one place ``--all`` *does* mutate — it is the
-writer half of the global layer.
+skill, then *detects* near-duplicate learnings that recur across ``global_skill_count`` distinct
+skills. Per §M7a, this is **advisory-only**: ``--all`` never writes to the global store itself —
+promotion (moving something into a broader/more-permanent status) always asks a human, and that
+rule applies here too, not just at single-entry ``whetstone promote``. Each detected cluster is
+reported as a ``global_candidate`` finding (same shape family as the M5a mining findings below),
+naming a representative entry and the exact ``whetstone promote <skill> <id> --cluster`` command
+that enacts it. Enacting one is :func:`whetstone.promotion.promote_cluster` — the writer half of
+the global layer now lives there, invoked deliberately rather than run automatically by ``--all``.
 
 TODO (§5.4): scope-merge/anti-fragmentation should also happen incrementally at capture time, so the
 store never drifts far between compactions. This slice implements it only in the batch pass; the
@@ -44,13 +48,13 @@ capture-time variant is future work.
 
 from __future__ import annotations
 
+import shlex
 from collections import Counter, defaultdict
 from dataclasses import replace
 from datetime import UTC, date, datetime
 
 from .config import Config, load_config
 from .embeddings import cosine, get_backend
-from .promotion import retire_source, write_global_entry
 from .scoring import weight
 from .store import index
 from .store.access import (
@@ -63,11 +67,9 @@ from .store.access import (
 )
 from .store.index import _centroid, entry_text
 from .store.layout import (
-    GLOBAL_SLUG,
     StoreLocation,
     commit_store,
     ensure_store,
-    global_store_location,
     read_registry,
     store_location,
     store_write_lock,
@@ -96,8 +98,13 @@ def compact(
     ``today`` is the reference date for the recency decay used to score learnings for retirement
     (§4.4); it defaults to the current UTC date and is injectable so tests are deterministic. The
     per-skill pass runs under that store's write lock and commits at most once. With
-    ``all_skills=True`` every registered skill is compacted and cross-skill clusters are promoted
-    into the learned global layer (§M5e); ``skill`` is then ignored.
+    ``all_skills=True`` every registered skill is compacted, and cross-skill clusters (learnings
+    recurring across ``>= global_skill_count`` distinct skills) are reported — under the returned
+    ``global_candidates`` key — as advisory findings, the same M5a finding shape as the per-skill
+    behavioral mining below; ``skill`` is then ignored. This is **advisory only** (§M7a): ``--all``
+    never writes to the global store or retires anything itself. Enacting one reported cluster is
+    an explicit, separate call: ``whetstone promote <skill> <id> --cluster`` (or
+    :func:`whetstone.promotion.promote_cluster` directly), naming the finding's representative.
     """
     if config is None:
         config = load_config()
@@ -152,12 +159,18 @@ def _compact_one(skill: str, config: Config, today: date) -> dict:
 
 
 def _compact_all(config: Config, today: date) -> dict:
-    """Compact every registered skill, then promote cross-skill clusters into the global layer."""
+    """Compact every registered skill, then report (never write) cross-skill promotion candidates.
+
+    §M7a: cross-skill promotion is advisory-only here — detected clusters come back as
+    ``global_candidate`` findings under the ``global_candidates`` key; nothing is written to the
+    global store by this path. A human enacts one deliberately via
+    ``whetstone promote <skill> <id> --cluster`` (or :func:`whetstone.promotion.promote_cluster`).
+    """
     skills = sorted(read_registry(config))
     per_skill = {s: _compact_one(s, config, today) for s in skills}
     backend = get_backend(config)
-    promotions = _cross_skill_promote(skills, config, backend)
-    return {"all": True, "skills": per_skill, "promotions": promotions}
+    global_candidates = _global_candidate_findings(skills, config, backend)
+    return {"all": True, "skills": per_skill, "global_candidates": global_candidates}
 
 
 # --------------------------------------------------------------------------- dedupe (step 1)
@@ -525,18 +538,23 @@ def _write_report(loc: StoreLocation, skill: str, findings: list[dict]) -> str |
     return str(path)
 
 
-# --------------------------------------------------------------- M5a cross-skill promotion (--all)
+# ----------------------------------------------------------- M5a/M7a cross-skill detection (--all)
 
 
-def _cross_skill_promote(skills: list[str], config: Config, backend) -> list[dict]:
-    """Detect learnings that recur across >= ``global_skill_count`` distinct skills and promote each
-    cluster into the learned global layer (§M5e), retiring the redundant per-skill copies.
+def find_cross_skill_clusters(
+    config: Config, backend, skills: list[str] | None = None
+) -> list[list[tuple[str, object]]]:
+    """Detect learnings that recur across >= ``config.global_skill_count`` distinct skills.
 
-    Clustering mirrors dedup: cosine >= ``dedup_similarity`` over the existing embedding backend,
-    but only *across* skills (within-skill dupes are the per-skill dedup pass's job). The global
-    write lock wraps the whole promotion; each source skill's write lock wraps its own retirement
-    (global-first ordering, matching :func:`whetstone.promotion.promote_to_global`, so no deadlock).
+    Pure detection — never writes anything. Clustering mirrors dedup: cosine >= ``dedup_similarity``
+    over the existing embedding backend, but only *across* skills (within-skill dupes are the
+    per-skill dedup pass's job). Returns one list of ``(skill, entry)`` pairs per qualifying
+    cluster. Shared by ``compact --all`` (which only reports these, see :func:`_compact_all`) and
+    :func:`whetstone.promotion.promote_cluster` (which enacts exactly one, by hand).
     """
+    if skills is None:
+        skills = sorted(read_registry(config))
+
     items: list[tuple[str, object, list[float]]] = []  # (skill, entry, vector)
     for s in skills:
         loc = store_location(s, config)
@@ -575,33 +593,49 @@ def _cross_skill_promote(skills: list[str], config: Config, backend) -> list[dic
     for i in range(n):
         groups[find(i)].append(i)
 
-    promotions: list[dict] = []
-    ensure_store(GLOBAL_SLUG, config)
-    g_loc = global_store_location(config)
-    with store_write_lock(g_loc):
-        index.rebuild_index_if_stale(g_loc, backend)
-        for members in groups.values():
-            cluster = [items[i] for i in members]
-            distinct = {c[0] for c in cluster}
-            if len(distinct) < config.global_skill_count:
-                continue
-            # Representative: highest recurrence wins; skill then id break ties (deterministic).
-            rep_skill, rep_entry, _ = max(
-                cluster, key=lambda c: (c[1].recurrence, c[0], c[1].id)
-            )
-            global_id = write_global_entry(g_loc, backend, rep_entry, rep_skill)
-            retired = []
-            for skill, entry, _ in cluster:
-                skill_loc = store_location(skill, config)
-                with store_write_lock(skill_loc):
-                    retire_source(skill_loc, backend, entry.id)
-                retired.append({"skill": skill, "id": entry.id})
-            promotions.append(
-                {
-                    "global_id": global_id,
-                    "representative": {"skill": rep_skill, "id": rep_entry.id},
-                    "skills": sorted(distinct),
-                    "retired": retired,
-                }
-            )
-    return promotions
+    clusters: list[list[tuple[str, object]]] = []
+    for members in groups.values():
+        cluster = [(items[i][0], items[i][1]) for i in members]
+        distinct = {s for s, _ in cluster}
+        if len(distinct) < config.global_skill_count:
+            continue
+        clusters.append(cluster)
+    return clusters
+
+
+def cluster_representative(cluster: list[tuple[str, object]]) -> tuple[str, object]:
+    """Deterministic representative pick for a cluster: highest recurrence wins; skill then id
+    break ties. Shared by ``compact --all``'s reporting and ``promote_cluster``'s enactment so both
+    always agree on which entry a given cluster's finding names."""
+    return max(cluster, key=lambda c: (c[1].recurrence, c[0], c[1].id))
+
+
+def _global_candidate_findings(skills: list[str], config: Config, backend) -> list[dict]:
+    """Shape each detected cross-skill cluster as an advisory ``global_candidate`` finding.
+
+    Never writes anything (§M7a) — pairs with :func:`find_cross_skill_clusters` for detection and
+    names the exact ``whetstone promote ... --cluster`` command a human runs to enact one.
+    """
+    findings = []
+    for cluster in find_cross_skill_clusters(config, backend, skills=skills):
+        rep_skill, rep_entry = cluster_representative(cluster)
+        distinct = sorted({s for s, _ in cluster})
+        findings.append(
+            {
+                "rule": "global_candidate",
+                "representative": {"skill": rep_skill, "id": rep_entry.id},
+                "skills": distinct,
+                "evidence": {
+                    "cluster_size": len(cluster),
+                    "members": [{"skill": s, "id": e.id} for s, e in cluster],
+                },
+                # shlex.quote so a skill name containing whitespace or shell metacharacters still
+                # yields a valid, safe, copy-pasteable command (a skill name is user-/model-chosen
+                # free text, not guaranteed to be a bare shell token).
+                "enact": (
+                    f"whetstone promote {shlex.quote(rep_skill)} {shlex.quote(rep_entry.id)} "
+                    "--cluster"
+                ),
+            }
+        )
+    return findings
