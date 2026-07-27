@@ -121,9 +121,10 @@ mid-task by the model — so they are command-line subcommands rather than tools
 ```sh
 whetstone compact <skill>          # retire stale learnings, merge near-dup scopes; report
                                    #   advisory behavioral findings (harden/stale/churn/conflict)
-whetstone compact --all            # compact every skill, then promote cross-skill preference
-                                   #   clusters into the learned global layer
+whetstone compact --all            # compact every skill, then *report* cross-skill preference
+                                   #   clusters as advisory candidates (never writes)
 whetstone promote <skill> <id>     # lift one learning/issue into the learned global layer by hand
+whetstone promote <skill> <id> --cluster  # enact one reported cross-skill candidate, by hand
 whetstone export <skill>           # write a shareable preference pack (.tar.gz)
 whetstone import <skill> <pack>    # import a pack, dedup-aware (--merge default | --replace)
 whetstone doctor <skill>           # read-only health check for the learned loop (never edits)
@@ -136,8 +137,11 @@ What each of those does:
   and *reports* — advisory only, never auto-applied — learnings worth hardening, scopes with capture
   churn, stale learnings, and unresolved conflicts (printed + written to a git-ignored
   `compact-report.md`). You enact a finding with `revise`.
-- **`promote` / `compact --all`** — feed the **learned global layer** below (by hand, or automatically
-  once a preference recurs across enough skills).
+- **`promote` / `compact --all`** — feed the **learned global layer** below, always by an explicit
+  human step: `compact --all` only *detects and reports* a cross-skill candidate (never writes to the
+  global store itself — promotion always asks, regardless of supervision mode); `promote <skill> <id>
+  --cluster` is how you enact one it reported, and plain `promote <skill> <id>` lifts a single entry
+  by hand.
 - **`export` / `import`** — **preference packs**: a `.tar.gz` of your `learnings/` + `issues/` markdown
   plus a `pack.toml` manifest (telemetry, the derived index, and git history are excluded). Import is
   dedup- and conflict-aware and **re-mints ids**, so a teammate's pack never collides with yours.
