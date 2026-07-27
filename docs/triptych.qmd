@@ -1,17 +1,17 @@
 ---
 title: "Before / After"
-subtitle: "See the learned layer change the output."
+subtitle: "Walk through how a correction becomes a durable preference."
 ---
 
-Each scenario runs **one skill** three ways. **Before** and **After** are shown side by side, with
-**the learned layer** beneath them:
+Each scenario walks through **one skill**, one correction, in three steps:
 
-1. **Before** — the output generated with an **empty** Whetstone store. The subjective preference we
-   later teach is (typically) not honored.
-2. **After** — the output generated once that learned layer was applied. The preference is honored.
-3. **The learned layer** — the **exact text injected into the warm run's prompt** (rendered by
-   Whetstone from the recalled learnings and issues, with their ids, scopes, and weights). This is
-   verbatim what the model was told — not a paraphrase.
+1. **Here's what it produced** — the output generated with an **empty** Whetstone store. The
+   subjective preference we later teach is (typically) not honored.
+2. **Here's what wasn't good** — the scripted correction, quoted verbatim as the user would actually
+   say it, plus the run it started sticking on.
+3. **Here's what changed** — the same task, generated again once the learned layer was applied. The
+   preference is honored — and the raw learned layer Whetstone injected is one click away if you want
+   the receipts.
 
 The scenarios span four skills — **Great Tables**, **frontend design**, **plotnine**, and
 **PowerPoint decks** — each carrying its own arbitrary house-style preference. The substrate is the
@@ -54,5 +54,5 @@ for skill, label, note in SKILLS:
         display(Markdown(f"## {n}"))
         display(HTML(triptych_html(n)))
 if not any_shown:
-    display(not_generated_note("The before / learned-layer / after panels"))
+    display(not_generated_note("The step-by-step before/after walkthroughs"))
 ```
