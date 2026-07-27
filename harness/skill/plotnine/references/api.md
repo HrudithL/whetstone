@@ -22,7 +22,9 @@ geom_point(alpha=, size=, color=)                 # scatter; ALWAYS pass size=HO
                                                    # explicitly -- plotnine has no size of its own
                                                    # worth trusting, and omitting size= silently falls
                                                    # back to plotnine's own (unpinned) default, not this one
-geom_jitter(width=, height=, alpha=, random_state=)  # jittered points (discrete/rounded x);
+geom_jitter(width=, height=, alpha=, size=, random_state=)  # jittered points (discrete/rounded x);
+                                                      # renders the same point marks as geom_point, so
+                                                      # ALWAYS pass size=HOUSE_STYLE["point_size"] too --
                                                       # random_state is MANDATORY -- ALWAYS pass
                                                       # random_state=HOUSE_STYLE["jitter_random_state"]
                                                       # explicitly, never unseeded

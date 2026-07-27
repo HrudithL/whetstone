@@ -35,6 +35,9 @@ use that geom, apply its knobs. One primary geom family per plot; add a secondar
 worth trusting, so the house style pins one (`pn_house_style.HOUSE_STYLE`):
 
 - `geom_point(size=2, ...)` — `HOUSE_STYLE["point_size"]`.
+- `geom_jitter(size=2, ...)` — same `HOUSE_STYLE["point_size"]`; it draws the same point
+  marks as `geom_point`, just with jittered positions (see Overplotting below for its
+  additional mandatory `random_state`).
 - `geom_line(size=0.8, ...)` — `HOUSE_STYLE["line_size"]`.
 
 Use these on every plot unless Rule 0 fires (an explicit user ask, or a taught
@@ -46,9 +49,11 @@ its own thinner size to recede behind the primary geom; that is not this rule.
 
 Many overlapping points hide the data. In order of preference:
 1. `geom_point(alpha=0.3)` — cheapest fix.
-2. `geom_jitter(width=..., height=..., random_state=42)` when x or y is
-   discrete/rounded. **`random_state` is mandatory** — pin it to
-   `HOUSE_STYLE["jitter_random_state"]` (`42`) so the jittered positions are
+2. `geom_jitter(width=..., height=..., size=2, random_state=42)` when x or y is
+   discrete/rounded. It renders the same point marks as `geom_point`, so it
+   MUST also pin `size=HOUSE_STYLE["point_size"]` (`2`) — same mark-size rule
+   as above, not a separate default. **`random_state` is mandatory** — pin it
+   to `HOUSE_STYLE["jitter_random_state"]` (`42`) so the jittered positions are
    reproducible run to run; an unseeded `geom_jitter` is never acceptable.
 3. `geom_bin2d()` or `geom_density_2d()` for very dense clouds (thousands of points).
 
@@ -86,7 +91,7 @@ a top-N.
 | Distribution, one numeric var (`geom_histogram`/`geom_density`) | `"Distribution of {X}"` — the measured variable is mapped to `x=`; `y` is a computed count/density, never the template's `{Y}` |
 | Distribution, compared across groups (`geom_boxplot`/`geom_violin`) | `"Distribution of {Y}"`; append `" by {X}"` when compared across a group |
 | Part-of-whole (stacked/dodged bar) | `"{Y} by {X}"` |
-| Heatmap (`geom_tile`) | `"{fill} by {X} and {Y}"` |
+| Heatmap (`geom_tile`) | `"{group} by {X} and {Y}"` — `{group}` here is the humanized `fill=` legend label (the tile's color-encoded value), same placeholder as the trend row, not a new one |
 
 The **subtitle/caption** stay free text (optional, Rule 0 territory) — only the
 **title** is templated. Axis labels themselves are already deterministic via
