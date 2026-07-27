@@ -219,7 +219,7 @@ def capture(
     ``needs_confirmation`` is returned; resolve the promotion via ``revise`` (the returned prompt
     tells you how) — ``capture`` never promotes.
 
-    §M7c (experimental, config-gated via ``same_polarity_contradiction_check``, on by default):
+    §M7c (experimental, config-gated via ``same_polarity_contradiction_check``, OFF by default):
     when a near-duplicate **learning** pair's
     combined text shows a narrow antonym/negation asymmetry (e.g. "left" vs "right", a negation word
     on only one side) — the same-similarity-but-opposite-meaning case an embedding alone can't
@@ -273,6 +273,20 @@ def capture(
                         entry_text(title, body), entry_text(duplicate.title, duplicate.body)
                     )
                     if note is not None:
+                        # A MANDATORY issue conflict always wins over a same-polarity heuristic
+                        # signal (§5.2) -- check it before returning possible_contradiction, not
+                        # after. Otherwise a candidate that both opposes a near-duplicate learning
+                        # AND violates an existing issue would surface only the soft signal; a
+                        # caller following this status's own resolution guidance (remove the
+                        # flagged learning, then re-capture) could delete a compatible, correct
+                        # entry only to discover the mandatory conflict on the very next call
+                        # (round-5 Codex review finding — a real data-loss risk via this PR's own
+                        # documented resolution path).
+                        mandatory_conflict = _find_conflict(
+                            loc, "learning", scope, title, body, candidate_vec, scope_vec, config
+                        )
+                        if mandatory_conflict is not None:
+                            return _conflict_result(loc, run_id, "learning", mandatory_conflict)
                         return _possible_contradiction_result(loc, run_id, duplicate, body, note)
                 return _capture_reinforce(loc, backend, duplicate, run_id, confirm, config)
             conflict = _find_conflict(
@@ -893,9 +907,20 @@ def _possible_contradiction_result(
     surface has no get-by-id lookup, so without it a caller that doesn't already have this entry's
     text cached from a prior `recall` could not actually compare the two sides to decide (round-3
     Codex review finding).
+
+    Also persists ``candidate_body``/``note`` onto the emitted event (not just the return value), so
+    a later `compact` residue-mining pass can still show what opposed this entry after the calling
+    conversation has ended (round-5 Codex review finding).
     """
     emit_capture(
-        loc, run_id, duplicate.id, "learning", "possible_contradiction", scope=duplicate.scope
+        loc,
+        run_id,
+        duplicate.id,
+        "learning",
+        "possible_contradiction",
+        scope=duplicate.scope,
+        candidate_body=candidate_body.strip(),
+        note=note,
     )
     return {
         "status": "possible_contradiction",
@@ -1190,23 +1215,23 @@ def _find_duplicate(
 # this heuristic narrows but does not remove (§7).
 #
 # DELIBERATELY EXCLUDES relational/directional/comparative pairs whose meaning depends on argument
-# order — "before"/"after" and "above"/"below" were in an earlier version and were dropped (round-2
-# Codex review finding), and "larger"/"smaller" was dropped in round-3 (round-4 finding): "Make
-# headings larger than body text." and "Make body text smaller than headings." mean the SAME thing
-# (the comparison AND its arguments both reversed), but this word-presence check can't tell that
-# apart from a genuine flip without argument-aware parsing, which is out of scope for a narrow
-# lexical heuristic. The remaining pairs below are used as monadic attributes in this project's
-# vocabulary ("increase padding", "right-align columns" — an instruction, not "X larger than Y"
-# restated as "Y smaller than X"), so they don't share this specific failure mode — EXCEPT
-# "left"/"right", which is also common as a relational preposition ("put the legend left of the
-# plot" / "put the plot right of the legend"). Rather than drop "left"/"right" outright — it's the
-# spec's own worked example ("right-align"/"left-align") — :func:`_alignment_clause_with` restricts
-# it to TIGHT alignment-compound wording only (see there).
+# order — "before"/"after" and "above"/"below" were dropped in round-2, "larger"/"smaller" in
+# round-4, and "more"/"less" in round-5 (Codex review findings): "Make headings larger than body
+# text." and "Make body text smaller than headings." mean the SAME thing (the comparison AND its
+# arguments both reversed), and so do "Use no more than two decimal places." and "Use two decimal
+# places or less." — but this word-presence check can't tell that apart from a genuine flip
+# without argument-aware parsing, which is out of scope for a narrow lexical heuristic. The
+# remaining pairs below are used as monadic attributes in this project's vocabulary ("increase
+# padding", "right-align columns" — an instruction, not "X more than Y" restated as "Y or less"),
+# so they don't share this specific failure mode — EXCEPT "left"/"right", also a relational
+# preposition
+# ("put the legend left of the plot" / "put the plot right of the legend"). Rather than drop
+# "left"/"right" outright — it's the spec's own worked example ("right-align"/"left-align") —
+# :func:`_alignment_clause_with` restricts it to TIGHT alignment-compound wording only (see there).
 _ANTONYM_PAIRS: tuple[tuple[str, str], ...] = (
     ("left", "right"),
     ("warm", "cool"),
     ("light", "dark"),
-    ("more", "less"),
     ("horizontal", "vertical"),
     ("increase", "decrease"),
     ("wide", "narrow"),

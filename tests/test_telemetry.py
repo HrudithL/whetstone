@@ -59,6 +59,27 @@ def test_emit_capture_shape(store):
     assert event["entry_id"] == "L7"
     assert event["polarity"] == "learning"
     assert event["status"] == "committed"
+    # candidate_body/note are omitted (not written as null) when not supplied.
+    assert "candidate_body" not in event
+    assert "note" not in event
+
+
+def test_emit_capture_persists_candidate_and_note_for_possible_contradiction(store):
+    # §M7c round-5: without this, a later `compact` residue-mining pass would have no way to show
+    # what actually opposed the flagged entry -- the info only ever existed in the transient
+    # tool-call return value.
+    emit_capture(
+        store,
+        "r-abc",
+        "L7",
+        "learning",
+        "possible_contradiction",
+        candidate_body="Left-align currency columns.",
+        note="one entry says 'left', the other says 'right'.",
+    )
+    (event,) = read_events(store)
+    assert event["candidate_body"] == "Left-align currency columns."
+    assert event["note"] == "one entry says 'left', the other says 'right'."
 
 
 def test_lines_are_compact_single_line_json(store):

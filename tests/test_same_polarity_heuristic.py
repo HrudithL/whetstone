@@ -7,10 +7,13 @@ does the wording actually flip (an antonym pair, or a negation on only one side)
 literal contradiction that happens to embed similarly rather than a genuine restatement? When it
 fires, ``capture`` returns ``possible_contradiction`` (a signal only — nothing is written, the
 existing entry is untouched) instead of silently reinforcing. This is config-gated
-(``same_polarity_contradiction_check``, default on per the M7c calibration — see
-``harness/calibration/labels.yaml``'s ``same_polarity_contradiction`` set and
-``harness/calibrate.py``'s ``calibrate_same_polarity_contradiction``); when off, behavior is
-byte-identical to pre-M7c ``capture`` regardless of content.
+(``same_polarity_contradiction_check``, OFF by default — five rounds of independent review each
+found a real precision/correctness gap the labeled calibration set alone didn't surface, so this
+ships experimental/opt-in rather than on; see ``LEARNING_SKILLS_DESIGN.md`` §7 and
+``harness/calibration/labels.yaml``'s ``same_polarity_contradiction`` set /
+``harness/calibrate.py``'s ``calibrate_same_polarity_contradiction`` for the calibration). Every
+test below explicitly turns the flag on via monkeypatch to exercise it; when off (the default),
+behavior is byte-identical to pre-M7c ``capture`` regardless of content.
 """
 
 from __future__ import annotations
@@ -375,6 +378,72 @@ def test_negation_cancellation_is_clause_scoped_not_sentence_scoped(env, monkeyp
     # The background clause agrees (avoid dark ~ light); the margins clause genuinely flips
     # (wide vs narrow) and must still surface, not be masked by the background cancellation.
     assert result["status"] == "possible_contradiction"
+
+
+def test_more_less_is_not_in_the_lexicon(env, monkeypatch):
+    # more/less has the same argument-reversal ambiguity as the already-excluded before/after,
+    # above/below, and larger/smaller pairs ("no more than two decimals" == "two decimals or less")
+    # -- round-5 Codex review finding. Must reinforce normally, not flag.
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    capture(
+        "gt", "learning", "Use no more than two decimal places.", "currency precision", "prov-1"
+    )
+
+    result = capture(
+        "gt", "learning", "Use two decimal places or less.", "currency precision", "prov-2"
+    )
+
+    assert result["status"] == "reinforced"
+
+
+# ------------------------------------------------------- mandatory conflict precedence (round 5)
+
+
+def test_mandatory_issue_conflict_wins_over_possible_contradiction(env, monkeypatch):
+    # A candidate that both (a) near-dups an existing learning it contradicts AND (b) violates an
+    # existing MANDATORY issue must surface the issue conflict, not the softer same-polarity signal
+    # -- round-5 Codex review finding: the resolution guidance for `possible_contradiction` (remove
+    # the flagged learning, then re-capture) could otherwise delete a compatible, correct entry only
+    # to discover the mandatory conflict on the very next call -- a real data-loss risk.
+    from conftest import make_issue
+    from whetstone.config import load_config
+    from whetstone.embeddings import get_backend
+    from whetstone.store import index
+    from whetstone.store.access import save_issue
+
+    monkeypatch.setenv("WHETSTONE_SAME_POLARITY_CONTRADICTION_CHECK", "true")
+    monkeypatch.setenv("WHETSTONE_CONFLICT_SIMILARITY", "0.6")
+    capture(
+        "gt",
+        "learning",
+        "Right-align currency columns for a cleaner ledger look.",
+        "currency columns",
+        "prov-1",
+    )
+    loc = store_location("gt")
+    config = load_config()
+    save_issue(
+        loc,
+        make_issue(
+            "I1",
+            "Never left-align currency columns for a cleaner ledger look.",
+            "currency columns",
+        ),
+    )
+    index.rebuild_index(loc, get_backend(config))
+
+    result = capture(
+        "gt",
+        "learning",
+        "Left-align currency columns for a cleaner ledger look.",
+        "currency columns",
+        "prov-2",
+    )
+
+    assert result["status"] == "conflict"
+    assert result["conflict"]["with_id"] == "I1"
+    # The original, compatible learning L1 must NOT have been touched or removed.
+    assert [le.id for le in load_learnings(loc)] == ["L1"]
 
 
 # --------------------------------------------------------------------------- config gate
