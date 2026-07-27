@@ -1018,20 +1018,25 @@ def main(argv: list[str] | None = None) -> None:
         print(_USAGE, file=sys.stderr)
         raise SystemExit(2)
     if args[0] == "promote":
+        # `--cluster` is a flag in a FIXED trailing slot (`promote <skill> <id> [--cluster]`), not
+        # filtered out of the argument list wherever it appears — a skill name is otherwise
+        # unrestricted text, so a skill literally named "--cluster" must still parse as a normal
+        # positional `skill` when it's not in that trailing slot.
         rest = args[1:]
-        cluster = "--cluster" in rest
-        positional = [a for a in rest if a != "--cluster"]
+        cluster = len(rest) == 3 and rest[2] == "--cluster"
+        positional = rest[:2] if cluster else rest
         if len(positional) != 2:
             print(_USAGE, file=sys.stderr)
             raise SystemExit(2)
+        skill_arg, id_arg = positional
         if cluster:
             from .promotion import promote_cluster
 
-            print(json.dumps(promote_cluster(positional[0], positional[1]), indent=2))
+            print(json.dumps(promote_cluster(skill_arg, id_arg), indent=2))
         else:
             from .promotion import promote_to_global
 
-            print(json.dumps(promote_to_global(positional[0], positional[1]), indent=2))
+            print(json.dumps(promote_to_global(skill_arg, id_arg), indent=2))
         return
     if args[0] == "export":
         rest = args[1:]

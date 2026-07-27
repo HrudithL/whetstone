@@ -129,6 +129,11 @@ def promote_to_global(skill: str, entry_id: str, config: Config | None = None) -
     }
 
 
+def _find_cluster_for(clusters, skill: str, entry_id: str):
+    """The cluster (if any) containing the given ``(skill, entry_id)`` pair."""
+    return next((c for c in clusters if any(s == skill and e.id == entry_id for s, e in c)), None)
+
+
 def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> dict:
     """Enact one cross-skill promotion candidate reported by ``compact --all`` (§M7a).
 
@@ -140,10 +145,20 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
     skills — is retired from its per-skill store. This is the only place a cross-skill cluster is
     actually promoted; ``compact --all`` itself only ever detects and reports.
 
+    Detection runs twice: once unlocked (to fail fast on an obviously-stale candidate), and again
+    immediately after the global write lock is taken, and only the **second, locked** run is ever
+    acted on. This matters because detection re-checks real cluster membership — same-skill
+    dedup-similarity threshold *and* ``global_skill_count`` — not just whether an id still exists,
+    so a member that was revised (not removed) in between, or a cluster that dropped below
+    threshold, is caught the same way an outright-removed entry is. The global lock serializes
+    racing ``promote_cluster`` calls for the same finding: a second, losing call's locked
+    redetection runs strictly after the first, winning call's writes/retirements complete (they
+    happen inside the same lock), so it reliably sees the post-promotion state and raises rather
+    than writing a stale duplicate.
+
     Raises ``ValueError`` if no current cluster containing ``(skill, entry_id)`` meets
-    ``global_skill_count`` (e.g. the candidate is stale — the store changed since it was reported,
-    or the entry doesn't exist), or if the representative was already enacted by a concurrent
-    ``promote_cluster`` call for the same cluster (detected between locks — see below).
+    ``global_skill_count`` — the candidate may be stale (already enacted, revised, or removed since
+    it was reported) or the entry may not exist.
     """
     if config is None:
         config = load_config()
@@ -155,48 +170,39 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
     from .compaction import cluster_representative, find_cross_skill_clusters
 
     backend = get_backend(config)
-    clusters = find_cross_skill_clusters(config, backend)
-    cluster = next(
-        (c for c in clusters if any(s == skill and e.id == entry_id for s, e in c)), None
-    )
-    if cluster is None:
-        raise ValueError(
+
+    def _stale_error() -> ValueError:
+        return ValueError(
             f"no cross-skill cluster containing {entry_id!r} in skill {skill!r} meets "
             f"global_skill_count={config.global_skill_count} right now — the candidate may be "
-            "stale; re-run `compact --all` to get a fresh finding"
+            "stale (already enacted, revised, or removed since it was reported); re-run "
+            "`compact --all` for a fresh finding"
         )
+
+    # Fail fast, unlocked — a cheap check before we bother taking any lock at all.
+    if _find_cluster_for(find_cross_skill_clusters(config, backend), skill, entry_id) is None:
+        raise _stale_error()
 
     ensure_store(GLOBAL_SLUG, config)
     g_loc = global_store_location(config)
 
     with store_write_lock(g_loc):
         index.rebuild_index_if_stale(g_loc, backend)
+
+        # The authoritative check: re-run detection now that the global lock serializes us against
+        # any racing `promote_cluster` call, and act only on this fresh result — never the unlocked
+        # snapshot above, which could be stale (a member revised, the cluster no longer meeting
+        # threshold, or already promoted by a call that won the race).
+        cluster = _find_cluster_for(find_cross_skill_clusters(config, backend), skill, entry_id)
+        if cluster is None:
+            raise _stale_error()
+
         rep_skill, rep_entry = cluster_representative(cluster)
-
-        # The detection above ran before any lock was held, so a concurrent `promote_cluster` for
-        # this same cluster could have already enacted it in between. The global lock serializes
-        # racing promotions from here on, so re-check the representative still exists in its
-        # source store now that we hold it — a fresh `find_learning`, not the possibly-stale entry
-        # `find_cross_skill_clusters` returned.
-        rep_loc = store_location(rep_skill, config)
-        with store_write_lock(rep_loc):
-            index.rebuild_index_if_stale(rep_loc, backend)
-            fresh_rep = find_learning(rep_loc, rep_entry.id)
-        if fresh_rep is None:
-            raise ValueError(
-                f"representative entry {rep_entry.id!r} in skill {rep_skill!r} no longer exists — "
-                "this candidate is stale (likely already enacted by a concurrent `promote_cluster` "
-                "call, or removed/revised meanwhile); re-run `compact --all` for a fresh finding"
-            )
-
-        global_id = write_global_entry(g_loc, backend, fresh_rep, rep_skill)
+        global_id = write_global_entry(g_loc, backend, rep_entry, rep_skill)
         retired = []
         for member_skill, entry in cluster:
             skill_loc = store_location(member_skill, config)
             with store_write_lock(skill_loc):
-                index.rebuild_index_if_stale(skill_loc, backend)
-                if find_learning(skill_loc, entry.id) is None:
-                    continue  # already retired by the same race — nothing left to do here
                 retire_source(skill_loc, backend, entry.id)
             retired.append({"skill": member_skill, "id": entry.id})
 

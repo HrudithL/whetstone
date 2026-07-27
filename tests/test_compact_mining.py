@@ -270,35 +270,94 @@ def test_promote_cluster_unknown_entry_raises(env):
 
 def test_promote_cluster_revalidates_under_lock_against_stale_detection(env, monkeypatch):
     """Regression for a Codex-flagged race: `find_cross_skill_clusters` runs unlocked, so two
-    concurrent `promote_cluster` calls for the same finding could both detect the cluster before
-    either takes a lock. The second (losing) call must re-validate the representative under the
-    global lock and refuse to write a duplicate, rather than trusting its now-stale snapshot."""
+    concurrent `promote_cluster` calls for the same finding could both pass their own unlocked
+    fast-fail check before either takes the global lock. The lock must serialize them so the
+    second (losing) call's *locked* re-detection sees the post-promotion state and raises, instead
+    of trusting its earlier unlocked snapshot and writing a stale duplicate.
+
+    A real race needs two threads; this simulates the same interleaving in one thread by making
+    the "losing" call's first (unlocked) detection return a snapshot taken before a "winning" call
+    runs to completion in between — exactly what an actual concurrent winner would have produced —
+    while its second (locked) detection call goes through to the real, now up-to-date store state.
+    """
     import whetstone.compaction as compaction_mod
-    from whetstone.config import load_config
-    from whetstone.embeddings import get_backend
 
     body = "Prefer muted, low-saturation color palettes."
     for skill in ("gt", "web", "ppt"):
         capture(skill, "learning", body, "palette", "prov")
 
-    config = load_config()
-    backend = get_backend(config)
-    # Snapshot detection exactly as a racing second caller would have captured it, before any lock.
-    stale_clusters = compaction_mod.find_cross_skill_clusters(config, backend)
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+
+    real_detect = compaction_mod.find_cross_skill_clusters
+    calls = {"n": 0}
+
+    def racing_detect(config, backend, skills=None):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            # This is the losing call's own unlocked fast-check. Capture what it would genuinely
+            # see right now (the cluster still intact), THEN let a concurrent winner run to
+            # completion — as it would during the real race window — before returning that
+            # earlier snapshot, simulating the losing call having read it just before the winner.
+            snapshot = real_detect(config, backend, skills=skills)
+            promote_cluster(rep["skill"], rep["id"])  # the "winning" concurrent caller
+            return snapshot
+        return real_detect(config, backend, skills=skills)  # the losing call's locked recheck
+
+    monkeypatch.setattr(compaction_mod, "find_cross_skill_clusters", racing_detect)
+
+    with pytest.raises(ValueError, match="no cross-skill cluster"):
+        promote_cluster(rep["skill"], rep["id"])  # the "losing" concurrent caller
+
+    g_learnings = load_learnings(global_store_location(Config(store_root=env, embedding_dim=384)))
+    assert len(g_learnings) == 1  # only the winner's write landed — no stale duplicate
+
+
+def test_promote_cluster_revalidates_real_membership_not_just_id_existence(env):
+    """Regression: a member that was *revised* (not removed) in the gap between a finding being
+    reported and it being enacted must drop the cluster below threshold and abort the whole
+    promotion — an existence-only check (the id still resolves to something) would wrongly let it
+    through despite it no longer actually matching the cluster."""
+    body = "Prefer muted, low-saturation color palettes."
+    for skill in ("gt", "web", "ppt"):
+        capture(skill, "learning", body, "palette", "prov")
 
     finding = compact(all_skills=True)["global_candidates"][0]
     rep = finding["representative"]
-    promote_cluster(rep["skill"], rep["id"])  # the "winning" caller enacts it first
 
-    # Force the "losing" caller to see the pre-promotion snapshot instead of re-detecting fresh
-    # (fresh detection would already fail the earlier "no cross-skill cluster" check, since the
-    # entries are gone now — the whole point is to exercise the under-lock re-validation instead).
-    monkeypatch.setattr(compaction_mod, "find_cross_skill_clusters", lambda *a, **k: stale_clusters)
-    with pytest.raises(ValueError, match="no longer exists"):
+    # Reword one non-representative member to something unrelated: it still exists (same id), but
+    # no longer clusters with the other two — as if a `revise` landed on it after the finding was
+    # reported but before it was enacted.
+    member = next(m for m in finding["evidence"]["members"] if m["skill"] != rep["skill"])
+    revise(
+        member["skill"],
+        member["id"],
+        "reinforce",
+        body="Completely unrelated database migration notes.",
+    )
+
+    with pytest.raises(ValueError, match="no cross-skill cluster"):
         promote_cluster(rep["skill"], rep["id"])
 
-    g_learnings = load_learnings(global_store_location(Config(store_root=env, embedding_dim=384)))
-    assert len(g_learnings) == 1  # the stale second call did not write a duplicate
+    # Nothing was written or retired — the whole cluster is now below global_skill_count.
+    assert not global_store_location(Config(store_root=env, embedding_dim=384)).path.exists()
+    for skill in ("gt", "web", "ppt"):
+        assert len(load_learnings(store_location(skill))) == 1
+
+
+def test_cli_promote_preserves_skill_literally_named_dashdash_cluster(env, capsys):
+    """Regression: `--cluster` is a flag only in its fixed trailing slot. A skill genuinely named
+    `--cluster` (skill names are otherwise unrestricted text) must still parse as a normal
+    positional `skill` for the single-entry `promote <skill> <id>` shape."""
+    res = capture("--cluster", "learning", "Prefer muted palettes.", "palette", "prov")
+    entry_id = res["entry_id"]
+
+    cli_main(["promote", "--cluster", entry_id])
+
+    out = json.loads(capsys.readouterr().out)
+    assert out["skill"] == "--cluster"
+    assert out["source_id"] == entry_id
+    assert load_learnings(store_location("--cluster")) == []
 
 
 def test_cli_promote_cluster_flag_enacts_candidate(env, capsys):
