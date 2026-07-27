@@ -24,7 +24,14 @@ preferences:
       # variable) - faceting is a genuinely different structural choice the cold run has no reason to
       # make on its own. Requires "ctry_origin" to actually appear after facet_wrap( (not just any
       # facet_wrap call), so faceting by a different column (e.g. bdy_style) while still color-
-      # encoding country doesn't falsely count as honoring this preference.
+      # encoding country doesn't falsely count as honoring this preference. Accepted residual gap,
+      # tried and reverted: bounding the wildcard to not cross a "+" (plotnine's layer separator, so
+      # "ctry_origin" would have to be inside the facet_wrap(...) call itself, not a later aes()) does
+      # correctly reject facet_wrap('~bdy_style') + aes(color='ctry_origin') in a real script - but the
+      # bounded character class breaks the same way the ["'] quote class did: harness.generate.
+      # _regex_sample can't turn it into a genuinely self-matching stub literal, so that stricter
+      # version can never pass its own --stub smoke test. Kept the unbounded version instead, same
+      # trade-off already made for pitch_deck_reorder's cta-second check.
       kind: regex
       pattern: 'facet_wrap\([\s\S]*?ctry_origin'
   - id: facet-free-y

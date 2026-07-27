@@ -54,13 +54,16 @@ preferences:
       is urgent today, not just that it exists.
     check:
       # A bare presence check would count "Why now" text added anywhere - even as extra text bolted
-      # onto the existing idea slide rather than a genuinely new slide - as honoring a preference that
-      # specifically asks for a SEPARATE slide BETWEEN the idea and how-it-works slides. Anchoring on
-      # "Watch one run" (the idea slide's own on-slide tagline, per the outline), requiring an
-      # "add_slide(" call before "Why now" (proving it's a new slide, not appended text), and "How it
-      # works" (that slide's on-slide title - the outline gives it no separate quoted tagline, so the
-      # model has every reason to reuse this literal label) together prove a genuinely new slide falls
-      # between them. Cold-clean: the outline has no "Why now" slide at all, so a cold run never
-      # produces this whole sequence.
+      # onto the existing idea or how-it-works slide rather than a genuinely new slide - as honoring a
+      # preference that specifically asks for a SEPARATE slide BETWEEN the idea and how-it-works
+      # slides. The tempered-greedy-token group `(?:(?!add_slide\()[\s\S])*?` ties the required
+      # "add_slide(" to being the one IMMEDIATELY followed by "Why now" (not just any add_slide(
+      # anywhere earlier), so a script that creates the how-it-works slide first and only then adds a
+      # "Why now" subtitle/eyebrow onto IT doesn't falsely match - that adversarial ordering was caught
+      # and fixed after an earlier, looser version of this check wrongly accepted it. Anchoring on
+      # "Watch one run" (the idea slide's own on-slide tagline, per the outline) and "How it works"
+      # (that slide's on-slide title - the outline gives it no separate quoted tagline, so the model has
+      # every reason to reuse this literal label) proves the new slide falls between them. Cold-clean:
+      # the outline has no "Why now" slide at all, so a cold run never produces this whole sequence.
       kind: regex
-      pattern: 'Watch one run[\s\S]*add_slide\([\s\S]*?Why now[\s\S]*How it works'
+      pattern: 'Watch one run[\s\S]*?add_slide\((?:(?!add_slide\()[\s\S])*?Why now[\s\S]*How it works'

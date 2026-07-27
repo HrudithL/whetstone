@@ -25,9 +25,11 @@ preferences:
       # Cold-clean: the prompt never mentions "manufacturer" or "average", so a cold run has no reason
       # to reach for a groupby - it lists cars. Requires "mfr" to actually appear after groupby( (not
       # just any groupby call), so grouping by a different column (e.g. ctry_origin, which would
-      # produce a plausible-looking but wrong-grain rollup) doesn't falsely count as honoring this.
+      # produce a plausible-looking but wrong-grain rollup) doesn't falsely count as honoring this. Also
+      # requires "mean" to appear, so a warm run that groups by mfr but aggregates with max/sum instead
+      # of the requested mean doesn't falsely count either.
       kind: regex
-      pattern: 'groupby\([\s\S]*?mfr'
+      pattern: 'groupby\([\s\S]*?mfr[\s\S]*?mean'
   - id: rollup-count-column
     # Distinct scope from rollup-by-manufacturer (was "data organization" for both) - a stub/synthetic
     # honoring check treats "was this preference's scope recalled" as membership-by-scope-string, so
@@ -45,8 +47,9 @@ preferences:
       # aggregation - .agg(Models=("model", "count")) - passes "count"/"size" as a plain string, not a
       # call, and is the aggregation style this repo's great-tables skill itself demonstrates. code_for_
       # check's ast-unparse normalizes all string quotes to single, so the quoted-string forms below
-      # only need the single-quote spelling to catch that idiom too. Requires "Models" to precede the
-      # count/size signal (matching the Models=(...) named-agg keyword order), so an unrelated count()
-      # on some other field doesn't falsely count as adding the requested column.
+      # only need the single-quote spelling to catch that idiom too. Accepts "Models" on either side of
+      # the count/size signal: the named-agg style (Models=(...)) puts it first, but the equally
+      # idiomatic .size().reset_index(name='Models') / .count().rename('Models') styles put it after -
+      # requiring only one order would reject the other equally-correct idiom.
       kind: regex
-      pattern: "Models[\\s\\S]*?(size\\(\\)|count\\(\\)|'count'|'size')"
+      pattern: "(Models[\\s\\S]*?(size\\(\\)|count\\(\\)|'count'|'size')|(size\\(\\)|count\\(\\)|'count'|'size')[\\s\\S]*?Models)"
