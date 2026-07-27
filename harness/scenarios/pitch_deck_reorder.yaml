@@ -1,0 +1,45 @@
+name: pitch_deck_reorder
+skill: pptx
+difficulty: hard
+prompt: >
+  Build the 5-slide "Marrow" pitch deck described in the outline, in the order given. Write deck.py
+  using python-pptx and run it to produce deck.pptx.
+data: data/pitch_deck_outline.md
+# COMPLEX-STRUCTURAL anchor: this harness's other pptx scenario (pitch_deck.yaml) teaches font/aspect-
+# ratio - a deck-level style setting layered on top of an unchanged slide sequence. Both preferences
+# here instead change the SLIDE SEQUENCE ITSELF (reorder + insert), which is a real restructuring of
+# the deck's narrative, not a cosmetic pass over the same 5 slides.
+preferences:
+  - id: cta-second
+    polarity: issue
+    scope: slide order
+    body: >
+      Don't save the call-to-action for last. Move the "Install Marrow" call-to-action slide to be
+      the SECOND slide - right after the title, before the problem/idea/how-it-works slides. Lead
+      with the install command, then explain why it matters.
+    feedback: >
+      Put the "Install Marrow" slide right after the title - don't bury the call-to-action at the
+      end, lead with it.
+    check:
+      # Cold-clean: the outline lists the CTA last and the prompt says "in the order given", so a cold
+      # run reproduces that order (CTA content after problem content). The character class [\s\S]
+      # matches across newlines without needing a regex DOTALL flag, so this proves the CTA's own
+      # on-slide text now appears BEFORE the problem slide's on-slide text in source order (which
+      # mirrors build order for a straight-line python-pptx script).
+      kind: regex
+      pattern: 'Install Marrow[\s\S]*Big test suites'
+  - id: why-now-slide
+    polarity: learning
+    scope: slide structure
+    body: >
+      Insert a new slide titled "Why now" between "The idea" and "How it works", making the case that
+      test suites have grown large enough that manual coverage tracking has become untenable - this
+      is new content the outline doesn't ask for, added because it strengthens the pitch.
+    feedback: >
+      Add a "Why now" slide in between the idea and how-it-works slides - explain why this problem
+      is urgent today, not just that it exists.
+    check:
+      # The outline has no "Why now" slide at all, so this is cold-clean by construction - its mere
+      # presence in the deck proves a new slide was actually inserted, not just reworded content.
+      kind: code_contains
+      pattern: Why now

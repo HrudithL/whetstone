@@ -1,0 +1,43 @@
+name: gtcars_manufacturer_rollup
+skill: great-tables
+difficulty: hard
+prompt: >
+  Build a table of the GT cars showing horsepower and price.
+data: data/gtcars.csv
+# COMPLEX-STRUCTURAL anchor: unlike this harness's other great-tables scenarios (which teach cosmetic
+# formatting/color/spanner tweaks on an already-decided row shape), both preferences here change what
+# the ROWS OF THE TABLE ARE — a real data reorganization, not a style choice. The prompt deliberately
+# doesn't say "one row per car" or "roll up by manufacturer", so a cold run's natural reading (one row
+# per record in the CSV) is the wrong shape, and the correction has to change the grouping grain, not
+# just repaint it.
+preferences:
+  - id: rollup-by-manufacturer
+    polarity: issue
+    scope: data organization
+    body: >
+      Don't list one row per car model. Roll the data up to one row per manufacturer (`mfr`), showing
+      the mean horsepower (`hp`) and mean price (`msrp`) across that manufacturer's whole lineup —
+      compute this with a real groupby aggregation over the raw rows, not a per-model listing.
+    feedback: >
+      Stop listing every single car model - I want one row per manufacturer, with their average
+      horsepower and average price across their whole lineup.
+    check:
+      # Cold-clean: the prompt never mentions "manufacturer" or "average", so a cold run has no reason
+      # to reach for a groupby - it lists cars. A bare "groupby(" is a light but honest signal that the
+      # grain actually changed, matching this harness's existing style of checking for the specific API
+      # call rather than re-deriving the whole aggregation semantically.
+      kind: code_contains
+      pattern: groupby(
+  - id: rollup-count-column
+    polarity: learning
+    scope: data organization
+    body: >
+      Add a "Models" column showing how many models from that manufacturer went into each average -
+      the reader should be able to tell a 2-model average from a 12-model one.
+    feedback: >
+      Also show how many models were averaged together for each manufacturer, so I know how much
+      each row is really representing.
+    check:
+      # size()/count() are the two idiomatic pandas ways to get a per-group row count; either counts.
+      kind: regex
+      pattern: '(size\(\)|count\(\))'

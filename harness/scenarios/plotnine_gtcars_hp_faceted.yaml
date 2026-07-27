@@ -1,0 +1,40 @@
+name: plotnine_gtcars_hp_faceted
+skill: plotnine
+difficulty: hard
+prompt: >
+  Plot how price relates to horsepower for these sports cars, and show the country of origin.
+data: data/gtcars.csv
+# COMPLEX-STRUCTURAL anchor: this harness's other gtcars plotnine scenario (plotnine_gtcars_hp_msrp)
+# stacks 5 cosmetic preferences (palette/scale/legend/size/alpha) on top of one combined scatter plot.
+# Both preferences here instead change the PLOT'S STRUCTURE - one combined plot becomes small multiples
+# with independent axes - a real re-encoding of the chart, not a styling pass on the same single panel.
+preferences:
+  - id: facet-by-country
+    polarity: issue
+    scope: layout structure
+    body: >
+      Don't color-encode country of origin on one combined scatter plot. Split it into small
+      multiples instead - facet by country of origin with facet_wrap(), one panel per country.
+    feedback: >
+      Don't cram every country onto one plot with colors - facet it, one small panel per country
+      so each country's shape is easy to read on its own.
+    check:
+      # Cold-clean: the prompt only asks to "show the country of origin", which the skill's own
+      # defaults satisfy with a single color-encoded scatter (its documented default for a categorical
+      # variable) - faceting is a genuinely different structural choice the cold run has no reason to
+      # make on its own.
+      kind: code_contains
+      pattern: facet_wrap(
+  - id: facet-free-y
+    polarity: learning
+    scope: scales
+    body: >
+      Let each facet panel use its own y-axis range (`scales="free_y"`) instead of a shared axis,
+      since some countries have a much narrower price range than others and a shared axis would
+      flatten them to near-invisible lines.
+    feedback: >
+      Give each facet its own y-axis scale - don't force them to share one range, some countries'
+      prices barely move compared to others.
+    check:
+      kind: regex
+      pattern: 'scales\s*=\s*["'']free_y["'']'
