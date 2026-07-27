@@ -68,12 +68,16 @@ free choice:
 
 | Data span | `date_breaks` | `date_labels` |
 |---|---|---|
-| ≤ 90 days | `"2 weeks"` | `"%b %d"` |
+| ≤ 90 days | `"2 weeks"` | `"%b %d, %Y"` |
 | > 90 days and ≤ 2 years | `"2 months"` | `"%b %Y"` |
 | > 2 years | `"1 year"` | `"%Y"` |
 
 Boundaries are non-overlapping by construction (`≤`/`>` on each edge) — a span of
-exactly 90 days always falls in the first row, never both.
+exactly 90 days always falls in the first row, never both. The short-span format
+always includes the year (`%Y`) even though the tick spacing is tight — the
+mandated trend title (`geoms.md`, `"{Y} over time"`) carries no date range of its
+own, so omitting the year from the ticks would make a plot's period genuinely
+ambiguous across a year boundary, not just visually redundant.
 
 ## Labels, facets, coords
 

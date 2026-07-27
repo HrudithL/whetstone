@@ -80,7 +80,8 @@ a top-N.
 | Geom family | Title template |
 |---|---|
 | Relationship (`geom_point`) | `"{Y} vs {X}"` |
-| Ranking/amount (`geom_col`/`geom_bar`) | `"{Y} by {X}"`; if sliced to a top-N (e.g. `.head(n)`), use `"Top {n} by {Y}"` instead |
+| Ranking/amount, pre-aggregated (`geom_col`) | `"{Y} by {X}"`; if sliced to a top-N (e.g. `.head(n)`), use `"Top {n} by {Y}"` instead |
+| Frequency of raw categories (`geom_bar`, `stat="count"`, no mapped `y=`) | `"Count of {X}"` — never `{Y}`; `geom_bar` computes its own bar height, there is no source column to name |
 | Trend over time (`geom_line`) | `"{Y} over time"`; append `" by {group}"` when a `color=`/`group=` hero variable is mapped |
 | Distribution, one numeric var (`geom_histogram`/`geom_density`) | `"Distribution of {X}"` — the measured variable is mapped to `x=`; `y` is a computed count/density, never the template's `{Y}` |
 | Distribution, compared across groups (`geom_boxplot`/`geom_violin`) | `"Distribution of {Y}"`; append `" by {X}"` when compared across a group |
