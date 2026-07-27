@@ -142,7 +142,8 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
 
     Raises ``ValueError`` if no current cluster containing ``(skill, entry_id)`` meets
     ``global_skill_count`` (e.g. the candidate is stale — the store changed since it was reported,
-    or the entry doesn't exist).
+    or the entry doesn't exist), or if the representative was already enacted by a concurrent
+    ``promote_cluster`` call for the same cluster (detected between locks — see below).
     """
     if config is None:
         config = load_config()
@@ -171,11 +172,31 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
     with store_write_lock(g_loc):
         index.rebuild_index_if_stale(g_loc, backend)
         rep_skill, rep_entry = cluster_representative(cluster)
-        global_id = write_global_entry(g_loc, backend, rep_entry, rep_skill)
+
+        # The detection above ran before any lock was held, so a concurrent `promote_cluster` for
+        # this same cluster could have already enacted it in between. The global lock serializes
+        # racing promotions from here on, so re-check the representative still exists in its
+        # source store now that we hold it — a fresh `find_learning`, not the possibly-stale entry
+        # `find_cross_skill_clusters` returned.
+        rep_loc = store_location(rep_skill, config)
+        with store_write_lock(rep_loc):
+            index.rebuild_index_if_stale(rep_loc, backend)
+            fresh_rep = find_learning(rep_loc, rep_entry.id)
+        if fresh_rep is None:
+            raise ValueError(
+                f"representative entry {rep_entry.id!r} in skill {rep_skill!r} no longer exists — "
+                "this candidate is stale (likely already enacted by a concurrent `promote_cluster` "
+                "call, or removed/revised meanwhile); re-run `compact --all` for a fresh finding"
+            )
+
+        global_id = write_global_entry(g_loc, backend, fresh_rep, rep_skill)
         retired = []
         for member_skill, entry in cluster:
             skill_loc = store_location(member_skill, config)
             with store_write_lock(skill_loc):
+                index.rebuild_index_if_stale(skill_loc, backend)
+                if find_learning(skill_loc, entry.id) is None:
+                    continue  # already retired by the same race — nothing left to do here
                 retire_source(skill_loc, backend, entry.id)
             retired.append({"skill": member_skill, "id": entry.id})
 

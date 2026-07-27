@@ -48,6 +48,7 @@ capture-time variant is future work.
 
 from __future__ import annotations
 
+import shlex
 from collections import Counter, defaultdict
 from dataclasses import replace
 from datetime import UTC, date, datetime
@@ -623,7 +624,13 @@ def _global_candidate_findings(skills: list[str], config: Config, backend) -> li
                     "cluster_size": len(cluster),
                     "members": [{"skill": s, "id": e.id} for s, e in cluster],
                 },
-                "enact": f"whetstone promote {rep_skill} {rep_entry.id} --cluster",
+                # shlex.quote so a skill name containing whitespace or shell metacharacters still
+                # yields a valid, safe, copy-pasteable command (a skill name is user-/model-chosen
+                # free text, not guaranteed to be a bare shell token).
+                "enact": (
+                    f"whetstone promote {shlex.quote(rep_skill)} {shlex.quote(rep_entry.id)} "
+                    "--cluster"
+                ),
             }
         )
     return findings

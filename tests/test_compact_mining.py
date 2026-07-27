@@ -7,6 +7,7 @@ reachable via ``whetstone promote <skill> <id> --cluster``, see the CLI test nea
 from __future__ import annotations
 
 import json
+import shlex
 from datetime import date
 
 import pytest
@@ -267,6 +268,39 @@ def test_promote_cluster_unknown_entry_raises(env):
         promote_cluster("gt", "L999")
 
 
+def test_promote_cluster_revalidates_under_lock_against_stale_detection(env, monkeypatch):
+    """Regression for a Codex-flagged race: `find_cross_skill_clusters` runs unlocked, so two
+    concurrent `promote_cluster` calls for the same finding could both detect the cluster before
+    either takes a lock. The second (losing) call must re-validate the representative under the
+    global lock and refuse to write a duplicate, rather than trusting its now-stale snapshot."""
+    import whetstone.compaction as compaction_mod
+    from whetstone.config import load_config
+    from whetstone.embeddings import get_backend
+
+    body = "Prefer muted, low-saturation color palettes."
+    for skill in ("gt", "web", "ppt"):
+        capture(skill, "learning", body, "palette", "prov")
+
+    config = load_config()
+    backend = get_backend(config)
+    # Snapshot detection exactly as a racing second caller would have captured it, before any lock.
+    stale_clusters = compaction_mod.find_cross_skill_clusters(config, backend)
+
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+    promote_cluster(rep["skill"], rep["id"])  # the "winning" caller enacts it first
+
+    # Force the "losing" caller to see the pre-promotion snapshot instead of re-detecting fresh
+    # (fresh detection would already fail the earlier "no cross-skill cluster" check, since the
+    # entries are gone now — the whole point is to exercise the under-lock re-validation instead).
+    monkeypatch.setattr(compaction_mod, "find_cross_skill_clusters", lambda *a, **k: stale_clusters)
+    with pytest.raises(ValueError, match="no longer exists"):
+        promote_cluster(rep["skill"], rep["id"])
+
+    g_learnings = load_learnings(global_store_location(Config(store_root=env, embedding_dim=384)))
+    assert len(g_learnings) == 1  # the stale second call did not write a duplicate
+
+
 def test_cli_promote_cluster_flag_enacts_candidate(env, capsys):
     """The exact CLI invocation a `global_candidate` finding's ``enact`` string names."""
     body = "Prefer muted, low-saturation color palettes."
@@ -280,4 +314,28 @@ def test_cli_promote_cluster_flag_enacts_candidate(env, capsys):
     out = json.loads(capsys.readouterr().out)
     assert out["global_id"].startswith("L")
     for skill in ("gt", "web", "ppt"):
+        assert load_learnings(store_location(skill)) == []
+
+
+def test_global_candidate_enact_command_is_shell_safe_for_skill_with_spaces(env, capsys):
+    """Regression: a skill name containing whitespace must not turn `enact` into a command whose
+    positional args a shell (or `server.main`'s own splitting) would parse as extra tokens."""
+    body = "Prefer muted, low-saturation color palettes."
+    for skill in ("great tables", "web app", "ppt deck"):
+        capture(skill, "learning", body, "palette", "prov")
+
+    finding = compact(all_skills=True)["global_candidates"][0]
+    rep = finding["representative"]
+    assert " " in rep["skill"]  # the representative itself has a space, exercising the fix
+
+    # shlex.split must reproduce exactly the 5 intended tokens, not split the skill name apart.
+    tokens = shlex.split(finding["enact"])
+    assert tokens == ["whetstone", "promote", rep["skill"], rep["id"], "--cluster"]
+
+    # And feeding those parsed tokens to the CLI (as a real shell would after parsing the pasted
+    # command) actually enacts the candidate.
+    cli_main(tokens[1:])
+    out = json.loads(capsys.readouterr().out)
+    assert out["global_id"].startswith("L")
+    for skill in ("great tables", "web app", "ppt deck"):
         assert load_learnings(store_location(skill)) == []
