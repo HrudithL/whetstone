@@ -3,19 +3,20 @@ title: "Before / After"
 subtitle: "Walk through how a correction becomes a durable preference."
 ---
 
-Each scenario walks through **one skill**, one correction, in three steps:
+Each scenario walks through **one skill** and one or more corrections, in three steps:
 
 1. **Here's what it produced** — the output generated with an **empty** Whetstone store. The
-   subjective preference we later teach is (typically) not honored.
-2. **Here's what wasn't good** — the scripted correction, quoted verbatim as the user would actually
-   say it, plus the run it started sticking on.
+   subjective preferences we later teach are (typically) not honored.
+2. **Here's what wasn't good** — the scripted correction(s), quoted verbatim as the user would
+   actually say them, plus the run each one started sticking on.
 3. **Here's what changed** — the same task, generated again once the learned layer was applied. The
-   preference is honored — and the raw learned layer Whetstone injected is one click away if you want
-   the receipts.
+   preferences are honored — and the raw learned layer Whetstone injected is one click away if you
+   want the receipts.
 
 The scenarios span four skills — **Great Tables**, **frontend design**, **plotnine**, and
-**PowerPoint decks** — each carrying its own arbitrary house-style preference. The substrate is the
-same for all four; only the skill and the taught preference change.
+**PowerPoint decks** — each carrying one or more arbitrary house-style preferences (most scenarios
+teach two; `plotnine_gtcars_hp_msrp` teaches five). The substrate is the same for all four; only the
+skill and the taught preferences change.
 
 *The panels render each skill's output natively from the committed artifacts under `harness/out/`:
 Great Tables tables inline, self-contained web pages sandboxed in an iframe, plotnine plots as

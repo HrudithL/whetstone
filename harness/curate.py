@@ -35,6 +35,16 @@ _ARTIFACT_TOOL_NAMES = frozenset({"Write", "Edit"})
 # above it, elide. Chosen against the observed range (100-2700+ chars per block in real runs).
 _THINKING_ELIDE_THRESHOLD = 200
 
+# A "text" block at or under this length reads like a brief, already-narrative aside; above it,
+# elide. This is NOT just an assistant-verbosity guard: the SDK delivers a mounted Skill's full
+# instructions (e.g. the ~7KB Great Tables SKILL.md body — see
+# harness/out/great-tables/islands_sizes/warm/transcript.json) as a plain **user** `TextBlock`, not
+# a `tool_result` — so without this rule that multi-kilobyte payload would sail through
+# `_curate_block` untouched via the catch-all `return block`, even though the surrounding `Skill`
+# tool_use/tool_result turn is correctly elided. 500 chars comfortably covers a real short
+# narrative note while catching any skill-instructions-sized dump.
+_TEXT_ELIDE_THRESHOLD = 500
+
 
 def _is_whetstone_tool(name: str) -> bool:
     """True if a tool_use/tool_result block's ``name`` is one of Whetstone's MCP tools."""
@@ -60,6 +70,11 @@ def _curate_block(block: dict, kept_tool_use_ids: set[str]) -> dict:
         if len(text) <= _THINKING_ELIDE_THRESHOLD:
             return block
         return _elide("internal reasoning", length=len(text))
+    if btype == "text":
+        text = block.get("text", "")
+        if len(text) <= _TEXT_ELIDE_THRESHOLD:
+            return block
+        return _elide("long text", length=len(text))
     if btype == "tool_use":
         name = block.get("name", "")
         if _is_whetstone_tool(name) or name in _ARTIFACT_TOOL_NAMES:
@@ -73,7 +88,7 @@ def _curate_block(block: dict, kept_tool_use_ids: set[str]) -> dict:
         if tool_use_id in kept_tool_use_ids:
             return block
         return _elide("tool result")
-    return block  # text and anything else (server tool blocks, ...): keep as-is
+    return block  # anything else (server tool blocks, ...): keep as-is
 
 
 def curate_transcript(messages: list[dict]) -> list[dict]:
@@ -86,9 +101,15 @@ def curate_transcript(messages: list[dict]) -> list[dict]:
     entirely from the curated view — they stay intact in the raw ``transcript.json``.
 
     Within a kept message, content blocks are curated by :func:`_curate_block`: Whetstone-tool and
-    Write/Edit tool_use/tool_result turns are kept in full; short assistant text and short
-    "thinking" blocks are kept in full; long "thinking" and any other tool_use/tool_result
+    Write/Edit tool_use/tool_result turns are kept in full; short assistant/user text and short
+    "thinking" blocks are kept in full; long text/"thinking" and any other tool_use/tool_result
     (Read/Bash/Glob/Grep/Skill — routine plumbing) are replaced with a structured elision marker.
+
+    A ``UserMessage`` also carries a top-level ``tool_use_result`` field — the CLI's own duplicate
+    copy of its tool result (observed for Read/Bash: the same CSV/file/stdout payload the
+    corresponding ``ToolResultBlock.content`` already holds). Whenever a message's
+    ``tool_use_result`` duplicates a ``tool_result`` block that got elided, it is elided too —
+    otherwise the "omitted" payload would still be sitting right there under a different key.
 
     Processes ``messages`` in order (a tool_result normally arrives in a later message than its
     tool_use), so a kept tool_use's id is known by the time its matching tool_result is reached.
@@ -102,6 +123,15 @@ def curate_transcript(messages: list[dict]) -> list[dict]:
         if not isinstance(content, list):
             curated.append(dict(msg))
             continue
-        new_content = [_curate_block(block, kept_tool_use_ids) for block in content]
-        curated.append({**msg, "content": new_content})
+        new_content = []
+        any_tool_result_elided = False
+        for block in content:
+            new_block = _curate_block(block, kept_tool_use_ids)
+            if block.get("type") == "tool_result" and new_block.get("type") == "elided":
+                any_tool_result_elided = True
+            new_content.append(new_block)
+        new_msg = {**msg, "content": new_content}
+        if any_tool_result_elided and new_msg.get("tool_use_result") is not None:
+            new_msg["tool_use_result"] = _elide("tool result")
+        curated.append(new_msg)
     return curated

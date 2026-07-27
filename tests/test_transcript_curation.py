@@ -172,6 +172,58 @@ def test_curate_keeps_artifact_write_calls():
     assert curated[1]["content"][0]["type"] == "tool_result"
 
 
+def test_curate_elides_large_skill_instruction_text_block():
+    # The SDK delivers a mounted Skill's full instructions as a plain user TextBlock, not a
+    # tool_result (observed for the real Great Tables skill, ~7KB) — this must not survive the
+    # catch-all "keep text as-is" path just because it isn't shaped like a tool call.
+    skill_payload = "Base directory for this skill: /tmp/x\n\n# Great Tables Skill\n" + ("y" * 600)
+    raw = [_user(sdk.TextBlock(text=skill_payload))]
+    curated = curate.curate_transcript(raw)
+    assert curated[0]["content"] == [
+        {"type": "elided", "reason": "long text", "length": len(skill_payload)}
+    ]
+
+
+def test_curate_keeps_short_user_text():
+    raw = [_user(sdk.TextBlock(text="here is the csv"))]
+    curated = curate.curate_transcript(raw)
+    assert curated[0]["content"] == [{"type": "text", "text": "here is the csv"}]
+
+
+def test_curate_strips_duplicated_tool_use_result_when_elided():
+    # The CLI stores the same Read/Bash payload both in the ToolResultBlock's `content` AND in the
+    # enclosing UserMessage's separate `tool_use_result` field (observed for CSV/file reads). Once
+    # the block itself is elided, the duplicate under `tool_use_result` must not survive untouched.
+    msg = sdk.UserMessage(
+        content=[sdk.ToolResultBlock(tool_use_id="tu_read", content="...huge csv...")],
+        tool_use_result={"stdout": "...huge csv..."},
+    )
+    raw = [generate._message_to_dict(msg)]
+    curated = curate.curate_transcript(raw)
+    assert curated[0]["content"] == [{"type": "elided", "reason": "tool result"}]
+    assert curated[0]["tool_use_result"] == {"type": "elided", "reason": "tool result"}
+
+
+def test_curate_keeps_tool_use_result_when_tool_result_kept():
+    msg = sdk.UserMessage(
+        content=[sdk.ToolResultBlock(tool_use_id="tu_recall", content="ok")],
+        tool_use_result={"stdout": "ok"},
+    )
+    raw = [
+        _assistant(
+            sdk.ToolUseBlock(
+                id="tu_recall", name="mcp__whetstone__recall", input={"skill": "great-tables"}
+            )
+        ),
+        generate._message_to_dict(msg),
+    ]
+    curated = curate.curate_transcript(raw)
+    assert curated[1]["content"] == [
+        {"type": "tool_result", "tool_use_id": "tu_recall", "content": "ok", "is_error": None}
+    ]
+    assert curated[1]["tool_use_result"] == {"stdout": "ok"}  # kept: nothing was elided here
+
+
 def test_curate_drops_system_and_result_messages():
     raw = [
         generate._message_to_dict(sdk.SystemMessage(subtype="init", data={})),
