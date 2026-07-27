@@ -104,3 +104,9 @@ same_polarity_contradiction:
     - scope: "neon color avoidance"
       first: "Avoid neon accent colors in the table."
       second: "Never use neon accent colors in the table."
+    # Tricky near-miss: an antonym pair (light/dark) where negation on only ONE side cancels the
+    # flip into an agreement -- "avoid dark" affirms the same thing as "use light" (round-2 Codex
+    # review finding).
+    - scope: "background tone"
+      first: "Avoid a dark background for the table."
+      second: "Use a light background for the table."

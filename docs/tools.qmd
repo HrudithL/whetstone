@@ -82,10 +82,13 @@ conflict-checks against existing entries before writing.
 default on): a near-duplicate **learning** whose wording actually flips against the existing one —
 a small, hand-picked antonym/negation lexicon catches the clearest cases ("left" vs. "right", a
 negation word on only one side) — returns this status (the existing entry's id, the candidate body,
-and a short note) instead of silently reinforcing. Nothing is written; resolve it with `revise` on
-the flagged entry, or re-`capture` if it genuinely was a duplicate. This narrows, but does not
-remove, the general limitation that embeddings alone can't separate a same-polarity contradiction
-from a paraphrase — see [Concepts](concepts.qmd) and `LEARNING_SKILLS_DESIGN.md` §7.
+and a short note) instead of silently reinforcing. Nothing is written. This check is deterministic,
+so re-calling `capture` with the same body flags again rather than resolving anything — resolve it
+via `revise` on the flagged `entry_id` instead: `action:"reinforce"` with no `body` if it genuinely
+was a duplicate (bumps recurrence without re-running this check), or `action:"reinforce"` with a
+reworded `body` (or `"weaken"`/`"remove"`) if it truly was a contradiction. This narrows, but does
+not remove, the general limitation that embeddings alone can't separate a same-polarity
+contradiction from a paraphrase — see [Concepts](concepts.qmd) and `LEARNING_SKILLS_DESIGN.md` §7.
 
 On a committed change `capture` (and `revise`) return a short human-facing **`confirmation`** string
 — *"Captured: currency columns — …. Re-applies on future great-tables runs."* — so the agent can

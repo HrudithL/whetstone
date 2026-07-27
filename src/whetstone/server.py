@@ -225,7 +225,11 @@ def capture(
     on only one side) — the same-similarity-but-opposite-meaning case an embedding alone can't
     separate from a genuine paraphrase — ``capture`` returns ``possible_contradiction`` (with the
     existing entry's id and a short ``note``) instead of silently reinforcing. Nothing is written;
-    resolve it with ``revise`` on the flagged entry, or re-``capture`` if it truly was a duplicate.
+    this check is deterministic, so re-calling ``capture`` with the same body flags again rather
+    than resolving anything. Resolve it via ``revise`` on the flagged ``entry_id`` instead: `action`
+    ``"reinforce"`` (with no ``body``) if it genuinely was a duplicate — this bumps recurrence
+    without re-running this check — `action` ``"reinforce"`` with a reworded ``body`` (or
+    ``"weaken"``/``"remove"``) if it truly was a contradiction and the entry should change or go.
 
     On a committed/reinforced result the payload carries a ``confirmation`` string (e.g. "Captured:
     <scope> — …. Re-applies on future <skill> runs."). RELAY it to the user so they can see the
@@ -1213,23 +1217,41 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
        the other, while the other text contains the OPPOSITE side and not the first ("left" vs.
        "right"). A pair mentioned on BOTH sides (e.g. two duplicates both discussing "left and
        right padding") is symmetric, not asymmetric, and is deliberately NOT flagged — the point is
-       a flip, not shared vocabulary.
+       a flip, not shared vocabulary. This is gated by negation parity (below): when exactly ONE
+       text is negated overall, an antonym flip more often reads as an agreement than a
+       contradiction ("Avoid a dark background" ~ "Use a light background" — negation cancels the
+       flip), so a pair match under differing negation is treated as an explained cancellation, not
+       evidence of a flip, and does not fire on its own.
     2. **Negation asymmetry** — one text carries a :data:`_NEGATION_ASYMMETRY` marker and the other
-       does not. Two duplicates that are BOTH negated ("avoid X" / "never X") are symmetric and NOT
-       flagged.
+       does not, with NO antonym pair present to explain that difference as a cancellation (e.g.
+       "Never right-align currency columns" vs. "Right-align currency columns" — the same content,
+       negated on only one side, is still a real flip). Two duplicates that are BOTH negated
+       ("avoid X" / "never X") are symmetric and NOT flagged either way.
 
     Returns a short human-readable note describing the detected asymmetry, or ``None`` when neither
-    signal fires (the ordinary case — treat it as a genuine duplicate and reinforce).
+    signal fires (the ordinary case — treat it as a genuine duplicate and reinforce). Conservative
+    by design: an ambiguous antonym-plus-negation combination is resolved toward NOT flagging, since
+    this heuristic would rather miss a real contradiction than wrongly block a genuine duplicate.
     """
     c, d = candidate_text.lower(), duplicate_text.lower()
+    negation_differs = bool(_NEGATION_ASYMMETRY.search(c)) != bool(_NEGATION_ASYMMETRY.search(d))
+    explained_by_negation = False
     for a, b in _ANTONYM_PAIRS:
         c_a, c_b = _word_in(a, c), _word_in(b, c)
         d_a, d_b = _word_in(a, d), _word_in(b, d)
-        if c_a and not c_b and d_b and not d_a:
-            return f"one entry says {a!r}, the other says {b!r} — likely opposite, not duplicate."
-        if c_b and not c_a and d_a and not d_b:
-            return f"one entry says {b!r}, the other says {a!r} — likely opposite, not duplicate."
-    if bool(_NEGATION_ASYMMETRY.search(c)) != bool(_NEGATION_ASYMMETRY.search(d)):
+        flipped_ab = c_a and not c_b and d_b and not d_a
+        flipped_ba = c_b and not c_a and d_a and not d_b
+        if not (flipped_ab or flipped_ba):
+            continue
+        if negation_differs:
+            explained_by_negation = True
+            continue
+        word_a, word_b = (a, b) if flipped_ab else (b, a)
+        return (
+            f"one entry says {word_a!r}, the other says {word_b!r} — likely opposite, not "
+            "duplicate."
+        )
+    if negation_differs and not explained_by_negation:
         return (
             "one entry uses a negation word (never/avoid/don't/refrain) the other doesn't — likely "
             "opposite, not duplicate."

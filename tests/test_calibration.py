@@ -79,11 +79,12 @@ def test_same_polarity_contradiction_scores_the_labeled_set(hashing_env):
     labels = calibrate.load_labels()
     result = calibrate.calibrate_same_polarity_contradiction(labels)
     assert result["n_contradiction_pairs"] == 6
-    assert result["n_duplicate_pairs"] == 5
+    assert result["n_duplicate_pairs"] == 6
     assert result["value"] == 1.0  # precision
     assert result["recall"] == 1.0
     assert result["false_positives"] == 0
     assert result["false_negatives"] == 0
+    assert result["not_reached"] == 0  # every labeled pair actually reached the heuristic
     assert "experimental" in result["note"].lower()
 
 
