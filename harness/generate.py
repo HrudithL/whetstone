@@ -19,6 +19,7 @@ into the instruction block injected on WARM runs — the same text saved verbati
 from __future__ import annotations
 
 import ast
+import dataclasses
 import io
 import os
 import re
@@ -494,7 +495,13 @@ class AgentGenerator:
         async with ClaudeSDKClient(options=options) as client:
             await client.query(prompt)
             async for msg in client.receive_response():
-                transcript.append(_message_to_dict(msg))
+                entry = _message_to_dict(msg)
+                # Drop the periodic `{"subtype": "thinking_tokens", ...}` progress pings (one per
+                # ~100 reasoning tokens): they carry no content, only bloat the saved transcript,
+                # and interleave with the substantive turns a reader actually wants.
+                if _is_progress_ping(entry):
+                    continue
+                transcript.append(entry)
         # The primary output must exist and be non-empty; when it IS the rendered artifact (a web
         # skill's index.html) require non-WHITESPACE content too — a whitespace-only file passes a
         # size check but renders as nothing and there are no required_artifacts to catch it later.
@@ -526,15 +533,116 @@ class AgentGenerator:
         return GenerationResult(code=primary_text, transcript=transcript)
 
 
+def _content_block_type(block: object) -> str:
+    """The wire-protocol ``type`` tag for one Agent-SDK content-block class.
+
+    Imports the SDK's block classes lazily (module-level `generate.py` must stay importable
+    without `claude-agent-sdk` for the free `--stub` path) and only classifies the block *kinds*
+    that appear in the tools this harness's ``AgentGenerator`` allows
+    (Read/Write/Edit/Bash/Glob/Grep/Skill) plus text/thinking — never WebSearch/WebFetch server
+    tools, but they're included for completeness/robustness against a future tool grant. Any other
+    dataclass falls back to its own class name so nothing is ever silently dropped.
+    """
+    from claude_agent_sdk import (
+        ServerToolResultBlock,
+        ServerToolUseBlock,
+        TextBlock,
+        ThinkingBlock,
+        ToolResultBlock,
+        ToolUseBlock,
+    )
+
+    if isinstance(block, TextBlock):
+        return "text"
+    if isinstance(block, ThinkingBlock):
+        return "thinking"
+    if isinstance(block, ToolUseBlock):
+        return "tool_use"
+    if isinstance(block, ToolResultBlock):
+        return "tool_result"
+    if isinstance(block, ServerToolUseBlock):
+        return "server_tool_use"
+    if isinstance(block, ServerToolResultBlock):
+        return "server_tool_result"
+    return type(block).__name__
+
+
+def _message_top_level_type(msg: object) -> str | None:
+    """The wire-protocol top-level ``type`` for an Agent-SDK message, or ``None`` if unrecognized.
+
+    ``SystemMessage`` subclasses (``TaskStartedMessage``, ``HookEventMessage``, the
+    ``thinking_tokens`` progress ping, ...) all report ``"system"`` here — matching the raw CLI
+    wire protocol — with ``subtype``/extra fields carrying the specific kind, so a reader filters
+    on ``subtype`` exactly as the CLI's own JSON does rather than on a one-off class-derived tag.
+    """
+    from claude_agent_sdk import AssistantMessage, ResultMessage, SystemMessage, UserMessage
+
+    if isinstance(msg, AssistantMessage):
+        return "assistant"
+    if isinstance(msg, UserMessage):
+        return "user"
+    if isinstance(msg, ResultMessage):
+        return "result"
+    if isinstance(msg, SystemMessage):  # covers every SystemMessage subclass
+        return "system"
+    return None
+
+
+def _to_jsonable(value: object) -> object:
+    """Recursively convert an Agent-SDK value into a plain JSON-able structure.
+
+    Every dataclass encountered (a nested message or a content block, e.g. inside
+    ``AssistantMessage.content``) is expanded into a real nested dict tagged with its
+    wire-protocol ``type`` (:func:`_content_block_type`) — never stringified via ``str``/``repr``.
+    Plain ``dict``/``list``/``tuple``/``str``/``int``/``float``/``bool``/``None`` values (already
+    JSON-safe — e.g. a ``ToolUseBlock.input`` or a raw ``tool_use_result`` dict from the CLI) pass
+    through recursively unchanged. Anything else falls back to ``repr`` rather than raising.
+    """
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        fields = {f.name: _to_jsonable(getattr(value, f.name)) for f in dataclasses.fields(value)}
+        return {"type": _content_block_type(value), **fields}
+    if isinstance(value, dict):
+        return {k: _to_jsonable(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [_to_jsonable(v) for v in value]
+    if isinstance(value, str | int | float | bool) or value is None:
+        return value
+    return repr(value)  # pragma: no cover - defensive: no known SDK value takes this path
+
+
 def _message_to_dict(msg: object) -> dict:
-    """Best-effort JSON-able view of an Agent-SDK message for the saved transcript."""
-    for attr in ("model_dump", "to_dict", "__dict__"):
+    """JSON-able view of an Agent-SDK message for the saved transcript.
+
+    Every known message type (``AssistantMessage``/``UserMessage``/``SystemMessage`` incl.
+    subclasses/``ResultMessage``) and content block (``TextBlock``/``ThinkingBlock``/
+    ``ToolUseBlock``/``ToolResultBlock``/...) is expanded into real nested JSON tagged with its
+    wire-protocol ``type`` — e.g. a ``ToolUseBlock`` becomes
+    ``{"type": "tool_use", "name": ..., "input": {...}}`` with ``input`` a real dict, never a
+    stringified ``repr`` like the old ``{k: str(v) for k, v in val.items()}`` fallback produced.
+    Falls back to ``model_dump``/``to_dict`` for a message type this function doesn't recognize
+    (future SDK additions), and to a tagged ``repr`` only as a last resort.
+    """
+    top_type = _message_top_level_type(msg)
+    if top_type is not None:
+        fields = {f.name: _to_jsonable(getattr(msg, f.name)) for f in dataclasses.fields(msg)}
+        return {"type": top_type, **fields}
+    for attr in ("model_dump", "to_dict"):
         val = getattr(msg, attr, None)
         if callable(val):
             try:
                 return dict(val())
             except Exception:  # pragma: no cover - defensive
                 pass
-        elif isinstance(val, dict):
-            return {k: str(v) for k, v in val.items()}
-    return {"repr": repr(msg)}  # pragma: no cover - defensive
+    if dataclasses.is_dataclass(msg) and not isinstance(msg, type):
+        return _to_jsonable(msg)  # unrecognized dataclass message: still real structure
+    return {"type": "unknown", "repr": repr(msg)}  # pragma: no cover - defensive
+
+
+def _is_progress_ping(entry: dict) -> bool:
+    """True for a serialized ``{"type": "system", "subtype": "thinking_tokens", ...}`` message.
+
+    The CLI emits one of these roughly every ~100 reasoning tokens while the model thinks; it
+    carries no content (just a running token count), so it is dropped from the saved transcript at
+    the collection point in :meth:`AgentGenerator._generate` rather than persisted as noise.
+    """
+    return entry.get("type") == "system" and entry.get("subtype") == "thinking_tokens"

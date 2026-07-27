@@ -37,6 +37,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import config
+from .curate import curate_transcript
 from .generate import (
     AgentGenerator,
     GenerationResult,
@@ -178,6 +179,12 @@ def _persist(
     if result.transcript:
         (phase_dir / "transcript.json").write_text(
             json.dumps(result.transcript, indent=2), encoding="utf-8"
+        )
+        # The reduced, human/site-consumable view alongside the raw ground truth — same pattern as
+        # runs.jsonl/summary.json coexisting. Nothing in the raw file is destroyed; curation only
+        # decides what a reader sees by default.
+        (phase_dir / "transcript.curated.json").write_text(
+            json.dumps(curate_transcript(result.transcript), indent=2), encoding="utf-8"
         )
 
 
