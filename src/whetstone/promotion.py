@@ -42,6 +42,7 @@ from .store.layout import (
     commit_store,
     ensure_store,
     global_store_location,
+    read_registry,
     store_location,
     store_write_lock,
 )
@@ -148,25 +149,30 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
     skills — is retired from its per-skill store. This is the only place a cross-skill cluster is
     actually promoted; ``compact --all`` itself only ever detects and reports.
 
-    Detection runs twice: once unlocked (to fail fast on an obviously-stale candidate and to learn
-    which skills participate), and again after every participating skill's write lock is held
-    (nested inside the global lock, in sorted order — see below) — only the **second, fully-locked**
-    run is ever acted on. This matters for two independent reasons: (1) the global lock alone only
-    serializes *other* ``promote_cluster`` calls, not `capture`/`revise`/`compact <skill>`, which
-    each only take their own source store's lock — so every participating source store must be
-    locked too, before the final check, or one of those could mutate a cluster member out from
-    under this call between detection and the write; (2) detection re-checks real cluster
-    membership — same-skill dedup-similarity threshold *and* ``global_skill_count`` — not just
-    whether an id still exists, so a member that was revised (not removed), or a cluster that
-    dropped below threshold, is caught the same way an outright-removed entry is.
+    Detection runs twice: once unlocked (to fail fast on an obviously-stale candidate before
+    bothering to take any lock), and again after **every currently-registered skill's** write lock
+    is held (nested inside the global lock, in sorted order — see below) — only the **second,
+    fully-locked** run is ever acted on. This matters for three independent reasons: (1) the global
+    lock alone only serializes *other* ``promote_cluster`` calls, not `capture`/`revise`/
+    `compact <skill>`, which each only take their own source store's lock — so every store that
+    could possibly join or leave the cluster must be locked too, before the final check, or one of
+    those could mutate a member out from under this call between detection and the write; (2)
+    detection re-checks real cluster membership — same-skill dedup-similarity threshold *and*
+    ``global_skill_count`` — not just whether an id still exists, so a member that was revised (not
+    removed), or a cluster that dropped below threshold, is caught the same way an outright-removed
+    entry is; (3) the authoritative rescan is run over the **full registry**, not just the skills
+    the unlocked provisional scan happened to find — a new matching learning captured in some OTHER
+    skill between the provisional scan and this call would otherwise join the cluster invisibly
+    (unlocked, unretired, and no longer reportable by a later ``compact --all`` since the copy that
+    remains no longer meets ``global_skill_count`` on its own), so the provisional scan's skill set
+    is used only to decide "is this obviously already stale," never to scope what gets locked or
+    re-detected.
 
-    Lock order is global-first, then every participating skill in sorted order — the same
-    global-then-skill convention :func:`promote_to_global` uses, extended to multiple skills so two
-    calls whose candidate sets overlap can never deadlock against each other (in practice the
-    global lock already fully serializes concurrent ``promote_cluster`` calls, since both must
-    acquire it before touching any skill lock; the sorted order is what keeps this call consistent
-    with that same convention if it is ever extended to lock skills without holding the global lock
-    for the whole duration).
+    Lock order is global-first, then every registered skill in sorted order — the same
+    global-then-skill convention :func:`promote_to_global` uses, extended to the full registry so
+    two concurrent ``promote_cluster`` calls (whose true participant sets could otherwise diverge as
+    the store changes underneath them) can never deadlock against each other or miss a skill the
+    other is relying on.
 
     Raises ``ValueError`` if no current cluster containing ``(skill, entry_id)`` meets
     ``global_skill_count`` — the candidate may be stale (already enacted, revised, or removed since
@@ -192,35 +198,37 @@ def promote_cluster(skill: str, entry_id: str, config: Config | None = None) -> 
             "`compact --all` for a fresh finding"
         )
 
-    # Fail fast, unlocked — a cheap check before we bother taking any lock at all, and it tells us
-    # which skills participate, so we know which source-store locks to acquire below.
+    # Fail fast, unlocked — a cheap check before we bother taking any lock at all. This is
+    # deliberately NOT used to scope which stores get locked below (see the docstring): a skill
+    # this provisional scan misses entirely could still join the true cluster by the time the
+    # authoritative, fully-locked scan runs.
     provisional = _find_cluster_for(find_cross_skill_clusters(config, backend), skill, entry_id)
     if provisional is None:
         raise _stale_error()
-    candidate_skills = sorted({s for s, _ in provisional})
 
     ensure_store(GLOBAL_SLUG, config)
     g_loc = global_store_location(config)
+    all_skills = sorted(read_registry(config))
 
     with store_write_lock(g_loc):
         index.rebuild_index_if_stale(g_loc, backend)
 
-        # Hold EVERY candidate source store's write lock for the rest of this call — not just one
-        # at a time as each is retired — so nothing (`capture`, `revise`, `compact <skill>`, or a
-        # racing `promote_cluster`) can mutate any participating skill's store between the
+        # Hold EVERY registered skill's write lock for the rest of this call — not just the
+        # provisional scan's participants, and not just one at a time as each is retired — so
+        # nothing (`capture`, `revise`, `compact <skill>`, or a racing `promote_cluster`) can mutate
+        # ANY store, including one the unlocked scan never saw as a candidate, between the
         # authoritative check below and the writes. Sorted order, nested inside the already-held
         # global lock (see the docstring for why this ordering matters).
         with ExitStack() as stack:
-            for cand_skill in candidate_skills:
-                stack.enter_context(store_write_lock(store_location(cand_skill, config)))
+            for reg_skill in all_skills:
+                stack.enter_context(store_write_lock(store_location(reg_skill, config)))
 
-            # The authoritative check: re-run detection now that every participant is locked,
-            # restricted to exactly those skills (a concurrent capture on some OTHER, unlocked
-            # skill could never safely join this promotion anyway, since we hold no lock for it —
-            # restricting keeps this a single deterministic pass rather than looping to acquire
-            # more locks). Act only on this result, never the provisional one above.
+            # The authoritative check: re-run detection now that every registered skill is locked,
+            # over the FULL registry (not the provisional scan's skill set) — so a member that only
+            # became part of the cluster after the provisional scan is still caught. Act only on
+            # this result, never the provisional one above.
             cluster = _find_cluster_for(
-                find_cross_skill_clusters(config, backend, skills=candidate_skills),
+                find_cross_skill_clusters(config, backend),
                 skill,
                 entry_id,
             )
