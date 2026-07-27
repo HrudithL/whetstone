@@ -119,11 +119,14 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
 
     ``conflicts`` (§M7b) flags pairs, within the entries just returned, where a learning affirms
     what a co-returned issue forbids — e.g. a "right-align currency" learning alongside a "never
-    right-align currency" issue. Each item is ``{"a": <learning id>, "a_origin": ..., "b": <issue
-    id>, "b_origin": ..., "note": ..}`` — ``*_origin`` disambiguates ids since the skill and global
-    stores mint ids independently and can collide. Always present (``[]`` when nothing conflicts).
-    The issue always wins (§5.2) — resolve the tension in your output, and consider `revise`-ing
-    the losing side.
+    right-align currency" issue. Each item is ``{"a": <learning id>, "a_origin": ..., "a_skill":
+    ..., "b": <issue id>, "b_origin": ..., "b_skill": ..., "note": ..}``. ``*_origin`` disambiguates
+    ids since the skill and global stores mint ids independently and can collide; ``*_skill`` is the
+    literal ``skill`` argument to pass to `revise` for that side — for a ``"global"``-origin entry
+    this is the reserved global slug, NOT this call's own ``skill``, since `revise` always resolves
+    ``entry_id`` against the store named by its ``skill`` argument. Always present (``[]`` when
+    nothing conflicts). The issue always wins (§5.2) — resolve the tension in your output, and
+    consider `revise`-ing the losing side: ``revise(skill=<its *_skill>, entry_id=<its id>, ...)``.
     """
     config = load_config()
     ensure_store(skill, config)
@@ -168,7 +171,7 @@ def recall(skill: str, intent: str, learnings_k: int | None = None) -> dict:
     # how it was ranked/capped (MMR), or the fallback floor (see the M5e comment above — retrieval
     # logic itself is never touched here either). It only annotates the payload already decided.
     conflicts = (
-        _recall_conflicts(snapshot, g_snapshot, learnings, issues, config)
+        _recall_conflicts(skill, snapshot, g_snapshot, learnings, issues, config)
         if learnings and issues
         else []
     )
@@ -862,7 +865,23 @@ def _is_prohibition(title: str, body: str) -> bool:
     return bool(_PROHIBITION.search(f"{title} {body}"))
 
 
+def _revise_skill_arg(skill: str, origin: str) -> str:
+    """The literal ``skill`` argument a caller must pass to `revise` to reach an entry with this
+    origin (§M7b, round-2 finding — routing global conflicts back through `revise` correctly).
+
+    A ``"skill"``-origin entry lives in the store for the ``skill`` `recall` was called with, so
+    that same string is the right target. A ``"global"``-origin entry lives in the reserved global
+    store instead — `revise(skill, entry_id, ...)` always resolves ``entry_id`` against the store
+    named by its ``skill`` argument, and the global store's ids are independently numbered from
+    every per-skill store's (§M5e), so passing the calling skill's own name for a global entry
+    would resolve the wrong local id (or miss entirely). ``GLOBAL_SLUG`` is the one string that
+    reaches it.
+    """
+    return GLOBAL_SLUG if origin == "global" else skill
+
+
 def _pairwise_conflict(
+    skill: str,
     learning: RecalledLearning,
     issue: RecalledIssue,
     l_entry: IndexedEntry,
@@ -882,6 +901,9 @@ def _pairwise_conflict(
     entries that apply to genuinely different contexts (e.g. a "green checkmark" learning for
     successful transactions vs. an unrelated "never green checkmark" issue for error messages) would
     be flagged. Finally the two entries' own vectors must clear ``config.conflict_similarity``.
+
+    ``skill`` is the skill name `recall` was called with — used only to compute each side's
+    ``*_skill`` (see :func:`_revise_skill_arg`); it plays no part in the conflict test itself.
     """
     if _is_prohibition(l_entry.title, l_entry.body):
         return None
@@ -898,20 +920,26 @@ def _pairwise_conflict(
             return None
     if cosine(l_entry.vector, i_entry.vector) < config.conflict_similarity:
         return None
+    a_skill = _revise_skill_arg(skill, learning.origin)
+    b_skill = _revise_skill_arg(skill, issue.origin)
     return {
         "a": learning.id,
         "a_origin": learning.origin,
+        "a_skill": a_skill,
         "b": issue.id,
         "b_origin": issue.origin,
+        "b_skill": b_skill,
         "note": (
             f"Learning {learning.id} ({learning.origin}) affirms what issue {issue.id} "
-            f"({issue.origin}) forbids — the issue is mandatory (§5.2) and wins; consider "
-            "`revise`-ing one side."
+            f"({issue.origin}) forbids — the issue is mandatory (§5.2) and wins. Resolve via "
+            f"`revise(skill={a_skill!r}, entry_id={learning.id!r}, ...)` or "
+            f"`revise(skill={b_skill!r}, entry_id={issue.id!r}, ...)`."
         ),
     }
 
 
 def _recall_conflicts(
+    skill: str,
     snapshot: RetrievalSnapshot,
     g_snapshot: RetrievalSnapshot,
     learnings: list[RecalledLearning],
@@ -930,6 +958,10 @@ def _recall_conflicts(
     affirming what a co-returned issue forbids); issue-vs-issue and learning-vs-learning
     contradictions are out of scope here (the latter is a later slice, §M7c).
 
+    ``skill`` is the skill name `recall` was called with (passed through to
+    :func:`_pairwise_conflict` to compute each conflict's ``a_skill``/``b_skill`` — the correct
+    `revise` target per side).
+
     Every pair here is (one learning, one issue) from two disjoint lists, so no symmetric A-vs-B /
     B-vs-A duplicate can arise structurally — nothing further to dedupe.
     """
@@ -945,7 +977,7 @@ def _recall_conflicts(
             i_entry = i_snapshot.entries.get(issue.id)
             if i_entry is None:
                 continue
-            hit = _pairwise_conflict(learning, issue, l_entry, i_entry, scope_phrase, config)
+            hit = _pairwise_conflict(skill, learning, issue, l_entry, i_entry, scope_phrase, config)
             if hit is not None:
                 conflicts.append(hit)
     return conflicts

@@ -115,8 +115,10 @@ def test_recall_surfaces_a_conflict_between_co_returned_learning_and_issue(env):
         {
             "a": "L1",
             "a_origin": "skill",
+            "a_skill": "gt",
             "b": "I1",
             "b_origin": "skill",
+            "b_skill": "gt",
             "note": result["conflicts"][0]["note"],
         }
     ]
@@ -191,15 +193,16 @@ def test_recall_conflict_ids_disambiguate_skill_and_global_origin(env):
     )
     index.rebuild_index(g_loc, backend)
 
-    result = recall(
-        "gt", "right-align the currency columns and bold section headers styling"
-    )
+    result = recall("gt", "right-align the currency columns and bold section headers styling")
 
     pairs = {
-        (c["a"], c["a_origin"], c["b"], c["b_origin"]) for c in result["conflicts"]
+        (c["a"], c["a_origin"], c["a_skill"], c["b"], c["b_origin"], c["b_skill"])
+        for c in result["conflicts"]
     }
-    assert ("L1", "skill", "I1", "skill") in pairs
-    assert ("L1", "global", "I1", "global") in pairs
+    assert ("L1", "skill", "gt", "I1", "skill", "gt") in pairs
+    # The global pair's *_skill is the reserved global slug, NOT "gt" -- `revise` always resolves
+    # entry_id against the store named by its skill argument, and only GLOBAL_SLUG reaches these.
+    assert ("L1", "global", GLOBAL_SLUG, "I1", "global", GLOBAL_SLUG) in pairs
     assert len(result["conflicts"]) == 2  # the two pairs are distinguishable, not deduped away
 
 
