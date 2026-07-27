@@ -54,3 +54,53 @@ regressions_prevented:
       intent: "adding gridlines and cell borders to separate the columns of a table"
     - issue: {scope: "color contrast", body: "Never use light-gray text on a white background."}
       intent: "choosing text colors and a muted low-contrast palette for table body text"
+
+# --- same_polarity_contradiction (M7c) -----------------------------------------------------------
+# A narrow, hand-picked, non-exhaustive antonym/negation lexicon (`_ANTONYM_PAIRS` in server.py)
+# flags a same-scope near-duplicate LEARNING pair -- already above dedup_similarity -- as
+# `possible_contradiction` instead of silently reinforcing. For each pair below, `first` is seeded,
+# then `second` is captured under the SAME scope. `contradiction_pairs` SHOULD fire (the heuristic
+# must catch it); `duplicate_pairs` are genuine paraphrases that must NOT fire -- the last two are
+# deliberately tricky near-misses that mention antonym/negation words on BOTH sides (symmetric, not
+# an asymmetry) to check for false positives. The scorer (harness/calibrate.py) forces the config
+# flag on and lowers dedup_similarity so every pair reliably reaches the heuristic on both the
+# hashing and sentence-transformers backends -- see calibrate_same_polarity_contradiction's
+# docstring for why.
+same_polarity_contradiction:
+  contradiction_pairs:
+    - scope: "currency columns"
+      first: "Right-align currency columns for a cleaner ledger look."
+      second: "Left-align currency columns for a cleaner ledger look."
+    - scope: "accent color"
+      first: "Use warm accent colors to highlight key figures."
+      second: "Use cool accent colors to highlight key figures."
+    - scope: "table theme"
+      first: "Use a light background theme for the table."
+      second: "Use a dark background theme for the table."
+    - scope: "cell padding"
+      first: "Increase cell padding for a roomier table layout."
+      second: "Decrease cell padding for a roomier table layout."
+    - scope: "gridline orientation"
+      first: "Draw horizontal gridlines between rows."
+      second: "Draw vertical gridlines between rows."
+    - scope: "row banding style"
+      first: "Apply subtle zebra striping to wide tables."
+      second: "Never apply zebra striping to wide tables."
+  duplicate_pairs:
+    - scope: "currency columns precision"
+      first: "Right-align currency columns and show two decimal places."
+      second: "Please right-align the currency columns with two decimal places."
+    - scope: "row banding"
+      first: "Use subtle zebra striping on wide tables to help the eye track rows."
+      second: "Add gentle zebra striping to wide tables so the eye can track rows."
+    - scope: "column headers"
+      first: "Bold column headers and set them in small caps for a compact look."
+      second: "Make column headers bold and small caps for a compact look."
+    # Tricky near-miss: BOTH sides mention "left" and "right" -- symmetric, not a flip.
+    - scope: "numeric column padding"
+      first: "Keep left and right padding equal around numeric columns."
+      second: "Keep the left and right padding balanced around numeric columns."
+    # Tricky near-miss: BOTH sides are negated ("avoid" / "never") -- symmetric, not a flip.
+    - scope: "neon color avoidance"
+      first: "Avoid neon accent colors in the table."
+      second: "Never use neon accent colors in the table."

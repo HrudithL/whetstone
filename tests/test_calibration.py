@@ -72,6 +72,21 @@ def test_regressions_proxy_recalls_issue_in_scope(hashing_env):
     assert "proxy" in result["note"].lower()
 
 
+def test_same_polarity_contradiction_scores_the_labeled_set(hashing_env):
+    # §M7c: precision/recall of the antonym/negation same-polarity heuristic against its own
+    # labeled section -- the scorer forces the config flag on and lowers dedup_similarity itself
+    # (see calibrate_same_polarity_contradiction's docstring), so no extra env is needed here.
+    labels = calibrate.load_labels()
+    result = calibrate.calibrate_same_polarity_contradiction(labels)
+    assert result["n_contradiction_pairs"] == 6
+    assert result["n_duplicate_pairs"] == 5
+    assert result["value"] == 1.0  # precision
+    assert result["recall"] == 1.0
+    assert result["false_positives"] == 0
+    assert result["false_negatives"] == 0
+    assert "experimental" in result["note"].lower()
+
+
 def test_retrieval_precision_shape_and_bounds(hashing_env):
     labels = calibrate.load_labels()
     result = calibrate.calibrate_retrieval(labels)
