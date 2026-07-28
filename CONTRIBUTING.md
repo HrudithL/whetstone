@@ -139,12 +139,25 @@ Every branch (sub → feature, feature → root) is integrated via a PR. No exce
   - Any items the agent flagged as subjective and is awaiting human input on.
 - **Size:** small. If a PR's diff is sprawling, split it into more sub-branches.
 - **Draft first** if the agent is still iterating; mark ready for review only when it believes the slice is complete.
+- **Request Codex review immediately.** Codex does not auto-review — as soon as the PR is opened (or marked ready), post `@codex review` as a comment. See [§6](#6-phase-5--codex-review) for the full detection/polling protocol.
 
 ---
 
 ## 6. Phase 5 — Codex Review
 
 The agent MUST wait for automated review before merging any PR up the tree. More than one review-fix round is normal and expected for a PR with real findings — but the loop has a **stopping condition** (see "When to stop reviewing" below), and it isn't "keep re-reviewing until Codex has literally nothing left to say." Each round must justify itself with substantive findings; once it stops doing that, the PR is done.
+
+**Codex no longer auto-reviews.** Automatic review on PR open has been turned off — a newly opened PR gets no bot activity at all until asked. There is no "first pass" distinct from later passes anymore: **every** review, including the very first one, is manually requested by the agent. Do not wait for a reaction or comment to appear unprompted; if you didn't request it, it isn't coming.
+
+### Request review as part of opening the PR
+
+As soon as a PR is opened (or a draft is marked ready for review), the agent MUST request review by posting a comment with exactly:
+
+```
+@codex review
+```
+
+Treat this as part of the act of creating the PR, not a separate later step — do not leave a PR sitting unreviewed. The same request is repeated after every subsequent push, since a prior review is stale as soon as new commits land.
 
 ### Wait for the complete signal before adjusting
 
@@ -153,11 +166,9 @@ fully finished:
 
 - **The entire CI run** — every job (including the slower `sentence-transformers` job), not just the
   first one to report. A green fast job while another job is still running is **not** a pass.
-- **The entire Codex review** — the complete review signal, which differs by pass (see "Detecting the
-  Codex review" below): on a PR's **first, automatic** review that is the 👍 reaction on the PR body;
-  on a **requested re-review** (`@codex review`) it is the fresh bot review *comment*, not a reaction.
-  Do not treat a first-pass 👍 as covering a later commit, and after `@codex review` wait for the new
-  comment rather than a reaction that will not come.
+- **The entire Codex review** — the fresh bot review *comment* for your requested pass, not a partial
+  or stale one. After each `@codex review`, wait for the new comment rather than assuming an earlier
+  pass still applies.
 
 Reacting to a partial signal is the failure mode this rule prevents: pushing a fix while CI is still
 running or the review is mid-flight wastes CI minutes on a commit that's about to change, and it
@@ -167,51 +178,36 @@ heavier ST job, the full run takes longer — waiting for it is deliberate, not 
 
 ### Detecting the Codex review
 
-Codex is driven by the **`chatgpt-codex-connector[bot]`** account, and it signals **differently on the first pass vs. every later pass**. **Consult this section every time you make changes to a PR** — the completion signal you must watch for depends on which pass you are in, and getting it wrong means either acting on a stale approval or waiting forever for a signal that will never come.
+Codex is driven by the **`chatgpt-codex-connector[bot]`** account. **Consult this section every time you request a review** — getting the completion signal wrong means either acting on a stale approval or waiting forever for a signal that will never come.
 
-**First pass — automatic, once, on PR open.** Codex auto-reviews a newly opened PR without being asked, and signals via an **emoji reaction on the PR body** (the top-level description):
-
-- **👀 (eyes)** — still reviewing/thinking. **In progress; do not proceed.**
-- **👍 (`+1`)** — review complete. A 👍 with no accompanying comment is a **clean/approving pass**.
-
-It does **not** re-review automatically when you push follow-up commits.
-
-**Every later pass — manual, on request.** After any push, the prior approval is stale (it covered the old diff), and you MUST request a re-review by posting a comment with exactly:
-
-```
-@codex review
-```
-
-On a requested re-review, `chatgpt-codex-connector[bot]` responds through **one of two channels depending on the outcome**, and **both embed the reviewed commit SHA** — that SHA (matched to your latest HEAD), not a 👍, is the completion signal:
+After posting `@codex review`, `chatgpt-codex-connector[bot]` responds through **one of two channels depending on the outcome**, and **both embed the reviewed commit SHA** — that SHA (matched to your latest HEAD) is the completion signal:
 
 - **Findings** → a **pull-request review** on `pulls/<pr>/reviews` (a `### 💡 Codex Review` body) plus **inline review comments** on the diff, with the review's **`commit_id`** set to the reviewed commit.
-- **Clean** → an **issue comment** on `issues/<pr>/comments` like *"Codex Review: Didn't find any major issues…"* containing a **`Reviewed commit: <sha>`** line. A clean pass does **not** post a `pulls/reviews` entry, so watching only the review endpoint will miss it (and a stale first-pass 👍 may sit on the PR body meanwhile — ignore it).
+- **Clean** → an **issue comment** on `issues/<pr>/comments` like *"Codex Review: Didn't find any major issues…"* containing a **`Reviewed commit: <sha>`** line. A clean pass does **not** post a `pulls/reviews` entry, so watching only the review endpoint will miss it.
 
-So after `@codex review`, poll **both** channels for the reviewed-commit SHA equal to your latest HEAD; if it's a `pulls/reviews` entry, read that review's inline comments and address findings; if it's the clean issue comment, the re-review passed.
+So after `@codex review`, poll **both** channels for the reviewed-commit SHA equal to your latest HEAD; if it's a `pulls/reviews` entry, read that review's inline comments and address findings; if it's the clean issue comment, the review passed.
 
 ### Polling for the signal
 
-The signal is not pushed to you — you must **poll** for it. After the PR opens (first pass) or after each `@codex review` (later passes), check periodically until the signal lands. Always `--paginate` (GitHub returns 30 per page; on a busy PR the bot's entry can fall on a later page and be missed):
+The signal is not pushed to you — you must **poll** for it. After each `@codex review`, check periodically until the signal lands. Always `--paginate` (GitHub returns 30 per page; on a busy PR the bot's entry can fall on a later page and be missed):
 
 ```sh
-# first pass — reaction on the PR body (look for "+1" / "eyes" by chatgpt-codex-connector[bot]):
-gh api --paginate repos/<owner>/<repo>/issues/<pr-number>/reactions
-# re-review, FINDINGS channel — a bot review whose commit_id == your latest HEAD, then that
+# FINDINGS channel — a bot review whose commit_id == your latest HEAD, then that
 # review's own inline comments (the PR-wide list also holds earlier passes' stale findings):
 gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews   # pick user==bot AND commit_id==HEAD -> review_id
 gh api --paginate repos/<owner>/<repo>/pulls/<pr-number>/reviews/<review_id>/comments   # this review's findings
-# re-review, CLEAN channel — a bot issue comment whose "Reviewed commit:" line == your latest HEAD:
+# CLEAN channel — a bot issue comment whose "Reviewed commit:" line == your latest HEAD:
 gh api --paginate repos/<owner>/<repo>/issues/<pr-number>/comments   # look for "Didn't find any major issues" + Reviewed commit
 ```
 
-A re-review is complete when the reviewed-commit SHA equals your latest HEAD in **either** channel. Read only the inline comments of the matched review (via `pulls/<pr>/reviews/<review_id>/comments`, or by filtering PR-wide `pulls/<pr>/comments` to `commit_id == HEAD`); the PR-wide list keeps every earlier pass's comments, so treating all of them as "the fresh review" makes you re-address already-fixed findings.
+A review is complete when the reviewed-commit SHA equals your latest HEAD in **either** channel. Read only the inline comments of the matched review (via `pulls/<pr>/reviews/<review_id>/comments`, or by filtering PR-wide `pulls/<pr>/comments` to `commit_id == HEAD`); the PR-wide list keeps every earlier pass's comments, so treating all of them as "the fresh review" makes you re-address already-fixed findings.
 
 Poll on a **modest cadence (~every 30s) within a bounded window (~15–20 min)**, ideally as a background loop that exits the moment the signal appears. Two distinct gates use different bars:
 
-- **To begin the FIX pass** — proceed once the **full CI run has completed (green OR red)** *and* the review signal is in (first-pass 👍 on the PR body / any 👀 resolved; or a re-review referencing your latest commit — a `pulls/reviews` entry with findings, or the clean issue comment). You need CI *finished*, not passing, so you can collect and fix its failures. Match on the **reviewed-commit SHA**, not merely "a review exists" — a review of a prior commit is stale.
+- **To begin the FIX pass** — proceed once the **full CI run has completed (green OR red)** *and* the requested review signal is in (a `pulls/reviews` entry with findings, or the clean issue comment) referencing your latest commit. You need CI *finished*, not passing, so you can collect and fix its failures. Match on the **reviewed-commit SHA**, not merely "a review exists" — a review of a prior commit is stale.
 - **To MERGE up** — CI must be **fully green** (all jobs), and the review must have reached its stopping condition per "When to stop reviewing" below (see [§7](#7-phase-6--merging-up-the-tree)). This does not mean the report is spotless — it means the agent has kept reviewing while it was worth it and stopped once it wasn't.
 
-Re-request after each round of fixes, for as many rounds as the findings stay substantive. If, after the full polling window, **no signal appears at all** (no first-pass reaction, or no re-review for your latest commit after `@codex review`), or Codex reports it is **rate-limited**, Codex is unavailable for this PR — fall back to the **Claude self-review** below rather than inventing some other substitute or silently skipping review.
+Re-request after each round of fixes, for as many rounds as the findings stay substantive. If, after the full polling window, **no signal appears at all** for your requested review, or Codex reports it is **rate-limited**, Codex is unavailable for this PR — fall back to the **Claude self-review** below rather than inventing some other substitute or silently skipping review.
 
 ### Fallback when Codex is unavailable (rate limits)
 
@@ -246,7 +242,7 @@ The goal is never a literally empty report — it's a round whose comments stop 
 
 Note the outcome briefly on the PR ("remaining comments are stylistic nits / already addressed — stopping here") and move on. This is a judgment call the agent makes itself, the same way it makes any other §10.1 call — it is not a genuine fork to escalate.
 
-The PR is eligible to merge up once **both** are true: the review has reached this stopping point — a first-pass 👍 on the PR body needs no further action; a re-review (findings or the clean issue comment) has, on its most recent round, either come back clean or surfaced nothing left worth fixing per the criteria above; or, when Codex is unavailable (rate-limited / no signal), the agent's **self-review** posted for your latest commit per the fallback above has been triaged the same way — AND any escalated forks are resolved by the human. None of this requires a spotless report; it requires that the feedback was actually considered each round and acted on where it mattered.
+The PR is eligible to merge up once **both** are true: the review has reached this stopping point — the requested review (findings or the clean issue comment) has, on its most recent round, either come back clean or surfaced nothing left worth fixing per the criteria above; or, when Codex is unavailable (rate-limited / no signal), the agent's **self-review** posted for your latest commit per the fallback above has been triaged the same way — AND any escalated forks are resolved by the human. None of this requires a spotless report; it requires that the feedback was actually considered each round and acted on where it mattered.
 
 ---
 
@@ -360,8 +356,9 @@ Per slice:
 - [ ] Opened a PR to the parent branch with a complete description.
 
 Per PR:
+- [ ] Posted `@codex review` as part of opening the PR — Codex no longer auto-reviews, so this is required every time, including the first pass.
 - [ ] Waited for the **entire CI run** (completed, green or red) AND the **entire Codex review** to finish before making any fix — no reacting to partial signals.
-- [ ] Detected the pass-aware Codex signal for HEAD: first-pass 👍 on the PR body, or (after `@codex review`) a re-review referencing HEAD — a findings review (`pulls/reviews` `commit_id`) or the clean issue comment (`Reviewed commit` SHA).
+- [ ] Detected the requested Codex signal for HEAD: a findings review (`pulls/reviews` `commit_id`) or the clean issue comment (`Reviewed commit` SHA).
 - [ ] If Codex was unavailable (rate-limited / no signal), posted the Claude **self-review** stand-in for HEAD as a PR comment (or asked the human only if that wasn't possible).
 - [ ] Made the reasonable fixes at own discretion each round; declined/deferred anything that would overcomplicate (noted why).
 - [ ] Escalated only genuine forks (multiple reasonable implementations, or a §10 decision); recorded the human's answer.
