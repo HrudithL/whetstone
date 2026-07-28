@@ -2,6 +2,14 @@
   "learnings": [
     {
       "id": "L1",
+      "rule": "Don't save the call-to-action for last. Move the \"Install Marrow\" call-to-action slide to be the SECOND slide - right after the title, before the problem/idea/how-it-works slides. Lead with the install command, then explain why it matters.",
+      "scope": "slide order",
+      "recurrence": 4,
+      "weight": 0.8,
+      "origin": "skill"
+    },
+    {
+      "id": "L2",
       "rule": "Insert a new slide titled \"Why now\" between \"The idea\" and \"How it works\", making the case that test suites have grown large enough that manual coverage tracking has become untenable - this is new content the outline doesn't ask for, added because it strengthens the pitch.",
       "scope": "slide structure",
       "recurrence": 4,
@@ -9,12 +17,5 @@
       "origin": "skill"
     }
   ],
-  "issues": [
-    {
-      "id": "I1",
-      "rule": "Don't save the call-to-action for last. Move the \"Install Marrow\" call-to-action slide to be the SECOND slide - right after the title, before the problem/idea/how-it-works slides. Lead with the install command, then explain why it matters.",
-      "scope": "slide order",
-      "origin": "skill"
-    }
-  ]
+  "issues": []
 }

@@ -7,13 +7,35 @@ from dataclasses import replace
 from datetime import date
 
 from conftest import make_issue, make_learning, seed
-from whetstone.retrieval import retrieve
+from whetstone.retrieval import _intent_clauses, retrieve
 from whetstone.store import index
 
 
 def _prepare(store, backend, learnings=(), issues=()):
     seed(store, learnings=learnings, issues=issues)
     index.rebuild_index(store, backend)
+
+
+def test_intent_clauses_single_topic_intent_is_unsplit():
+    # Nothing to split -> exactly the original intent, so a single-topic caller embeds/matches
+    # precisely as before the clause-decomposition change.
+    assert _intent_clauses("formatting the currency columns") == ["formatting the currency columns"]
+
+
+def test_intent_clauses_splits_on_commas_and_semicolons_and_keeps_the_whole_intent():
+    intent = "Styling a table: color palette; row banding, currency formatting"
+    clauses = _intent_clauses(intent)
+    assert clauses[0] == intent  # whole intent always first/kept
+    assert "Styling a table: color palette" in clauses  # split on ";", not ":"
+    assert "row banding" in clauses
+    assert "currency formatting" in clauses
+    assert len(clauses) == len(set(clauses))  # deduped
+
+
+def test_intent_clauses_dedupes_repeated_clauses():
+    # A trailing near-empty fragment or a repeated phrase must not produce duplicate query vectors.
+    assert _intent_clauses("color palette, color palette,") == ["color palette, color palette,",
+                                                                  "color palette"]
 
 
 def test_matched_scope_learnings_are_returned(store, backend, config):

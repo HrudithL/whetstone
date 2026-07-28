@@ -1,186 +1,213 @@
 --- cold/table.py
 +++ warm/table.py
-@@ -1,64 +1,53 @@
--"""Build a GT-cars table showing horsepower and price, grouped by manufacturer.
--
--Design follows the great-tables flowchart:
--  Step 1  clean, correctly-typed DataFrame (one row per car)
--  Step 2  organize: group by manufacturer (stub = model), show hp + price only
--  Step 3  Big Color: two neutral magnitudes -> hp = Blues (primary), price = Greens
--  Step 4  heading band: Big Color present -> LIGHT washed-blue band
--  Step 5  Small-Color polish: hairlines, stub tint, group emphasis, fmt per type
--  Step 6  title + subtitle + source note
--  Step 7  render with .gtsave("table.png") and also emit table.html
--"""
-+"""Build a manufacturer-level rollup of the GT cars, showing mean horsepower and
-+mean price across each manufacturer's whole lineup, rendered with great_tables."""
+@@ -1,106 +1,127 @@
+-"""GT cars — horsepower and price.
++"""GT cars — horsepower and price, rolled up to one row per manufacturer.
+ 
+-Built with the great-tables skill flowchart:
+-  1 UNDERSTAND   47 cars, grain = one car (mfr + model); measures = hp, msrp (both clean floats)
+-  2 ORGANIZE     stub = car (PP-13 identifier trigger); rows sorted by hp desc; no grouping
+-                 (mfr = 19 levels over 47 rows -> not a low-cardinality organizing story)
+-  3 BIG COLOR    two neutral magnitudes, >=5 rows -> both colored (ceiling is 2):
+-                 hp (prompt-named first, primary) = Blues; msrp (secondary) = Greens
+-                 per the neutral tie-breaker ladder Blues -> Greens -> Oranges
+-  4 BAND         Big Color present -> LIGHT band, washed tint of the dominant hue (Blues) #EAF0F6
+-  5 SMALL COLOR  hairlines, striping (>=10 rows), stub tint (grey-budget -> washed blue), fmt_*
+-  6 TITLES       title + subtitle, stacked footer notes (caption + source)
+-  7 RENDER       .gtsave("table.png") + .as_raw_html() -> table.html
++Flowchart trace (great-tables skill):
++  1 UNDERSTAND  47 raw model rows; grain = model. Roll up with a real groupby to
++                one row per `mfr`: mean hp, mean msrp, and a model count so the
++                reader can tell a 2-model average from a 12-model one.
++                hp/msrp are already float64 in the CSV; no NAs in either.
++  2 ORGANIZE    stub = mfr (PP-13 identifier trigger). Spanner "Lineup Average"
++                over the two mean measures; Models sits outside it.
++                Canonical metric (PP-18): unweighted mean over the models the
++                dataset lists — stated in the subtitle + source note.
++  3 BIG COLOR   two ordered magnitudes over 19 rows -> both qualify for gradient
++                fill (>=5 rows). Prompt names horsepower first => primary = hp
++                (Blues); secondary neutral takes the next rung of the pinned
++                Blues -> Greens ladder => msrp (Greens). Models stays uncolored
++                (the <=2 ceiling). Domains are data-driven, truncate=False.
++  4 BAND        Big Color present => LIGHT band (grey #F0F0F0), 2px #CCCCCC rule.
++  5 SMALL COLOR hairlines; group divider right of Models; striping (19 rows, body
++                not fully filled); stub tinted #EAF0F6 (grey-budget: band +
++                stripes + stub grey with Blues fills -> recolor the stub, the
++                highest-priority element, to the washed-Navy tint); fmt_* per
++                semantic type; square four-side frame.
++  6 TITLES      title + subtitle, stacked source notes.
++  7 RENDER      .gtsave("table.png", expand=15) + .as_raw_html() -> table.html
+ """
  
  import numpy as np
  import pandas as pd
- from great_tables import GT, md, style, loc
+ from great_tables import GT, loc, style
  
--# ---------------------------------------------------------------------------
--# Step 1 — Understand & clean the data
--# ---------------------------------------------------------------------------
--# gtcars.csv is already correctly typed (hp/msrp are floats). Grain: one row
--# per car; identifiers: mfr + model; requested measures: hp (horsepower), msrp (price).
+-# ---------------------------------------------------------------- Step 1: data
 -df = pd.read_csv("gtcars.csv")
-+# ---------------------------------------------------------------- Step 1: DATA
-+# Raw grain is one row per car model. Roll up to one row per manufacturer with a
-+# real groupby aggregation over the raw rows (mean hp, mean msrp), plus a count
-+# of models so the average is interpretable.
-+raw = pd.read_csv("gtcars.csv")
++# --- Step 1: load + clean -------------------------------------------------
++cars = pd.read_csv("gtcars.csv")
++cars["mfr"] = cars["mfr"].str.strip()
++cars["hp"] = pd.to_numeric(cars["hp"], errors="coerce")
++cars["msrp"] = pd.to_numeric(cars["msrp"], errors="coerce")
  
--# ---------------------------------------------------------------------------
--# Step 2 — Organize columns
--# ---------------------------------------------------------------------------
--# Keep only the identifiers and the two requested measures. Manufacturer is the
--# organizing story (groupname_col); model is the row identifier (stub).
--# Sort so groups are contiguous (mfr A->Z) and within each group the most
--# powerful car comes first.
--cars = (
--    df[["mfr", "model", "hp", "msrp"]]
--    .sort_values(["mfr", "hp"], ascending=[True, False])
-+df = (
-+    raw.groupby("mfr", as_index=False)
-+    .agg(
-+        models=("model", "size"),
-+        hp=("hp", "mean"),
-+        msrp=("msrp", "mean"),
-+    )
+-# hp and msrp already import as float64 — no currency/percent strings to strip.
+-# Trim whitespace in the string keys that build the row label.
+-df["mfr"] = df["mfr"].str.strip()
+-df["model"] = df["model"].str.strip()
+-
+-# One human-readable label per row; two columns would force the reader to
+-# mentally join mfr + model on every line.
+-df["car"] = df["mfr"] + " " + df["model"]
+-
+-# ------------------------------------------------------------ Step 2: organize
+-# Sort by horsepower descending: the ordering is what makes the gradient readable.
+-tbl = (
+-    df.sort_values("hp", ascending=False)
+-    .reset_index(drop=True)[["car", "year", "hp", "msrp"]]
++# Roll up the raw model rows to one row per manufacturer (real groupby agg).
++by_mfr = (
++    cars.groupby("mfr")
++    .agg(models=("model", "count"), hp=("hp", "mean"), msrp=("msrp", "mean"))
++    .reset_index()
 +    .sort_values("hp", ascending=False)
-     .reset_index(drop=True)
++    .reset_index(drop=True)
  )
  
--# ---------------------------------------------------------------------------
--# Step 3 — Big Color domains (data-driven, backend-neutral)
--# ---------------------------------------------------------------------------
--hp_lo = float(np.nanmin(cars[["hp"]].to_numpy()))
--hp_hi = float(np.nanmax(cars[["hp"]].to_numpy()))
--msrp_lo = float(np.nanmin(cars[["msrp"]].to_numpy()))
--msrp_hi = float(np.nanmax(cars[["msrp"]].to_numpy()))
-+# ------------------------------------------------- Step 3: BIG COLOR domains
-+# Two neutral magnitudes (horsepower + price) → both qualify as colored measures
-+# (19 rows ≥ 5). Prompt names horsepower first → primary = Blues; secondary
-+# price → Greens (neutral tie-breaker ladder Blues → Greens).
-+hp_lo = float(np.nanmin(df[["hp"]].to_numpy()))
-+hp_hi = float(np.nanmax(df[["hp"]].to_numpy()))
-+msrp_lo = float(np.nanmin(df[["msrp"]].to_numpy()))
-+msrp_hi = float(np.nanmax(df[["msrp"]].to_numpy()))
+-# ----------------------------------------------------------- Step 3: Big Color
+-# Data-driven domains, one per measure (never a round guess).
+-hp_lo = float(np.nanmin(tbl[["hp"]].to_numpy()))
+-hp_hi = float(np.nanmax(tbl[["hp"]].to_numpy()))
+-msrp_lo = float(np.nanmin(tbl[["msrp"]].to_numpy()))
+-msrp_hi = float(np.nanmax(tbl[["msrp"]].to_numpy()))
++# --- Step 3: data-driven domains, one per colored measure -----------------
++hp_lo = float(np.nanmin(by_mfr[["hp"]].to_numpy()))
++hp_hi = float(np.nanmax(by_mfr[["hp"]].to_numpy()))
++msrp_lo = float(np.nanmin(by_mfr[["msrp"]].to_numpy()))
++msrp_hi = float(np.nanmax(by_mfr[["msrp"]].to_numpy()))
  
--# Washed-blue tint (dominant Big-Color hue = Blues) used for all light surfaces.
--WASHED_BLUE = "#EAF0F6"
-+BAND = "#EAF0F6"  # washed-Blues tint (dominant Big-Color hue) for band + stub
- 
- gt = (
--    GT(cars, rowname_col="model", groupname_col="mfr")
--    # -- Step 6: titles / subtitle ------------------------------------------
--    .tab_header(
--        title=md("**GT Cars — Horsepower & Price**"),
--        subtitle="Engine output and manufacturer's suggested retail price, by marque",
-+    GT(df, rowname_col="mfr")
-+    # -------------------------------------------------- Step 2: organize columns
-+    .tab_spanner(label="Lineup Averages", columns=["hp", "msrp"])
-+    .cols_label(
-+        models="Models",
-+        hp="Avg. Horsepower",
-+        msrp="Avg. Price",
+-gt = (
+-    GT(tbl, rowname_col="car")
+-    # ------------------------------------------------ Step 6: titles & notes
++n_models = int(by_mfr["models"].sum())
++n_mfr = len(by_mfr)
++
++table = (
++    GT(by_mfr, rowname_col="mfr")
+     .tab_header(
+-        title="Horsepower and Price Across the GT Cars",
+-        subtitle="All 47 cars in the gtcars collection, ranked by peak horsepower",
++        title="Horsepower and Price Across the GT Car Marques",
++        subtitle=(
++            f"Lineup averages for {n_mfr} manufacturers, built from all "
++            f"{n_models} model rows in the gtcars set"
++        ),
      )
--    .tab_stubhead(label="Model")
--    # -- Step 5(e): format per semantic type --------------------------------
--    .fmt_number(columns="hp", decimals=0, use_seps=True)
--    .fmt_currency(columns="msrp", currency="USD", decimals=0, use_seps=True)
--    .cols_label(hp="Horsepower", msrp="Price (MSRP)")
--    # -- Step 3: Big Color — two neutral magnitudes -------------------------
--    # Primary measure (horsepower, named first in the prompt) -> Blues.
+-    .tab_stubhead(label="Car")
+-    .cols_label(year="Year", hp="Horsepower", msrp="Price (MSRP)")
+-    # ------------------------------------------- Step 5(e): format per column
+-    .fmt_integer(columns=["hp"])
+-    .fmt_currency(columns=["msrp"], currency="USD", decimals=0)
+-    .fmt_integer(columns=["year"], use_seps=False)  # 2,017 is wrong for a year
+-    .sub_missing(columns=["year", "hp", "msrp"], missing_text="—")
+-    # ------------------------------------------------------ Step 3: Big Color
 +    .tab_stubhead(label="Manufacturer")
-+    .cols_align(align="center", columns=["models"])
-+    # ------------------------------------------------------ Step 5(e): formatting
-+    .fmt_number(columns=["hp", "models"], decimals=0, use_seps=True)
-+    .fmt_currency(columns="msrp", decimals=0, use_seps=True)
-+    # ------------------------------------------------------- Step 3: Big Color
++    .tab_spanner(label="Lineup Average", columns=["hp", "msrp"])
++    .cols_label(models="Models", hp="Horsepower", msrp="Price (MSRP)")
++    # --- Step 5(e): fmt_* per semantic type ---
++    .fmt_integer(columns="models")
++    .fmt_number(columns="hp", decimals=0, use_seps=True)
++    .fmt_currency(columns="msrp", currency="USD", decimals=0, use_seps=True)
++    .sub_missing(columns=["models", "hp", "msrp"], missing_text="—")
++    .cols_align(align="right", columns=["models", "hp", "msrp"])
++    .cols_width(mfr="190px", models="100px", hp="150px", msrp="170px")
++    # --- Step 3: Big Color, two colored measures ---
      .data_color(
-         columns="hp",
-         palette="Blues",
-@@ -66,7 +55,6 @@
+         columns=["hp"],
+-        palette="Blues",  # neutral magnitude, primary measure
++        palette="Blues",
+         domain=[hp_lo, hp_hi],
          truncate=False,
          na_color="#808080",
      )
--    # Secondary neutral magnitude (price) -> next rung of the ladder: Greens.
      .data_color(
-         columns="msrp",
-         palette="Greens",
-@@ -74,48 +62,48 @@
+         columns=["msrp"],
+-        palette="Greens",  # secondary neutral -> next rung of the ladder
++        palette="Greens",
+         domain=[msrp_lo, msrp_hi],
          truncate=False,
          na_color="#808080",
      )
--    # -- Step 4: LIGHT heading band (Big Color present) ---------------------
-+    # ---------------------------------------------- Step 6: titles & annotations
-+    .tab_header(
-+        title="GT Cars — Horsepower & Price by Manufacturer",
-+        subtitle="Mean horsepower and MSRP across each manufacturer's full GT lineup",
-+    )
-+    .tab_source_note(source_note=md("Source: the **gtcars** dataset (2014–2017 model years)."))
-+    .tab_source_note(
-+        source_note="Averages computed over all models per manufacturer; ordered by mean horsepower."
-+    )
-+    # ---------------------------------------------------- Step 4: LIGHT band
-     .tab_options(
--        column_labels_background_color=WASHED_BLUE,
-+        column_labels_background_color=BAND,
-         column_labels_font_weight="bold",
-         column_labels_border_bottom_color="#CCCCCC",
-         column_labels_border_bottom_width="2px",
--        # Step 5(a): cell hairlines between body rows
-+        # Step 5(a): cell hairlines
-         table_body_hlines_style="solid",
-         table_body_hlines_color="#E8E8E8",
-         table_body_hlines_width="1px",
--        # Step 5 sub-note: row-group (manufacturer) emphasis
--        row_group_background_color=WASHED_BLUE,
--        row_group_font_weight="bold",
--        row_group_border_top_color="#BDBDBD",
--        row_group_border_bottom_color="#BDBDBD",
--        row_group_padding="6px",
--        # Frame: boxed light border on all four sides
-+        # Frame — boxed enclosing border on all four sides
-         table_border_top_style="solid", table_border_top_color="#CCCCCC", table_border_top_width="1px",
-         table_border_bottom_style="solid", table_border_bottom_color="#CCCCCC", table_border_bottom_width="1px",
-         table_border_left_style="solid", table_border_left_color="#CCCCCC", table_border_left_width="1px",
-         table_border_right_style="solid", table_border_right_color="#CCCCCC", table_border_right_width="1px",
-     )
--    # -- Step 5(d): stub tint (harmonized to the washed-blue theme) ---------
-+    # ------------------------------------------------------- Step 5(d): stub tint
-+    .tab_style(style=style.fill(color=BAND), locations=loc.stub())
-+    .tab_style(style=style.text(weight="bold"), locations=loc.stub())
-+    # ------------------------------------ Step 5(b): column-group vertical divider
-     .tab_style(
--        style=style.fill(color=WASHED_BLUE),
--        locations=loc.stub(),
+-    # ------------------------------------------------ Step 5(c): row striping
+-    # >=10 rows and the body is not essentially fully filled (stub + Year are plain).
++    # --- Step 5(c): striping ---
+     .opt_row_striping()
+-    .tab_options(row_striping_background_color="#F6F6F6")
+-    # --------------------------------------------------- Step 5(d): stub tint
+-    # Grey-budget rule: band + stripes + stub would stack three greys, so the
+-    # highest-priority element (the stub) takes the washed-Blues tint.
++    # --- Step 5(d) + grey budget: washed-Navy stub tint ---
+     .tab_style(style=style.fill(color="#EAF0F6"), locations=loc.stub())
+-    .tab_style(style=style.text(weight="bold"), locations=loc.stub())
+-    .cols_align(align="right", columns=["year", "hp", "msrp"])
+-    # ------------------------------------------------ Step 6: stacked footers
++    # --- Step 5(b): column-group divider at the one group boundary ---
++    .tab_style(
 +        style=style.borders(sides="right", color="#D0D0D0", weight="1px"),
 +        locations=loc.body(columns="models"),
-     )
--    # -- Step 6: source note (dataset is known) -----------------------------
--    .tab_source_note(
--        source_note=md(
--            "_Source:_ `gtcars` dataset (47 grand-touring models) — "
--            "horsepower measured in hp; price is USD MSRP."
--        )
++    )
 +    .tab_style(
 +        style=style.borders(sides="right", color="#D0D0D0", weight="1px"),
 +        locations=loc.column_labels(columns="models"),
++    )
++    # --- Step 6: stacked footer notes ---
+     .tab_source_note(
+         source_note=(
+-            "Cell shading encodes magnitude within each column: horsepower in blue, "
+-            "price in green. Price is the manufacturer's suggested retail price in USD."
++            "Averages are unweighted means of the models each manufacturer lists "
++            "in the dataset; the Models column gives the number of rows behind "
++            "each average."
+         )
+     )
+-    .tab_source_note(source_note="Source: gtcars dataset (Posit / great_tables sample data).")
++    .tab_source_note(
++        source_note="Source: gtcars dataset (Posit / great_tables sample data)."
++    )
+     .tab_options(
+-        # Step 4: LIGHT heading band (Big Color present) + the 2px bottom rule
+-        column_labels_background_color="#EAF0F6",
+-        column_labels_font_weight="bold",
+-        column_labels_border_bottom_color="#CCCCCC",
+-        column_labels_border_bottom_width="2px",
+-        # Step 5(a): hairline between every body row
++        # Step 5(a): hairlines + the Step-4 column-label bottom rule
+         table_body_hlines_style="solid",
+         table_body_hlines_color="#E8E8E8",
+         table_body_hlines_width="1px",
+-        # Frame: light boxed border on all four sides (left/right default to none)
++        column_labels_border_bottom_color="#CCCCCC",
++        column_labels_border_bottom_width="2px",
++        # Step 4: LIGHT band (Big Color present), dark bold labels
++        column_labels_background_color="#F0F0F0",
++        column_labels_font_weight="bold",
++        row_striping_background_color="#F6F6F6",
++        # Frame: square light border on all four sides
+         table_border_top_style="solid",
+         table_border_top_color="#CCCCCC",
+         table_border_top_width="1px",
+@@ -116,10 +137,10 @@
      )
  )
  
--# ---------------------------------------------------------------------------
--# Step 7 — Render (mandatory PNG) + self-contained HTML
--# ---------------------------------------------------------------------------
- gt.gtsave("table.png", expand=15)
--
--with open("table.html", "w", encoding="utf-8") as f:
-+with open("table.html", "w") as f:
-     f.write(gt.as_raw_html())
+-# ------------------------------------------------------- Step 7: render & save
+-gt.gtsave("table.png", expand=15, zoom=2.0, vwidth=1000, vheight=1800)
++# --- Step 7: render (mandatory renderer) + native HTML artifact -----------
++table.gtsave("table.png", expand=15)
  
--print("Wrote table.png and table.html")
-+print("wrote table.png and table.html")
-+print(df.to_string())
+ with open("table.html", "w") as f:
+-    f.write(gt.as_raw_html())
++    f.write(table.as_raw_html())
+ 
+-print("wrote table.png and table.html")
++print(f"Wrote table.png and table.html — {n_mfr} manufacturers, {n_models} models.")

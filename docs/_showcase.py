@@ -9,6 +9,7 @@ yet" note instead of erroring), and renders the real artifacts once ``python -m 
 from __future__ import annotations
 
 import base64
+import difflib
 import html as _html
 import json
 from pathlib import Path
@@ -137,6 +138,57 @@ def _panel_body(scenario: str, phase: str) -> str:
     return "<em>not generated</em>"
 
 
+def _diffed_lines(cold_code: str, warm_code: str) -> list[str] | None:
+    """A unified diff (1 line of context) between the cold and warm primary source, or ``None`` if
+    identical/either is missing.
+
+    A live agent regenerates the WHOLE script every run — renamed variables, reworded comments,
+    restructured helper functions — so a genuine one- or two-line change (the actual preference
+    being honored) sits inside 100+ lines of incidental rewrite noise a reader has no way to
+    separate from the substance by eyeballing two full-code panels side by side. A real diff, with
+    unchanged regions collapsed to just their surrounding context, isolates what the learned layer
+    actually changed.
+    """
+    if not cold_code or not warm_code or cold_code == warm_code:
+        return None
+    return list(
+        difflib.unified_diff(cold_code.splitlines(), warm_code.splitlines(), lineterm="", n=1)
+    )[2:]  # drop the "--- "/"+++ " file-header lines; the surrounding page already labels cold/warm
+
+
+def source_diff_html(scenario: str) -> str:
+    """A collapsed, syntax-colored diff of the scenario's primary output, cold vs. warm.
+
+    Placed under the warm panel in the "what changed" step — the panel above it shows the warm
+    artifact rendered/as code in full (unchanged, so a reader can still read straight through it);
+    this adds the isolated diff as a second, more legible way to see what actually moved.
+    """
+    primary = (load_summary(scenario) or {}).get("output", "table.py")
+    cold_code = read_text(scenario, "cold", primary)
+    warm_code = read_text(scenario, "warm", primary)
+    lines = _diffed_lines(cold_code or "", warm_code or "")
+    if not lines:
+        return ""
+    rendered = []
+    for line in lines:
+        esc = _html.escape(line)
+        if line.startswith("+"):
+            style = "background:#e6ffed;color:#22863a"
+        elif line.startswith("-"):
+            style = "background:#ffeef0;color:#b31d28"
+        elif line.startswith("@@"):
+            style = "color:#6a737d"
+        else:
+            style = ""
+        rendered.append(f'<span style="display:block;{style}">{esc}</span>')
+    return (
+        "<details><summary>What actually changed, line by line "
+        f"(<code>{_html.escape(primary)}</code>, cold &rarr; warm)</summary>"
+        '<pre style="overflow-x:auto;max-height:24rem"><code>' + "".join(rendered) +
+        "</code></pre></details>"
+    )
+
+
 def learned_layer_html(scenario: str) -> str:
     """Render the middle panel: the **exact learned-layer text injected into the warm prompt**.
 
@@ -243,6 +295,7 @@ def triptych_html(scenario: str) -> str:
         '<p class="ws-step-body">The same task, generated again once the learned layer is '
         "applied.</p>"
         f"{_panel_body(scenario, 'warm')}"
+        f"{source_diff_html(scenario)}"
         "<details><summary>Show the raw learned layer</summary>"
         f"{learned_layer_html(scenario)}</details>"
         "</div>"

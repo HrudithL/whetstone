@@ -8,12 +8,12 @@
     "max_runs": 5,
     "stick_streak": 2
   },
-  "runs": 3,
+  "runs": 5,
   "preferences": {
     "mono-font": {
       "polarity": "learning",
       "scope": "typography",
-      "cold_honored": false,
+      "cold_honored": true,
       "runs_to_stick": 2,
       "value_over_time": [
         {
@@ -25,42 +25,63 @@
           "run": 3,
           "weight": 0.6667,
           "recurrence": 2
+        },
+        {
+          "run": 4,
+          "weight": 0.75,
+          "recurrence": 3
+        },
+        {
+          "run": 5,
+          "weight": 0.8,
+          "recurrence": 4
         }
       ]
     },
     "square-format": {
-      "polarity": "issue",
+      "polarity": "learning",
       "scope": "aspect ratio",
       "cold_honored": false,
-      "runs_to_stick": 2,
+      "runs_to_stick": null,
       "value_over_time": [
         {
           "run": 2,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.5,
+          "recurrence": 1
         },
         {
           "run": 3,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.6667,
+          "recurrence": 2
+        },
+        {
+          "run": 4,
+          "weight": 0.75,
+          "recurrence": 3
+        },
+        {
+          "run": 5,
+          "weight": 0.8,
+          "recurrence": 4
         }
       ]
     }
   },
   "usage_kpis": {
     "skill": "pptx-pitch_deck",
-    "runs": 3,
-    "avg_learnings_applied_per_run": 0.6667,
+    "runs": 5,
+    "avg_learnings_applied_per_run": 1.6,
     "captures_by_status": {
       "committed": 2,
-      "reinforced": 2,
+      "reinforced": 8,
       "noop": 0,
-      "conflict": 0
+      "conflict": 0,
+      "possible_contradiction": 0
     },
     "repeat_correction_proxy": {
-      "reinforcement_rate": 0.6667,
-      "reinforcements": 2,
-      "learnings_created": 1
+      "reinforcement_rate": 0.8,
+      "reinforcements": 8,
+      "learnings_created": 2
     },
     "learnings_survived_pct": {
       "value": 1.0,

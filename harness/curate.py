@@ -38,7 +38,7 @@ _THINKING_ELIDE_THRESHOLD = 200
 # A "text" block at or under this length reads like a brief, already-narrative aside; above it,
 # elide. This is NOT just an assistant-verbosity guard: the SDK delivers a mounted Skill's full
 # instructions (e.g. the ~7KB Great Tables SKILL.md body — see
-# harness/out/great-tables/islands_sizes/warm/transcript.json) as a plain **user** `TextBlock`, not
+# harness/out/great-tables/gtcars_hp_price/warm/transcript.json) as a plain **user** `TextBlock`, not
 # a `tool_result` — so without this rule that multi-kilobyte payload would sail through
 # `_curate_block` untouched via the catch-all `return block`, even though the surrounding `Skill`
 # tool_use/tool_result turn is correctly elided. 500 chars comfortably covers a real short

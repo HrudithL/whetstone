@@ -11,30 +11,30 @@
   "runs": 5,
   "preferences": {
     "cta-second": {
-      "polarity": "issue",
+      "polarity": "learning",
       "scope": "slide order",
       "cold_honored": false,
-      "runs_to_stick": 2,
+      "runs_to_stick": 4,
       "value_over_time": [
         {
           "run": 2,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.5,
+          "recurrence": 1
         },
         {
           "run": 3,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.6667,
+          "recurrence": 2
         },
         {
           "run": 4,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.75,
+          "recurrence": 3
         },
         {
           "run": 5,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.8,
+          "recurrence": 4
         }
       ]
     },
@@ -70,17 +70,18 @@
   "usage_kpis": {
     "skill": "pptx-pitch_deck_reorder",
     "runs": 5,
-    "avg_learnings_applied_per_run": 0.8,
+    "avg_learnings_applied_per_run": 1.6,
     "captures_by_status": {
       "committed": 2,
-      "reinforced": 4,
+      "reinforced": 8,
       "noop": 0,
-      "conflict": 0
+      "conflict": 0,
+      "possible_contradiction": 0
     },
     "repeat_correction_proxy": {
       "reinforcement_rate": 0.8,
-      "reinforcements": 4,
-      "learnings_created": 1
+      "reinforcements": 8,
+      "learnings_created": 2
     },
     "learnings_survived_pct": {
       "value": 1.0,

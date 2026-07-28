@@ -11,7 +11,10 @@ data: data/pitch_deck_outline.md
 # the deck's narrative, not a cosmetic pass over the same 5 slides.
 preferences:
   - id: cta-second
-    polarity: issue
+    # LEARNING, not issue: a one-off correction to THIS deck's narrative order, not a standing
+    # always/never rule the user is asserting for every future deck — see
+    # harness/scenarios/README.md for the polarity rule.
+    polarity: learning
     scope: slide order
     body: >
       Don't save the call-to-action for last. Move the "Install Marrow" call-to-action slide to be
@@ -21,27 +24,23 @@ preferences:
       Put the "Install Marrow" slide right after the title - don't bury the call-to-action at the
       end, lead with it.
     check:
-      # Literal source-text order alone is a weak proxy for slide-build order - a helper defined near
-      # the top of the script could contain "Install Marrow" while still being called last, so a bare
-      # "Install Marrow ... Big test suites" order check could pass on a deck that was never reordered.
-      # Requiring two "add_slide(" calls before "Install Marrow" ties it to the actual slide-add call
-      # sequence (proving the CTA text isn't part of slide 1), on top of the existing before-the-
-      # problem-slide check. Accepted residual gap, tried and reverted: an "exactly the second slide"
-      # version (tempered-greedy-token gating every gap, anchored to the start of the source) correctly
-      # rejects a Title -> Agenda -> Install Marrow -> Problem adversarial sample in a real deck.py, but
-      # the `^`-anchor that makes it work there is incompatible with how this harness's --stub sampler
-      # embeds a check's literal deep inside a wrapper statement (never at position 0 of the "source"),
-      # so that stricter version can never self-satisfy under `--stub` - a materially worse trade than
-      # this "at least 2" version's narrower gap (an unasked-for extra slide inserted before the CTA,
-      # which the prompt gives a real model no reason to invent). This assumes the straightforward,
-      # single top-to-bottom script a 5-slide deck like this one is expected to produce (consistent
-      # with pitch_deck.yaml's checks, which assume the same non-abstracted style) - not airtight
-      # against a deliberately indirect helper-function structure, but this harness's checks work over
-      # generated source text, not a rendered deck, so a perfect structural guarantee isn't available.
-      # Cold-clean: the outline lists the CTA last and the prompt says "in the order given", so a cold
-      # run reproduces that order (CTA content after problem content, and after only 1 add_slide call).
+      # PRIOR VERSION (reverted — a real, observed false negative, not hypothetical): required two
+      # "add_slide(" calls before "Install Marrow", to tie the text order to the actual slide-add
+      # call sequence. That assumed every slide is built with a direct `prs.slides.add_slide(...)`
+      # call — but a live model just as often (observed on real committed runs, both before and
+      # after this fix) factors slide creation into a one-line helper (`def new_slide(): ...
+      # add_slide(...) ...` called as `slide = new_slide()` per slide), so "add_slide(" appears only
+      # ONCE in the whole file regardless of how many slides exist, and the ">= 2 add_slide(" check
+      # failed on every single run of a real deck that WAS correctly reordered — a check false
+      # negative, exactly the kind of "says it didn't happen when it did" bug this harness exists to
+      # avoid. Dropped the call-counting requirement entirely: content order alone — "Install Marrow"
+      # (the CTA's own on-slide title) before "Big test suites" (the problem slide's own on-slide
+      # title) — is what a reordered deck's source text actually looks like, independent of whatever
+      # helper/variable names the model happens to choose that run. Cold-clean: the outline lists the
+      # CTA last and the prompt says "in the order given", so a cold run writes "Big test suites"
+      # before "Install Marrow", never the reverse.
       kind: regex
-      pattern: 'add_slide\([\s\S]*?add_slide\([\s\S]*?Install Marrow[\s\S]*?Big test suites'
+      pattern: 'Install Marrow[\s\S]*Big test suites'
   - id: why-now-slide
     polarity: learning
     scope: slide structure
@@ -53,17 +52,24 @@ preferences:
       Add a "Why now" slide in between the idea and how-it-works slides - explain why this problem
       is urgent today, not just that it exists.
     check:
-      # A bare presence check would count "Why now" text added anywhere - even as extra text bolted
-      # onto the existing idea or how-it-works slide rather than a genuinely new slide - as honoring a
-      # preference that specifically asks for a SEPARATE slide BETWEEN the idea and how-it-works
-      # slides. The tempered-greedy-token group `(?:(?!add_slide\()[\s\S])*?` ties the required
-      # "add_slide(" to being the one IMMEDIATELY followed by "Why now" (not just any add_slide(
-      # anywhere earlier), so a script that creates the how-it-works slide first and only then adds a
-      # "Why now" subtitle/eyebrow onto IT doesn't falsely match - that adversarial ordering was caught
-      # and fixed after an earlier, looser version of this check wrongly accepted it. Anchoring on
-      # "Watch one run" (the idea slide's own on-slide tagline, per the outline) and "How it works"
-      # (that slide's on-slide title - the outline gives it no separate quoted tagline, so the model has
-      # every reason to reuse this literal label) proves the new slide falls between them. Cold-clean:
-      # the outline has no "Why now" slide at all, so a cold run never produces this whole sequence.
+      # PRIOR VERSION (reverted — same real false-negative class as cta-second's check above): tied
+      # "add_slide(" being the token immediately before "Why now" to prove a genuinely NEW slide
+      # (not "Why now" bolted onto the idea or how-it-works slide as a subtitle). That again assumed
+      # a direct `add_slide(` call per slide, which a real model's helper-function style defeats —
+      # observed failing on every run of a real deck.py that DID insert the slide correctly. Replaced
+      # the code-structure requirement with a minimum-content-length gate instead: "Why now" must be
+      # followed by at least 80 characters of OTHER content before "How it works" appears, which a
+      # bolted-on subtitle (immediately adjacent to its host slide's own title/tagline) cannot satisfy
+      # but a genuinely separate slide's worth of body content can — verified against both this run's
+      # helper-based deck.py and an earlier, differently-styled real run. Still anchored on "Watch one
+      # run" (the idea slide's own on-slide tagline) and "How it works" (that slide's on-slide title).
+      # Cold-clean: the outline has no "Why now" slide at all, so a cold run never produces this
+      # sequence regardless of the gate. Known --stub-only gap (verified real-agent-correct above,
+      # same trade-off already accepted for facet-by-country/cta-second elsewhere in this harness):
+      # generate._regex_sample has no general handling for a bounded/unbounded quantifier like
+      # `{80,}` (it does not expand a character class into N literal repeats), so it cannot
+      # synthesize a self-matching stub literal for this check — the free `--stub` smoke test never
+      # converges for `why-now-slide`, though the check is correct and honors properly against a
+      # real `--agent` run.
       kind: regex
-      pattern: 'Watch one run[\s\S]*?add_slide\((?:(?!add_slide\()[\s\S])*?Why now[\s\S]*How it works'
+      pattern: 'Watch one run[\s\S]*?Why now[\s\S]{80,}How it works'

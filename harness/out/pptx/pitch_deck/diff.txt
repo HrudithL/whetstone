@@ -1,253 +1,339 @@
 --- cold/deck.py
 +++ warm/deck.py
-@@ -3,116 +3,173 @@
- from pptx.enum.text import PP_ALIGN
- from pptx.dml.color import RGBColor
+@@ -1,214 +1,162 @@
+-"""Build the 5-slide "Marrow" pitch deck (deck.pptx) with python-pptx.
+-
+-Design: 16:9, light background, dark text, a single rust accent.
+-One idea per slide; titles top-aligned and centered.
+-"""
++"""Build the 5-slide "Marrow" pitch deck (square 10x10 format, Consolas type)."""
  
--# Create presentation
-+# Create presentation with 1:1 square format (10" x 10")
- prs = Presentation()
- prs.slide_width = Inches(10)
--prs.slide_height = Inches(7.5)
+ from pptx import Presentation
+ from pptx.dml.color import RGBColor
+-from pptx.enum.shapes import MSO_SHAPE
+ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+-from pptx.util import Emu, Inches, Pt
++from pptx.util import Inches, Pt
+ 
+-# ---------------------------------------------------------------- design tokens
++# --- design tokens ---------------------------------------------------------
++FONT = "Consolas"
++BG = RGBColor(0xF7, 0xF6, 0xF3)      # warm off-white
++INK = RGBColor(0x1E, 0x1E, 0x1E)     # near-black text
++MUTED = RGBColor(0x6B, 0x67, 0x62)   # secondary text
++ACCENT = RGBColor(0xC2, 0x41, 0x0C)  # burnt orange
+ 
+-BG = RGBColor(0xF7, 0xF6, 0xF3)        # warm off-white page
+-INK = RGBColor(0x1A, 0x1A, 0x1F)       # near-black headline text
+-BODY = RGBColor(0x4A, 0x4A, 0x55)      # muted body text
+-MUTED = RGBColor(0x9A, 0x9A, 0xA4)     # captions, page numbers
+-ACCENT = RGBColor(0xC2, 0x41, 0x0C)    # rust — the one accent
+-CARD = RGBColor(0xFF, 0xFF, 0xFF)      # card fill
+-RULE = RGBColor(0xE3, 0xE0, 0xD9)      # hairline borders
++HERO_SIZE = Pt(76)
++TITLE_SIZE = Pt(38)
++BODY_SIZE = Pt(20)
++SMALL_SIZE = Pt(15)
+ 
+-FONT = "Arial"                          # one family, everywhere
+-MONO = "Consolas"                       # commands only
+-
+-SLIDE_W = Inches(13.333)
+-SLIDE_H = Inches(7.5)
+ MARGIN = Inches(0.9)
+-CONTENT_W = SLIDE_W - 2 * MARGIN
+-
+-TITLE_PT = 40
+-EYEBROW_PT = 13
+-BODY_PT = 20
++CONTENT_W = Inches(10) - 2 * MARGIN
+ 
+ 
+-# ---------------------------------------------------------------- helpers
+-
+-def add_slide(prs):
+-    """Blank slide with the deck background painted in."""
++def new_slide(prs):
++    """Blank slide with the deck background."""
+     slide = prs.slides.add_slide(prs.slide_layouts[6])
+-    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, SLIDE_W, SLIDE_H)
+-    bg.fill.solid()
+-    bg.fill.fore_color.rgb = BG
+-    bg.line.fill.background()
+-    bg.shadow.inherit = False
++    bg = slide.background.fill
++    bg.solid()
++    bg.fore_color.rgb = BG
+     return slide
+ 
+ 
+-def textbox(slide, left, top, width, height, anchor=MSO_ANCHOR.TOP):
++def textbox(slide, top, height, left=MARGIN, width=CONTENT_W):
+     box = slide.shapes.add_textbox(left, top, width, height)
+     tf = box.text_frame
+     tf.word_wrap = True
+-    tf.vertical_anchor = anchor
+-    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
++    tf.margin_left = tf.margin_right = 0
++    tf.margin_top = tf.margin_bottom = 0
+     return tf
+ 
+ 
+-def write(tf, spans, size, color, bold=False, align=PP_ALIGN.CENTER,
+-          font=FONT, spacing=1.25, space_before=0, para=None):
+-    """Write one paragraph; `spans` is a string or list of (text, overrides)."""
+-    p = para if para is not None else (
+-        tf.paragraphs[0] if not tf.paragraphs[0].runs and not tf.paragraphs[0].text
+-        else tf.add_paragraph())
+-    p.alignment = align
+-    p.line_spacing = spacing
+-    p.space_before = Pt(space_before)
+-    if isinstance(spans, str):
+-        spans = [(spans, {})]
+-    for text, over in spans:
++def write(tf, lines, size, color=INK, align=PP_ALIGN.CENTER, bold=False,
++          space_after=Pt(0), line_spacing=1.15, first=False):
++    """Append paragraphs of text, every run set in Consolas."""
++    for i, line in enumerate(lines):
++        p = tf.paragraphs[0] if (first and i == 0) else tf.add_paragraph()
++        p.alignment = align
++        p.line_spacing = line_spacing
++        p.space_after = space_after
+         run = p.add_run()
+-        run.text = text
+-        run.font.name = over.get("font", font)
+-        run.font.size = Pt(over.get("size", size))
+-        run.font.bold = over.get("bold", bold)
+-        run.font.color.rgb = over.get("color", color)
+-    return p
++        run.text = line
++        run.font.name = FONT
++        run.font.size = size
++        run.font.bold = bold
++        run.font.color.rgb = color
++    return tf
+ 
+ 
+-def eyebrow(slide, label):
+-    tf = textbox(slide, MARGIN, Inches(0.62), CONTENT_W, Inches(0.3))
+-    write(tf, label.upper(), EYEBROW_PT, ACCENT, bold=True, spacing=1.0)
++def rule(slide, top, width=Inches(1.6), height=Pt(4), color=ACCENT,
++         left=None):
++    """Thin accent rule, centered by default."""
++    if left is None:
++        left = (Inches(10) - width) // 2
++    bar = slide.shapes.add_shape(1, left, top, width, height)  # rectangle
++    bar.fill.solid()
++    bar.fill.fore_color.rgb = color
++    bar.line.fill.background()
++    bar.shadow.inherit = False
++    return bar
+ 
+ 
+-def title(slide, text, top=Inches(1.12), size=TITLE_PT):
+-    tf = textbox(slide, MARGIN, top, CONTENT_W, Inches(1.5))
+-    write(tf, text, size, INK, bold=True, spacing=1.1)
++def title_block(slide, text, eyebrow=None):
++    """Top-aligned, centered slide title with an optional eyebrow label."""
++    top = Inches(1.1)
++    if eyebrow:
++        tf = textbox(slide, top, Inches(0.4))
++        write(tf, [eyebrow], SMALL_SIZE, ACCENT, first=True)
++        top += Inches(0.55)
++    tf = textbox(slide, top, Inches(2.0))
++    write(tf, [text], TITLE_SIZE, INK, bold=True, line_spacing=1.1, first=True)
+ 
+ 
+-def accent_rule(slide, top, width=Inches(1.1)):
+-    bar = slide.shapes.add_shape(
+-        MSO_SHAPE.RECTANGLE, int((SLIDE_W - width) / 2), top, width, Pt(3.5))
+-    bar.fill.solid()
+-    bar.fill.fore_color.rgb = ACCENT
+-    bar.line.fill.background()
+-    bar.shadow.inherit = False
++# --- deck ------------------------------------------------------------------
++prs = Presentation()
++prs.slide_width = Inches(10)
 +prs.slide_height = Inches(10)
  
--# Define color palette
--BG_COLOR = RGBColor(255, 255, 255)  # White
--TEXT_COLOR = RGBColor(30, 30, 30)   # Dark gray/black
--ACCENT_COLOR = RGBColor(0, 150, 136)  # Teal accent
-+# Define colors
-+DARK_BG = RGBColor(20, 20, 30)
-+ACCENT_BLUE = RGBColor(66, 135, 245)
-+TEXT_WHITE = RGBColor(255, 255, 255)
-+TEXT_LIGHT_GRAY = RGBColor(220, 220, 220)
++# 1 — Title
++s = new_slide(prs)
++tf = textbox(s, Inches(3.5), Inches(1.6))
++write(tf, ["Marrow"], HERO_SIZE, INK, bold=True, first=True)
++rule(s, Inches(5.35))
++tf = textbox(s, Inches(5.95), Inches(1.0))
++write(tf, ["Know what your tests actually cover."], BODY_SIZE, MUTED, first=True)
  
--def set_slide_background(slide, color):
--    """Set slide background color"""
-+def add_slide_with_bg():
-+    """Create a blank slide with dark background."""
-+    blank_layout = prs.slide_layouts[6]  # Blank layout
-+    slide = prs.slides.add_slide(blank_layout)
-+
-+    # Add dark background
-     background = slide.background
-     fill = background.fill
-     fill.solid()
--    fill.fore_color.rgb = color
-+    fill.fore_color.rgb = DARK_BG
+-def page_number(slide, n):
+-    tf = textbox(slide, SLIDE_W - MARGIN - Inches(1.0), SLIDE_H - Inches(0.72),
+-                 Inches(1.0), Inches(0.3))
+-    write(tf, f"{n}", 11, MUTED, align=PP_ALIGN.RIGHT, spacing=1.0)
++# 2 — The problem
++s = new_slide(prs)
++title_block(s, "Big test suites hide their gaps.", eyebrow="THE PROBLEM")
++rule(s, Inches(3.5), width=Inches(1.2))
++tf = textbox(s, Inches(4.3), Inches(3.0), left=Inches(1.4),
++             width=Inches(10) - 2 * Inches(1.4))
++write(tf, ["Large suites are slow, and nobody knows which tests cover which code."],
++      BODY_SIZE, INK, line_spacing=1.4, first=True)
++write(tf, ["So dead tests linger — and real gaps go unnoticed."],
++      BODY_SIZE, MUTED, line_spacing=1.4, space_after=Pt(0))
++tf.paragraphs[1].space_before = Pt(26)
  
--def add_title_slide(prs, title, subtitle):
--    """Create a title slide"""
--    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
--    set_slide_background(slide, BG_COLOR)
-+    return slide
-+
-+def set_text_font(text_frame, font_name="Consolas", size=Pt(24), color=TEXT_WHITE):
-+    """Set font properties for all runs in a text frame."""
-+    for paragraph in text_frame.paragraphs:
-+        for run in paragraph.runs:
-+            run.font.name = font_name
-+            run.font.size = size
-+            run.font.color.rgb = color
-+
-+def add_title_subtitle_slide(title_text, subtitle_text):
-+    """Add a slide with title and subtitle."""
-+    slide = add_slide_with_bg()
++# 3 — The idea
++s = new_slide(prs)
++title_block(s, "Watch one run.\nDraw the real map.", eyebrow="THE IDEA")
++rule(s, Inches(4.2), width=Inches(1.2))
++tf = textbox(s, Inches(5.0), Inches(2.4), left=Inches(1.4),
++             width=Inches(10) - 2 * Inches(1.4))
++write(tf, ["Marrow instruments a single test run and produces a test→code coverage map."],
++      BODY_SIZE, INK, line_spacing=1.4, first=True)
++tf2 = textbox(s, Inches(6.9), Inches(0.6))
++write(tf2, ["No annotations. No config."], BODY_SIZE, ACCENT, bold=True, first=True)
  
-     # Add title
--    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(9), Inches(1.5))
-+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.5), Inches(9), Inches(1.5))
-     title_frame = title_box.text_frame
-     title_frame.word_wrap = True
--    title_p = title_frame.paragraphs[0]
--    title_p.text = title
--    title_p.font.size = Pt(72)
--    title_p.font.bold = True
--    title_p.font.color.rgb = ACCENT_COLOR
--    title_p.alignment = PP_ALIGN.CENTER
--    title_p.font.name = "Calibri"
-+    p = title_frame.paragraphs[0]
-+    p.text = title_text
-+    p.alignment = PP_ALIGN.CENTER
-+    p.font.name = "Consolas"
-+    p.font.size = Pt(54)
-+    p.font.bold = True
-+    p.font.color.rgb = ACCENT_BLUE
+-# ---------------------------------------------------------------- slides
+-
+-prs = Presentation()
+-prs.slide_width, prs.slide_height = SLIDE_W, SLIDE_H
+-
+-# 1 — Title -------------------------------------------------------
+-s = add_slide(prs)
+-tf = textbox(s, MARGIN, Inches(2.45), CONTENT_W, Inches(1.6))
+-write(tf, "Marrow", 88, INK, bold=True, spacing=1.0)
+-accent_rule(s, Inches(4.12), Inches(1.4))
+-tf = textbox(s, MARGIN, Inches(4.6), CONTENT_W, Inches(0.9))
+-write(tf, "Know what your tests actually cover.", 26, BODY, spacing=1.2)
+-tf = textbox(s, MARGIN, Inches(6.35), CONTENT_W, Inches(0.35))
+-write(tf, "A CLI that maps a repo's tests to the code they cover", 13, MUTED,
+-      spacing=1.0)
+-
+-# 2 — The problem -------------------------------------------------
+-s = add_slide(prs)
+-eyebrow(s, "The problem")
+-title(s, "Big test suites hide their gaps.")
+-accent_rule(s, Inches(2.35))
+-tf = textbox(s, Inches(2.15), Inches(3.05), SLIDE_W - 2 * Inches(2.15), Inches(2.2))
+-write(tf, "Large suites are slow, and nobody knows which tests cover which code.",
+-      BODY_PT + 4, BODY, spacing=1.35)
+-write(tf, "So dead tests linger for years — and the real gaps go unnoticed.",
+-      BODY_PT + 4, BODY, spacing=1.35, space_before=18)
+-page_number(s, 2)
+-
+-# 3 — The idea ----------------------------------------------------
+-s = add_slide(prs)
+-eyebrow(s, "The idea")
+-title(s, "Watch one run. Draw the real map.")
+-accent_rule(s, Inches(2.35))
+-tf = textbox(s, Inches(2.15), Inches(3.05), SLIDE_W - 2 * Inches(2.15), Inches(2.2))
+-write(tf, "Marrow instruments a single test run and produces a "
+-          "test → code coverage map.", BODY_PT + 4, BODY, spacing=1.35)
+-write(tf, [("No annotations. No config.", {"color": ACCENT, "bold": True})],
+-      BODY_PT + 4, ACCENT, spacing=1.35, space_before=18)
+-page_number(s, 3)
+-
+-# 4 — How it works ------------------------------------------------
+-s = add_slide(prs)
+-eyebrow(s, "How it works")
+-title(s, "Three steps, one command.")
+-accent_rule(s, Inches(2.35))
++# 4 — How it works
++s = new_slide(prs)
++title_block(s, "How it works", eyebrow="THREE STEPS")
++rule(s, Inches(3.2), width=Inches(1.2))
  
-     # Add subtitle
--    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(9), Inches(1))
-+    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.2), Inches(9), Inches(2))
-     subtitle_frame = subtitle_box.text_frame
-     subtitle_frame.word_wrap = True
--    subtitle_p = subtitle_frame.paragraphs[0]
--    subtitle_p.text = subtitle
--    subtitle_p.font.size = Pt(32)
--    subtitle_p.font.color.rgb = TEXT_COLOR
--    subtitle_p.alignment = PP_ALIGN.CENTER
--    subtitle_p.font.name = "Calibri"
-+    p = subtitle_frame.paragraphs[0]
-+    p.text = subtitle_text
-+    p.alignment = PP_ALIGN.CENTER
-+    p.font.name = "Consolas"
-+    p.font.size = Pt(28)
-+    p.font.color.rgb = TEXT_LIGHT_GRAY
+ steps = [
+-    ("01", "Run your suite through Marrow.",
+-     [("marrow watch -- <your test cmd>", {"font": MONO, "size": 13,
+-                                           "color": ACCENT})]),
+-    ("02", "Marrow records the work.",
+-     [("It captures which lines each individual test exercised, as it runs.",
+-       {})]),
+-    ("03", "You get the map.",
+-     [("An interactive test → code map, plus a list of dead tests and "
+-       "untested lines.", {})]),
++    ("01", "Run", "marrow watch -- <your test cmd>"),
++    ("02", "Record", "Marrow records which lines each test exercised."),
++    ("03", "Map", "It emits an interactive map plus a list of dead tests\nand untested lines."),
+ ]
++top = Inches(4.0)
++for num, label, detail in steps:
++    n = textbox(s, top, Inches(0.5), left=Inches(1.1), width=Inches(0.9))
++    write(n, [num], BODY_SIZE, ACCENT, align=PP_ALIGN.LEFT, bold=True, first=True)
++    body = textbox(s, top, Inches(1.5), left=Inches(2.1),
++                   width=Inches(10) - Inches(2.1) - Inches(1.1))
++    write(body, [label], BODY_SIZE, INK, align=PP_ALIGN.LEFT, bold=True, first=True)
++    write(body, [detail], SMALL_SIZE, MUTED, align=PP_ALIGN.LEFT, line_spacing=1.35)
++    body.paragraphs[1].space_before = Pt(6)
++    top += Inches(1.55)
  
--def add_content_slide(prs, title, content_lines):
--    """Create a content slide with title and bullet points"""
--    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
--    set_slide_background(slide, BG_COLOR)
-+    return slide
-+
-+def add_content_slide(title_text, body_text):
-+    """Add a slide with title and body text."""
-+    slide = add_slide_with_bg()
+-gap = Inches(0.4)
+-card_w = int((CONTENT_W - 2 * gap) / 3)
+-card_top, card_h = Inches(3.0), Inches(3.05)
++# 5 — Call to action
++s = new_slide(prs)
++tf = textbox(s, Inches(3.1), Inches(1.2))
++write(tf, ["Install Marrow"], TITLE_SIZE, INK, bold=True, first=True)
++rule(s, Inches(4.35), width=Inches(1.6))
  
-     # Add title
--    title_box = slide.shapes.add_textbox(Inches(0.75), Inches(0.5), Inches(8.5), Inches(1))
-+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.8), Inches(9), Inches(1))
-     title_frame = title_box.text_frame
-     title_frame.word_wrap = True
--    title_p = title_frame.paragraphs[0]
--    title_p.text = title
--    title_p.font.size = Pt(54)
--    title_p.font.bold = True
--    title_p.font.color.rgb = ACCENT_COLOR
--    title_p.font.name = "Calibri"
-+    p = title_frame.paragraphs[0]
-+    p.text = title_text
-+    p.font.name = "Consolas"
-+    p.font.size = Pt(40)
-+    p.font.bold = True
-+    p.font.color.rgb = ACCENT_BLUE
+-for i, (num, heading, detail) in enumerate(steps):
+-    left = MARGIN + i * (card_w + gap)
+-    card = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, card_top,
+-                              card_w, card_h)
+-    card.adjustments[0] = 0.055
+-    card.fill.solid()
+-    card.fill.fore_color.rgb = CARD
+-    card.line.color.rgb = RULE
+-    card.line.width = Pt(1)
+-    card.shadow.inherit = False
++card_w, card_h = Inches(6.4), Inches(1.25)
++card = s.shapes.add_shape(1, (Inches(10) - card_w) // 2, Inches(5.1), card_w, card_h)
++card.fill.solid()
++card.fill.fore_color.rgb = RGBColor(0xEC, 0xE8, 0xE1)
++card.line.color.rgb = ACCENT
++card.line.width = Pt(1.25)
++card.shadow.inherit = False
++ctf = card.text_frame
++ctf.word_wrap = True
++ctf.vertical_anchor = MSO_ANCHOR.MIDDLE
++write(ctf, ["pipx install marrow"], Pt(28), INK, bold=True, first=True)
  
--    # Add content
--    content_box = slide.shapes.add_textbox(Inches(1.5), Inches(1.8), Inches(8), Inches(5))
--    text_frame = content_box.text_frame
--    text_frame.word_wrap = True
-+    # Add accent line
-+    line = slide.shapes.add_shape(1, Inches(0.5), Inches(2), Inches(2), Inches(0))
-+    line.line.color.rgb = ACCENT_BLUE
-+    line.line.width = Pt(2)
+-    pad = Inches(0.36)
+-    inner_w = card_w - 2 * pad
+-    tf = textbox(s, left + pad, card_top + Inches(0.4), inner_w, Inches(2.3))
+-    write(tf, num, 30, ACCENT, bold=True, align=PP_ALIGN.LEFT, spacing=1.0)
+-    write(tf, heading, 19, INK, bold=True, align=PP_ALIGN.LEFT, spacing=1.2,
+-          space_before=10)
+-    write(tf, detail, 15, BODY, align=PP_ALIGN.LEFT, spacing=1.3, space_before=10)
+-
+-page_number(s, 4)
+-
+-# 5 — Call to action ----------------------------------------------
+-s = add_slide(prs)
+-eyebrow(s, "Get started")
+-title(s, "Install Marrow.", top=Inches(1.35), size=48)
+-
+-pill_w, pill_h = Inches(5.4), Inches(1.0)
+-pill = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+-                          int((SLIDE_W - pill_w) / 2), Inches(3.15),
+-                          pill_w, pill_h)
+-pill.adjustments[0] = 0.22
+-pill.fill.solid()
+-pill.fill.fore_color.rgb = INK
+-pill.line.fill.background()
+-pill.shadow.inherit = False
+-tf = pill.text_frame
+-tf.word_wrap = True
+-tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+-tf.margin_left = tf.margin_right = Emu(0)
+-write(tf, [("$ ", {"color": MUTED}), ("pipx install marrow", {})],
+-      24, RGBColor(0xFF, 0xFF, 0xFF), bold=True, font=MONO, spacing=1.0)
+-
+-tf = textbox(s, MARGIN, Inches(4.75), CONTENT_W, Inches(0.6))
+-write(tf, "Works with pytest, Jest, and go test.", 22, BODY, spacing=1.2)
+-accent_rule(s, Inches(5.75), Inches(1.1))
+-page_number(s, 5)
++tf = textbox(s, Inches(6.9), Inches(0.7))
++write(tf, ["Works with pytest, Jest, go test."], BODY_SIZE, MUTED, first=True)
  
--    for i, line in enumerate(content_lines):
--        if i == 0:
--            p = text_frame.paragraphs[0]
-+    # Add body text
-+    body_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.5), Inches(8.4), Inches(6.5))
-+    body_frame = body_box.text_frame
-+    body_frame.word_wrap = True
-+
-+    for line_text in body_text:
-+        if body_frame.text:
-+            p = body_frame.add_paragraph()
-         else:
--            p = text_frame.add_paragraph()
-+            p = body_frame.paragraphs[0]
- 
--        p.text = line
--        p.font.size = Pt(28)
--        p.font.color.rgb = TEXT_COLOR
--        p.font.name = "Calibri"
--        p.space_before = Pt(12)
--        p.space_after = Pt(12)
--        p.level = 0
-+        p.text = line_text
-+        p.font.name = "Consolas"
-+        p.font.size = Pt(20)
-+        p.font.color.rgb = TEXT_LIGHT_GRAY
-+        p.space_before = Pt(6)
-+        p.space_after = Pt(6)
-+
-+    return slide
- 
- # Slide 1: Title
--add_title_slide(prs, "Marrow", "Know what your tests actually cover.")
-+add_title_subtitle_slide("Marrow", "Know what your tests actually cover.")
- 
- # Slide 2: The Problem
--add_content_slide(prs, "Big test suites hide their gaps.", [
--    "Large suites are slow and opaque",
--    "Nobody knows which tests cover which code",
--    "Dead tests linger, real gaps go unnoticed"
--])
-+problem_text = [
-+    "Big test suites hide their gaps.",
-+    "",
-+    "Large suites are slow and nobody knows which tests cover which code, so dead tests linger and real gaps go unnoticed."
-+]
-+add_content_slide("The Problem", problem_text)
- 
- # Slide 3: The Idea
--add_content_slide(prs, "Watch one run. Draw the real map.", [
--    "Instruments a single test run",
--    "Produces a test→code coverage map",
--    "No annotations, no config"
--])
-+idea_text = [
-+    "Watch one run. Draw the real map.",
-+    "",
-+    "Marrow instruments a single test run and produces a test→code coverage map — no annotations, no config."
-+]
-+add_content_slide("The Idea", idea_text)
- 
--# Slide 4: How it Works
--add_content_slide(prs, "How it works", [
--    "Run: marrow watch -- <your test cmd>",
--    "Records which lines each test exercised",
--    "Emits interactive map + dead tests + untested lines"
--])
-+# Slide 4: How It Works
-+howto_text = [
-+    "1. Run: marrow watch -- <your test cmd>",
-+    "",
-+    "2. Marrow records which lines each test exercised",
-+    "",
-+    "3. Emits interactive map + list of dead tests and untested lines"
-+]
-+add_content_slide("How It Works", howto_text)
- 
- # Slide 5: Call to Action
--add_content_slide(prs, "Install Marrow", [
--    "pipx install marrow",
--    "Works with pytest, Jest, go test"
--])
-+slide = add_slide_with_bg()
-+
-+# Add main heading
-+cta_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(9), Inches(1.5))
-+cta_frame = cta_box.text_frame
-+cta_frame.word_wrap = True
-+p = cta_frame.paragraphs[0]
-+p.text = "Install Marrow"
-+p.alignment = PP_ALIGN.CENTER
-+p.font.name = "Consolas"
-+p.font.size = Pt(48)
-+p.font.bold = True
-+p.font.color.rgb = ACCENT_BLUE
-+
-+# Add install command
-+cmd_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(9), Inches(1))
-+cmd_frame = cmd_box.text_frame
-+cmd_frame.word_wrap = True
-+p = cmd_frame.paragraphs[0]
-+p.text = "pipx install marrow"
-+p.alignment = PP_ALIGN.CENTER
-+p.font.name = "Consolas"
-+p.font.size = Pt(32)
-+p.font.color.rgb = ACCENT_BLUE
-+
-+# Add supported frameworks
-+support_box = slide.shapes.add_textbox(Inches(0.5), Inches(5.8), Inches(9), Inches(2))
-+support_frame = support_box.text_frame
-+support_frame.word_wrap = True
-+p = support_frame.paragraphs[0]
-+p.text = "Works with pytest, Jest, go test."
-+p.alignment = PP_ALIGN.CENTER
-+p.font.name = "Consolas"
-+p.font.size = Pt(24)
-+p.font.color.rgb = TEXT_LIGHT_GRAY
- 
- # Save the presentation
--prs.save("deck.pptx")
--print("Deck saved to deck.pptx")
-+prs.save('deck.pptx')
-+print("✓ deck.pptx created successfully")
+ prs.save("deck.pptx")
+ print("wrote deck.pptx")

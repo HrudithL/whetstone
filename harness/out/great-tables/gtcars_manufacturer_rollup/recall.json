@@ -1,11 +1,21 @@
 {
-  "learnings": [],
-  "issues": [
+  "learnings": [
     {
-      "id": "I1",
+      "id": "L1",
       "rule": "Don't list one row per car model. Roll the data up to one row per manufacturer (`mfr`), showing the mean horsepower (`hp`) and mean price (`msrp`) across that manufacturer's whole lineup \u2014 compute this with a real groupby aggregation over the raw rows, not a per-model listing.",
       "scope": "data organization",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L2",
+      "rule": "Add a \"Models\" column showing how many models from that manufacturer went into each average - the reader should be able to tell a 2-model average from a 12-model one.",
+      "scope": "row count column",
+      "recurrence": 2,
+      "weight": 0.6667,
       "origin": "skill"
     }
-  ]
+  ],
+  "issues": []
 }

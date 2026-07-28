@@ -1,19 +1,28 @@
 """Scope-based retrieval over the index (§5.4): scope match -> MMR cap -> fallback floor.
 
 Given the model's *elaborated intent* (never the raw prompt — that closes the abstraction gap,
-§5.4), embed it once and:
+§5.4), embed it and:
 
-1. **Scope match** — a scope matches when ``max(sim(intent, centroid), sim(intent, phrase))`` clears
-   its cutoff. Learnings and issues have separate, asymmetric cutoffs (issues lower: including a
+1. **Scope match** — a scope matches when ``max(sim(q, centroid), sim(q, phrase))`` clears its
+   cutoff for ANY of the intent's query vectors: the full intent, plus each of its top-level
+   comma/semicolon-separated clauses (see ``_intent_clauses``). A single-topic intent behaves
+   exactly as before (nothing to split); a multi-topic intent — e.g. "color palette, axis scales,
+   legend placement" — pools into one sentence embedding whose per-topic signal dilutes as more
+   topics are named, so matching each clause too recovers scopes the pooled vector alone would
+   miss. Learnings and issues have separate, asymmetric cutoffs (issues lower: including a
    marginally-relevant mandatory "don't do X" is cheap).
 2. **Learnings** from matched scopes are capped to ``learnings_k`` by MMR (diverse, not k
-   near-duplicates); **issues** from matched scopes are returned uncapped (all are mandatory).
-3. **Fallback floor** — if *no* scope clears either cutoff, return the top-weight learnings plus
-   broadly-relevant issues so a real-but-thin request never comes back empty.
+   near-duplicates); **issues** from matched scopes are returned uncapped (all are mandatory). MMR
+   ranking, relevance, and weight all key off the full intent only — clause-splitting affects
+   which scopes are eligible, never how the eligible entries are ranked/picked.
+3. **Fallback floor** — if *no* scope clears either cutoff (under any clause), return the
+   top-weight learnings plus broadly-relevant issues so a real-but-thin request never comes back
+   empty.
 """
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -80,8 +89,56 @@ def _scope_similarity(query: list[float], scope: ScopeVectors) -> float:
     return max(cosine(query, scope.centroid), cosine(query, scope.phrase))
 
 
-def _matched_scopes(query: list[float], scopes: list[ScopeVectors], cutoff: float) -> set[str]:
-    return {s.scope for s in scopes if _scope_similarity(query, s) >= cutoff}
+# An elaborated intent that legitimately spans several styling dimensions (§5.4's own worked
+# example is itself a comma list: "color palette + row banding, number/currency formatting,
+# column alignment, header emphasis, density") pools into ONE sentence embedding whose per-topic
+# signal gets diluted as more topics are named — a 6-dimension sentence's vector sits roughly
+# equidistant from all 6 scopes, none of them close enough to individually clear a cutoff tuned
+# against single-topic calibration intents. Splitting on top-level enumeration/sentence punctuation
+# and matching each clause too (in ADDITION to the whole intent, never instead of it) recovers the
+# per-dimension signal a pooled vector drowns out, without changing what a single-clause intent
+# already matched. This is the fix the design doc itself calls for: "No threshold value fixes the
+# abstraction gap; fixing the query does" (§5.4 point 1). Periods split too, not just commas/
+# semicolons: an intent that leads with a multi-sentence task description before naming its
+# dimensions (e.g. "...Produce a single self-contained index.html. Consider color palette and
+# accent, typography, ...") would otherwise leave that first dimension's clause glued to the
+# entire preamble — measured to sit right at the cutoff's edge, while every later comma-bounded
+# dimension clears it easily; splitting on "." too isolates it the same way.
+_CLAUSE_SPLIT_RE = re.compile(r"[,;.]")
+
+
+def _intent_clauses(intent: str) -> list[str]:
+    """``intent`` plus each of its top-level comma/semicolon-separated clauses, deduped.
+
+    Returns just ``[intent]`` when there is nothing to split (0 or 1 usable clause) — a
+    single-topic intent is embedded and matched exactly as before. A multi-clause intent embeds
+    the clauses IN ADDITION to the full sentence, so scope-matching only ever gains candidates
+    relative to the whole-intent-only baseline, never loses one.
+
+    A single bare word ("caps", "emphasis") carries no context once split out on its own and, on
+    the calibration labeled set, was measured to spuriously drift into an unrelated scope's cutoff
+    (a real precision regression, not a hypothetical one) — dropped rather than treated as its own
+    probe. Every dimension this fix actually targets (e.g. "legend placement", "color palette and
+    encoding") is itself 2+ words, so this costs none of the intended recall.
+    """
+    parts = [p.strip() for p in _CLAUSE_SPLIT_RE.split(intent) if p.strip()]
+    parts = [p for p in parts if len(p.split()) >= 2]
+    if len(parts) <= 1:
+        return [intent]
+    seen = {intent}
+    clauses = [intent]
+    for p in parts:
+        if p not in seen:
+            seen.add(p)
+            clauses.append(p)
+    return clauses
+
+
+def _matched_scopes(queries: list[list[float]], scopes: list[ScopeVectors], cutoff: float) -> set[str]:
+    """A scope matches if ANY query vector (the full intent, or one of its clauses) clears cutoff."""
+    return {
+        s.scope for s in scopes if max(_scope_similarity(q, s) for q in queries) >= cutoff
+    }
 
 
 def _entry_weight(entry: IndexedEntry, config: Config, today: date) -> float:
@@ -196,7 +253,9 @@ def retrieve(
     if today is None:
         today = datetime.now(UTC).date()
 
-    query = backend.embed([intent])[0]
+    clauses = _intent_clauses(intent)
+    embedded = backend.embed(clauses)
+    query = embedded[0]  # the full intent, unchanged — MMR ranking/relevance/fallback use only this
 
     # All four reads share ONE open connection so a concurrent capture/revise index rebuild (atomic
     # os.replace) can't straddle them — the open handle keeps reading its snapshot's inode, so every
@@ -216,8 +275,11 @@ def retrieve(
         snapshot_out.scope_phrase.update({s.scope: s.phrase for s in learning_scopes})
         snapshot_out.scope_phrase.update({s.scope: s.phrase for s in issue_scopes})
 
-    matched_learning = _matched_scopes(query, learning_scopes, config.learnings_cutoff)
-    matched_issue = _matched_scopes(query, issue_scopes, config.issues_cutoff)
+    # Scope MATCHING (only) checks every clause, so a multi-topic intent's per-dimension signal
+    # isn't drowned out by the others (see _intent_clauses). Ranking within the matched set (MMR,
+    # relevance, the fallback floor) still runs against `query` alone, unaffected.
+    matched_learning = _matched_scopes(embedded, learning_scopes, config.learnings_cutoff)
+    matched_issue = _matched_scopes(embedded, issue_scopes, config.issues_cutoff)
 
     if not matched_learning and not matched_issue:
         return _fallback(

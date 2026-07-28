@@ -1,381 +1,423 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marrow — Pricing</title>
 <style>
-  /* ============ Marrow · pricing ============
-     Subject: a test-coverage-mapping CLI. The design borrows from the tool's
-     own artifact — the coverage grid: a matrix of cells, lit where tests reach.
-     Palette: deep terminal ink + warm "bone" type + a single marrow-coral accent.
-  */
+  /* ---------- Marrow palette ---------- */
   :root{
-    --ink:      #0C0F14;
-    --panel:    #12161D;
-    --panel-2:  #161B23;
-    --line:     #232B36;
-    --bone:     #ECE6D9;
-    --muted:    #8A93A1;
-    --dim:      #5C6472;
-    --accent:   #FF6A3D;
-    --accent-d: #C74A26;
-    --covered:  #57C7A6;
-    --radius:   14px;
-    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
-    --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --ink:    #14111a;   /* terminal ground */
+    --pane:   #1d1926;   /* card surface */
+    --pane-up:#251f2f;   /* recommended surface */
+    --bone:   #ece5da;   /* primary text */
+    --ash:    #9a93a6;   /* muted text */
+    --marrow: #ff6a4b;   /* signature accent: a covered line */
+
+    --edge: rgba(236,229,218,.10);
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 
-  *{ box-sizing:border-box; }
+  *{box-sizing:border-box}
 
-  html{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  html{-webkit-text-size-adjust:100%}
 
   body{
     margin:0;
-    background:
-      radial-gradient(1200px 600px at 80% -10%, rgba(255,106,61,.10), transparent 60%),
-      radial-gradient(900px 500px at 0% 110%, rgba(87,199,166,.06), transparent 55%),
-      var(--ink);
+    background:var(--ink);
     color:var(--bone);
     font-family:var(--sans);
-    line-height:1.5;
-    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    /* faint marrow glow seated behind the recommended tier */
+    background-image:radial-gradient(50rem 28rem at 50% 30%, rgba(255,106,75,.075), transparent 70%);
   }
 
-  .wrap{
-    max-width:1120px;
+  .section{
+    max-width:1100px;
     margin:0 auto;
-    padding:clamp(56px,9vw,120px) clamp(20px,5vw,40px);
+    padding:clamp(3.5rem,8vw,7rem) clamp(1.15rem,4vw,2.5rem) clamp(4rem,8vw,7rem);
   }
 
-  /* ---------- Section heading ---------- */
-  .head{ margin-bottom:clamp(40px,6vw,72px); }
+  /* ---------- Section head ---------- */
+  .head{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:2rem 3rem;
+    align-items:end;
+    padding-bottom:1.5rem;
+    border-bottom:1px solid var(--edge);
+  }
 
-  .kicker{
+  .eyebrow{
+    margin:0 0 1.1rem;
     font-family:var(--mono);
-    font-size:12.5px;
-    letter-spacing:.14em;
-    color:var(--accent);
+    font-size:.75rem;
+    letter-spacing:.19em;
+    text-transform:uppercase;
+    color:var(--ash);
+  }
+  .eyebrow .prompt{color:var(--marrow)}
+  .caret{
+    display:inline-block;
+    width:.52em;height:1.05em;
+    margin-left:.15em;
+    vertical-align:-.18em;
+    background:var(--marrow);
+    animation:blink 1.15s steps(1,end) infinite;
+  }
+  @keyframes blink{50%{opacity:0}}
+
+  h2{
+    margin:0;
+    font-family:var(--mono);
+    font-size:clamp(2.35rem,6.5vw,3.5rem);
+    font-weight:700;
+    letter-spacing:-.035em;
+    line-height:.95;
+  }
+  .sub{
+    margin:.85rem 0 0;
+    font-size:1.0625rem;
+    line-height:1.5;
+    color:var(--ash);
+    max-width:32ch;
+  }
+  .sub b{color:var(--bone);font-weight:600}
+
+  /* legend: explains the gutter, so it carries information */
+  .legend{
+    font-family:var(--mono);
+    font-size:.7rem;
+    line-height:1.75;
+    letter-spacing:.05em;
+    color:var(--ash);
+    text-transform:uppercase;
+    margin:0;
+    text-align:right;
+  }
+  .legend .key{
     display:inline-flex;
     align-items:center;
-    gap:.6em;
-    margin:0 0 20px;
+    gap:.4rem;
+    margin-left:.85rem;
   }
-  .kicker::before{
-    content:"";
-    width:26px; height:1px;
-    background:linear-gradient(90deg, var(--accent), transparent);
-  }
-  .kicker .caret{ color:var(--dim); }
+  .swatch{width:.5rem;height:.5rem;border-radius:1px}
+  .swatch.on{background:var(--marrow)}
+  .swatch.off{background:transparent;box-shadow:inset 0 0 0 1px rgba(236,229,218,.28)}
 
-  h1{
-    font-size:clamp(42px,7vw,74px);
-    line-height:.98;
-    letter-spacing:-.03em;
-    font-weight:680;
-    margin:0 0 18px;
-  }
-
-  .sub{
-    font-size:clamp(16px,2vw,18.5px);
-    color:var(--muted);
-    max-width:34ch;
-    margin:0;
-  }
-  .sub b{ color:var(--bone); font-weight:600; }
-
-  /* ---------- Card grid ---------- */
-  .grid{
+  /* ---------- Card row ---------- */
+  .tiers{
+    list-style:none;
+    margin:2.75rem 0 0;
+    padding:0;
     display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:20px;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:1.15rem;
     align-items:stretch;
   }
 
   .card{
     position:relative;
-    display:flex;
-    flex-direction:column;
-    background:linear-gradient(180deg, var(--panel-2), var(--panel));
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:30px 28px 32px;
-    overflow:hidden;
-    transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s;
-  }
-  .card:hover{
-    transform:translateY(-6px);
-    border-color:#33404f;
-    box-shadow:0 24px 60px -30px rgba(0,0,0,.8);
-  }
-
-  /* Recommended tier — lit, elevated */
-  .card.reco{
-    border-color:rgba(255,106,61,.42);
-    background:
-      linear-gradient(180deg, rgba(255,106,61,.08), transparent 220px),
-      linear-gradient(180deg, var(--panel-2), var(--panel));
-    box-shadow:0 30px 70px -34px rgba(255,106,61,.35);
-    z-index:2;
-  }
-  @media(min-width:861px){ .card.reco{ transform:translateY(-14px); } .card.reco:hover{ transform:translateY(-20px); } }
-
-  /* coverage-grid motif in the top-right of each card */
-  .covmap{
-    position:absolute;
-    top:24px; right:22px;
     display:grid;
-    grid-template-columns:repeat(5, 6px);
-    grid-auto-rows:6px;
-    gap:3px;
-    opacity:.55;
+    grid-template-rows:auto auto 1fr auto;
+    gap:1.5rem;
+    padding:1.6rem 1.6rem 1.6rem 3.1rem;   /* left room for the coverage gutter */
+    background:var(--pane);
+    border:1px solid var(--edge);
+    border-radius:3px;
+    transition:transform .22s ease, border-color .22s ease, background-color .22s ease;
   }
-  .covmap i{ background:var(--line); border-radius:1.5px; }
-  .covmap i.on{ background:var(--dim); }
-  .card.reco .covmap i.on{ background:var(--accent); box-shadow:0 0 6px rgba(255,106,61,.6); }
-  .card.reco .covmap i.half{ background:var(--accent-d); }
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,106,75,.35)}
 
-  .badge{
+  .card.rec{
+    background:var(--pane-up);
+    border-color:rgba(255,106,75,.5);
+    box-shadow:0 1rem 3rem -1.25rem rgba(0,0,0,.6);
+  }
+  .card.rec::before{           /* covered-line rule across the top */
+    content:"";
     position:absolute;
-    top:0; left:28px;
-    transform:translateY(-50%);
-    font-family:var(--mono);
-    font-size:11px;
-    letter-spacing:.13em;
-    color:var(--ink);
-    background:var(--accent);
-    padding:5px 11px;
-    border-radius:100px;
-    font-weight:600;
+    inset:-1px -1px auto -1px;
+    height:2px;
+    background:var(--marrow);
+    border-radius:3px 3px 0 0;
   }
 
-  .tier{
+  /* ---------- Signature element: the coverage gutter ---------- */
+  .gutter{
+    position:absolute;
+    top:1.6rem;
+    left:1.35rem;
+    display:grid;
+    gap:3px;
+  }
+  .gutter i{
+    display:block;
+    width:7px;height:7px;
+    border-radius:1px;
+    box-shadow:inset 0 0 0 1px rgba(236,229,218,.16);
+    transform-origin:left center;
+  }
+  .gutter i.on{
+    background:var(--marrow);
+    box-shadow:none;
+    animation:fill .34s cubic-bezier(.2,.8,.3,1) backwards;
+  }
+  .gutter i.on:nth-child(1){animation-delay:.05s}
+  .gutter i.on:nth-child(2){animation-delay:.10s}
+  .gutter i.on:nth-child(3){animation-delay:.15s}
+  .gutter i.on:nth-child(4){animation-delay:.20s}
+  .gutter i.on:nth-child(5){animation-delay:.25s}
+  .gutter i.on:nth-child(6){animation-delay:.30s}
+  .gutter i.on:nth-child(7){animation-delay:.35s}
+  .gutter i.on:nth-child(8){animation-delay:.40s}
+  .gutter i.on:nth-child(9){animation-delay:.45s}
+  @keyframes fill{from{transform:scaleX(.15);opacity:0}to{transform:scaleX(1);opacity:1}}
+
+  /* ---------- Card head ---------- */
+  .tier-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:.75rem;
+    min-height:1.5rem;
+  }
+  h3{
+    margin:0;
     font-family:var(--mono);
-    font-size:13px;
+    font-size:.9375rem;
+    font-weight:700;
     letter-spacing:.16em;
     text-transform:uppercase;
-    color:var(--muted);
-    margin:2px 0 22px;
   }
-  .card.reco .tier{ color:var(--accent); }
+  .tag{
+    font-family:var(--mono);
+    font-size:.625rem;
+    font-weight:700;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink);
+    background:var(--marrow);
+    padding:.24rem .45rem;
+    border-radius:2px;
+    white-space:nowrap;
+  }
+  .count{
+    margin-left:auto;
+    font-family:var(--mono);
+    font-size:.6875rem;
+    letter-spacing:.1em;
+    color:var(--ash);
+    white-space:nowrap;
+  }
 
+  /* ---------- Price ---------- */
   .price{
     display:flex;
     align-items:baseline;
-    gap:8px;
     flex-wrap:wrap;
-    margin-bottom:26px;
-    min-height:52px;
+    gap:.5rem;
+    min-height:3.25rem;
   }
   .amount{
-    font-size:46px;
-    font-weight:680;
-    letter-spacing:-.03em;
-    line-height:1;
-    font-family:var(--sans);
-  }
-  .period{
     font-family:var(--mono);
-    font-size:13px;
-    color:var(--dim);
-    letter-spacing:.02em;
+    font-size:2.75rem;
+    font-weight:700;
+    letter-spacing:-.05em;
+    line-height:1;
   }
+  .amount.word{font-size:2rem;letter-spacing:-.03em}
+  .unit{
+    font-family:var(--mono);
+    font-size:.75rem;
+    letter-spacing:.06em;
+    color:var(--ash);
+  }
+
+  /* ---------- Features ---------- */
+  .feats{list-style:none;margin:0;padding:0;display:grid;gap:.7rem;align-content:start}
+  .feats li{
+    display:grid;
+    grid-template-columns:1rem 1fr;
+    gap:.55rem;
+    font-size:.9375rem;
+    line-height:1.4;
+  }
+  .feats .mk{
+    font-family:var(--mono);
+    font-size:.8125rem;
+    color:var(--marrow);
+    line-height:1.55;
+  }
+  .feats li.inherit{color:var(--ash)}
+  .feats li.inherit .mk{color:var(--ash)}
+  .feats li.inherit b{color:var(--bone);font-weight:600}
 
   /* ---------- CTA ---------- */
   .cta{
     display:block;
-    width:100%;
     text-align:center;
     font-family:var(--mono);
-    font-size:14px;
-    letter-spacing:.02em;
-    padding:14px 16px;
-    border-radius:10px;
-    border:1px solid var(--line);
-    background:transparent;
-    color:var(--bone);
-    cursor:pointer;
+    font-size:.8125rem;
+    font-weight:700;
+    letter-spacing:.1em;
+    text-transform:uppercase;
     text-decoration:none;
-    transition:background .25s, border-color .25s, color .25s, transform .1s;
-  }
-  .cta:hover{ background:rgba(255,255,255,.04); border-color:#3a4757; }
-  .cta:active{ transform:translateY(1px); }
-  .cta.primary{
-    background:var(--accent);
-    border-color:var(--accent);
-    color:#1a0d07;
-    font-weight:600;
-  }
-  .cta.primary:hover{ background:#ff7d55; border-color:#ff7d55; }
-  .cta::before{ content:"› "; color:currentColor; opacity:.55; }
-
-  /* ---------- Features ---------- */
-  .divider{
-    height:1px;
-    background:var(--line);
-    margin:28px 0 22px;
-  }
-  .feat{
-    list-style:none;
-    margin:0; padding:0;
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-    flex-grow:1;
-  }
-  .feat li{
-    display:flex;
-    align-items:flex-start;
-    gap:11px;
-    font-size:14.5px;
-    color:var(--bone);
-  }
-  /* coverage-cell bullet */
-  .feat li::before{
-    content:"";
-    flex:none;
-    width:9px; height:9px;
-    margin-top:5px;
+    padding:.9rem 1rem;
     border-radius:2px;
-    background:var(--covered);
-    box-shadow:0 0 0 1px rgba(87,199,166,.25);
+    color:var(--bone);
+    background:transparent;
+    border:1px solid rgba(236,229,218,.28);
+    transition:background-color .18s ease, color .18s ease, border-color .18s ease;
   }
-  .card.reco .feat li::before{ background:var(--accent); box-shadow:0 0 0 1px rgba(255,106,61,.3); }
-
-  /* "Everything in X" — an inherited line, styled distinctly */
-  .feat li.inherit{
-    font-family:var(--mono);
-    font-size:12.5px;
-    letter-spacing:.02em;
-    color:var(--muted);
-    padding-bottom:2px;
+  .cta:hover{border-color:var(--bone);background:rgba(236,229,218,.07)}
+  .cta.solid{
+    background:var(--marrow);
+    border-color:var(--marrow);
+    color:#1a0d09;
   }
-  .feat li.inherit::before{
-    content:"+";
-    background:none;
-    box-shadow:none;
-    width:auto; height:auto;
-    margin-top:0;
-    color:var(--dim);
-    font-family:var(--mono);
-    font-size:14px;
-    line-height:1.4;
-  }
-  .feat li.inherit b{ color:var(--bone); font-weight:600; }
+  .cta.solid:hover{background:#ff8266;border-color:#ff8266}
 
-  /* ---------- entrance motion ---------- */
-  @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
-  .card{ animation:rise .6s cubic-bezier(.2,.7,.2,1) both; }
-  .card:nth-child(1){ animation-delay:.05s; }
-  .card:nth-child(2){ animation-delay:.13s; }
-  .card:nth-child(3){ animation-delay:.21s; }
-  .covmap i.on{ animation:cell .5s ease both; }
-  @keyframes cell{ from{ opacity:0; } to{ opacity:1; } }
-
-  .foot{
-    margin-top:36px;
-    font-family:var(--mono);
-    font-size:12.5px;
-    color:var(--dim);
-    letter-spacing:.02em;
-  }
-  .foot .dot{ color:var(--covered); }
-
-  /* ---------- responsive ---------- */
-  @media(max-width:860px){
-    .grid{ grid-template-columns:1fr; max-width:440px; }
-    .card.reco{ order:-1; }
-  }
-
-  /* ---------- focus + reduced motion ---------- */
-  a:focus-visible, .cta:focus-visible{
-    outline:2px solid var(--accent);
+  a:focus-visible,
+  .card:focus-visible{
+    outline:2px solid var(--marrow);
     outline-offset:3px;
   }
-  @media(prefers-reduced-motion:reduce){
-    *{ animation:none !important; transition:none !important; }
-    .card:hover, .card.reco{ transform:none; }
+
+  .foot{
+    margin:1.75rem 0 0;
+    font-family:var(--mono);
+    font-size:.6875rem;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    color:var(--ash);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:900px){
+    .head{grid-template-columns:1fr;align-items:start}
+    .legend{text-align:left}
+    .legend .key{margin:0 .85rem 0 0}
+    .tiers{grid-template-columns:1fr;gap:1rem}
+    .card:hover{transform:none}
+    .amount{font-size:2.375rem}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none !important;transition:none !important}
+    .card:hover{transform:none}
   }
 </style>
 </head>
 <body>
-  <main class="wrap">
-    <header class="head">
-      <p class="kicker"><span class="caret">$</span> marrow plans <span class="caret">--all</span></p>
-      <h1>Pricing</h1>
+
+<section class="section" aria-labelledby="pricing-title">
+
+  <div class="head">
+    <div>
+      <p class="eyebrow"><span class="prompt">$</span> marrow plans<span class="caret" aria-hidden="true"></span></p>
+      <h2 id="pricing-title">Pricing</h2>
       <p class="sub"><b>Start free.</b> Upgrade when your team does.</p>
-    </header>
+    </div>
 
-    <section class="grid" aria-label="Pricing tiers">
+    <p class="legend">
+      Coverage gutter — capabilities unlocked
+      <br>
+      <span class="key"><span class="swatch on" aria-hidden="true"></span> included</span>
+      <span class="key"><span class="swatch off" aria-hidden="true"></span> not in tier</span>
+    </p>
+  </div>
 
-      <!-- Solo -->
-      <article class="card">
-        <div class="covmap" aria-hidden="true">
-          <i class="on"></i><i></i><i></i><i></i><i></i>
-          <i></i><i></i><i></i><i></i><i></i>
-          <i></i><i></i><i></i><i></i><i></i>
-        </div>
-        <h2 class="tier">Solo</h2>
-        <div class="price">
-          <span class="amount">$0</span>
-          <span class="period">/ forever</span>
-        </div>
-        <a class="cta" href="#">Start free</a>
-        <div class="divider"></div>
-        <ul class="feat">
-          <li>1 developer</li>
-          <li>Local test maps</li>
-          <li>Community support</li>
-        </ul>
-      </article>
+  <ul class="tiers">
 
-      <!-- Team (recommended) -->
-      <article class="card reco" aria-label="Team — recommended">
-        <span class="badge">RECOMMENDED</span>
-        <div class="covmap" aria-hidden="true">
-          <i class="on"></i><i class="on"></i><i class="half"></i><i class="on"></i><i class="on"></i>
-          <i class="on"></i><i class="half"></i><i class="on"></i><i class="on"></i><i class="on"></i>
-          <i class="on"></i><i class="on"></i><i class="on"></i><i class="half"></i><i class="on"></i>
-        </div>
-        <h2 class="tier">Team</h2>
-        <div class="price">
-          <span class="amount">$12</span>
-          <span class="period">/ user / month</span>
-        </div>
-        <a class="cta primary" href="#">Start 14-day trial</a>
-        <div class="divider"></div>
-        <ul class="feat">
-          <li class="inherit">Everything in <b>Solo</b></li>
-          <li>Shared team maps</li>
-          <li>CI integration</li>
-          <li>Email support</li>
-        </ul>
-      </article>
+    <!-- ─── Solo ─── -->
+    <li class="card">
+      <span class="gutter" aria-hidden="true">
+        <i class="on"></i><i class="on"></i><i class="on"></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i>
+      </span>
 
-      <!-- Enterprise -->
-      <article class="card">
-        <div class="covmap" aria-hidden="true">
-          <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
-          <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
-          <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
-        </div>
-        <h2 class="tier">Enterprise</h2>
-        <div class="price">
-          <span class="amount">Custom</span>
-        </div>
-        <a class="cta" href="#">Contact sales</a>
-        <div class="divider"></div>
-        <ul class="feat">
-          <li class="inherit">Everything in <b>Team</b></li>
-          <li>SSO / SAML</li>
-          <li>Self-hosted option</li>
-          <li>Dedicated support</li>
-        </ul>
-      </article>
+      <div class="tier-head">
+        <h3>Solo</h3>
+        <span class="count">3/9</span>
+      </div>
 
-    </section>
+      <p class="price">
+        <span class="amount">$0</span>
+        <span class="unit">/ forever</span>
+      </p>
 
-    <p class="foot"><span class="dot">■</span> coverage mapped across every tier — no card by card lock-in.</p>
-  </main>
+      <ul class="feats">
+        <li><span class="mk" aria-hidden="true">▪</span> 1 developer</li>
+        <li><span class="mk" aria-hidden="true">▪</span> Local test maps</li>
+        <li><span class="mk" aria-hidden="true">▪</span> Community support</li>
+      </ul>
+
+      <a class="cta" href="#">Start free</a>
+    </li>
+
+    <!-- ─── Team (recommended) ─── -->
+    <li class="card rec">
+      <span class="gutter" aria-hidden="true">
+        <i class="on"></i><i class="on"></i><i class="on"></i>
+        <i class="on"></i><i class="on"></i><i class="on"></i>
+        <i></i><i></i><i></i>
+      </span>
+
+      <div class="tier-head">
+        <h3>Team</h3>
+        <span class="count">6/9</span>
+        <span class="tag">Recommended</span>
+      </div>
+
+      <p class="price">
+        <span class="amount">$12</span>
+        <span class="unit">/ user / month</span>
+      </p>
+
+      <ul class="feats">
+        <li class="inherit"><span class="mk" aria-hidden="true">↳</span> Everything in <b>Solo</b></li>
+        <li><span class="mk" aria-hidden="true">▪</span> Shared team maps</li>
+        <li><span class="mk" aria-hidden="true">▪</span> CI integration</li>
+        <li><span class="mk" aria-hidden="true">▪</span> Email support</li>
+      </ul>
+
+      <a class="cta solid" href="#">Start 14-day trial</a>
+    </li>
+
+    <!-- ─── Enterprise ─── -->
+    <li class="card">
+      <span class="gutter" aria-hidden="true">
+        <i class="on"></i><i class="on"></i><i class="on"></i>
+        <i class="on"></i><i class="on"></i><i class="on"></i>
+        <i class="on"></i><i class="on"></i><i class="on"></i>
+      </span>
+
+      <div class="tier-head">
+        <h3>Enterprise</h3>
+        <span class="count">9/9</span>
+      </div>
+
+      <p class="price">
+        <span class="amount word">Custom</span>
+      </p>
+
+      <ul class="feats">
+        <li class="inherit"><span class="mk" aria-hidden="true">↳</span> Everything in <b>Team</b></li>
+        <li><span class="mk" aria-hidden="true">▪</span> SSO / SAML</li>
+        <li><span class="mk" aria-hidden="true">▪</span> Self-hosted option</li>
+        <li><span class="mk" aria-hidden="true">▪</span> Dedicated support</li>
+      </ul>
+
+      <a class="cta" href="#">Contact sales</a>
+    </li>
+
+  </ul>
+
+  <p class="foot">USD · billed monthly · cancel from the CLI</p>
+
+</section>
+
 </body>
 </html>

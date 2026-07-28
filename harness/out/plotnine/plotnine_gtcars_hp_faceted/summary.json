@@ -8,33 +8,23 @@
     "max_runs": 5,
     "stick_streak": 2
   },
-  "runs": 5,
+  "runs": 3,
   "preferences": {
     "facet-by-country": {
-      "polarity": "issue",
+      "polarity": "learning",
       "scope": "layout structure",
       "cold_honored": false,
       "runs_to_stick": 2,
       "value_over_time": [
         {
           "run": 2,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.5,
+          "recurrence": 1
         },
         {
           "run": 3,
-          "weight": null,
-          "recurrence": null
-        },
-        {
-          "run": 4,
-          "weight": null,
-          "recurrence": null
-        },
-        {
-          "run": 5,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.6667,
+          "recurrence": 2
         }
       ]
     },
@@ -42,45 +32,36 @@
       "polarity": "learning",
       "scope": "scales",
       "cold_honored": false,
-      "runs_to_stick": null,
+      "runs_to_stick": 2,
       "value_over_time": [
         {
           "run": 2,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.5,
+          "recurrence": 1
         },
         {
           "run": 3,
-          "weight": null,
-          "recurrence": null
-        },
-        {
-          "run": 4,
-          "weight": null,
-          "recurrence": null
-        },
-        {
-          "run": 5,
-          "weight": null,
-          "recurrence": null
+          "weight": 0.6667,
+          "recurrence": 2
         }
       ]
     }
   },
   "usage_kpis": {
     "skill": "plotnine-plotnine_gtcars_hp_faceted",
-    "runs": 5,
-    "avg_learnings_applied_per_run": 0.0,
+    "runs": 3,
+    "avg_learnings_applied_per_run": 1.3333,
     "captures_by_status": {
       "committed": 2,
       "reinforced": 4,
       "noop": 0,
-      "conflict": 0
+      "conflict": 0,
+      "possible_contradiction": 0
     },
     "repeat_correction_proxy": {
-      "reinforcement_rate": 0.8,
+      "reinforcement_rate": 0.6667,
       "reinforcements": 4,
-      "learnings_created": 1
+      "learnings_created": 2
     },
     "learnings_survived_pct": {
       "value": 1.0,

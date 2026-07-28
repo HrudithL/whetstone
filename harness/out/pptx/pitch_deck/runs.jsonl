@@ -1,3 +1,5 @@
-{"run": 1, "phase": "cold", "honored": {"mono-font": false, "square-format": false}, "weights": {"mono-font": null, "square-format": null}, "recurrence": {"mono-font": null, "square-format": null}}
-{"run": 2, "phase": "warm", "honored": {"mono-font": true, "square-format": true}, "weights": {"mono-font": 0.5, "square-format": null}, "recurrence": {"mono-font": 1, "square-format": null}}
-{"run": 3, "phase": "warm", "honored": {"mono-font": true, "square-format": true}, "weights": {"mono-font": 0.6667, "square-format": null}, "recurrence": {"mono-font": 2, "square-format": null}}
+{"run": 1, "phase": "cold", "honored": {"mono-font": true, "square-format": false}, "weights": {"mono-font": null, "square-format": null}, "recurrence": {"mono-font": null, "square-format": null}}
+{"run": 2, "phase": "warm", "honored": {"mono-font": true, "square-format": false}, "weights": {"mono-font": 0.5, "square-format": 0.5}, "recurrence": {"mono-font": 1, "square-format": 1}}
+{"run": 3, "phase": "warm", "honored": {"mono-font": true, "square-format": true}, "weights": {"mono-font": 0.6667, "square-format": 0.6667}, "recurrence": {"mono-font": 2, "square-format": 2}}
+{"run": 4, "phase": "warm", "honored": {"mono-font": true, "square-format": false}, "weights": {"mono-font": 0.75, "square-format": 0.75}, "recurrence": {"mono-font": 3, "square-format": 3}}
+{"run": 5, "phase": "warm", "honored": {"mono-font": true, "square-format": true}, "weights": {"mono-font": 0.8, "square-format": 0.8}, "recurrence": {"mono-font": 4, "square-format": 4}}

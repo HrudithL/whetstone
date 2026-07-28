@@ -1,187 +1,251 @@
+"""Build the 5-slide "Marrow" pitch deck described in pitch_deck_outline.md.
+
+Slides follow the outline order exactly:
+  1. Title            2. The problem      3. The idea
+  4. How it works     5. Call to action
+
+Run:  python3 deck.py   ->   deck.pptx
+"""
+
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.util import Inches, Pt
 
-# ----- Palette -----
-BG = RGBColor(0x12, 0x16, 0x1C)        # deep slate background
-TEXT = RGBColor(0xE8, 0xEC, 0xF1)      # near-white text
-MUTED = RGBColor(0x9A, 0xA6, 0xB2)     # muted gray for secondary text
-ACCENT = RGBColor(0xF2, 0x6B, 0x3A)    # warm orange accent
-PANEL = RGBColor(0x1B, 0x22, 0x2B)     # slightly lighter panel
+# ---------------------------------------------------------------- design system
 
-FONT = "Arial"
+BG = RGBColor(0xFA, 0xF8, 0xF5)      # warm off-white slide background
+INK = RGBColor(0x1C, 0x1B, 0x19)     # primary text
+MUTED = RGBColor(0x6B, 0x66, 0x5F)   # secondary text
+ACCENT = RGBColor(0xC2, 0x47, 0x2F)  # single restrained accent (rust)
+CARD = RGBColor(0xFF, 0xFF, 0xFF)    # card fill
+HAIRLINE = RGBColor(0xE2, 0xDD, 0xD5)
 
-# ----- Setup: 16:9 -----
+FONT = "Arial"        # one clean sans-serif family, used everywhere
+MONO = "Consolas"     # commands only
+
+DECK_TITLE = Pt(62)
+SLIDE_TITLE = Pt(34)
+LEAD = Pt(22)
+BODY = Pt(18)
+STEP = Pt(16)
+FOOTER = Pt(10)
+
+SLIDE_W = Inches(13.333)
+SLIDE_H = Inches(7.5)
+MARGIN = Inches(0.9)
+CONTENT_W = SLIDE_W - 2 * MARGIN
+
 prs = Presentation()
-prs.slide_width = Inches(13.333)
-prs.slide_height = Inches(7.5)
-SW, SH = prs.slide_width, prs.slide_height
+prs.slide_width = SLIDE_W
+prs.slide_height = SLIDE_H
 BLANK = prs.slide_layouts[6]
 
+# ---------------------------------------------------------------- helpers
 
-def add_slide():
+
+def new_slide():
+    """Blank slide with the deck background painted in."""
     slide = prs.slides.add_slide(BLANK)
-    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, SW, SH)
+    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, SLIDE_W, SLIDE_H)
     bg.fill.solid()
     bg.fill.fore_color.rgb = BG
     bg.line.fill.background()
     bg.shadow.inherit = False
-    slide.shapes._spTree.remove(bg._element)
-    slide.shapes._spTree.insert(2, bg._element)
     return slide
 
 
-def accent_bar(slide, left, top, w=Inches(0.9), h=Inches(0.09)):
-    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, w, h)
+def textbox(slide, x, y, w, h, anchor=MSO_ANCHOR.TOP):
+    box = slide.shapes.add_textbox(x, y, w, h)
+    tf = box.text_frame
+    tf.word_wrap = True
+    tf.vertical_anchor = anchor
+    tf.margin_left = tf.margin_right = 0
+    tf.margin_top = tf.margin_bottom = 0
+    return tf
+
+
+def write(tf, text, size, color=INK, bold=False, align=PP_ALIGN.CENTER,
+          font=FONT, space_before=0, space_after=0, line=None, first=False):
+    """Append (or fill) a styled paragraph. Returns the paragraph."""
+    p = tf.paragraphs[0] if first else tf.add_paragraph()
+    p.alignment = align
+    p.space_before = Pt(space_before)
+    p.space_after = Pt(space_after)
+    if line is not None:
+        p.line_spacing = line
+    run = p.add_run()
+    run.text = text
+    run.font.name = font
+    run.font.size = size
+    run.font.bold = bold
+    run.font.color.rgb = color
+    return p
+
+
+def accent_rule(slide, y, width=Inches(1.5), centered=True, x=None,
+                thickness=Inches(0.045), color=ACCENT):
+    """Short accent bar — the deck's recurring visual motif."""
+    left = int((SLIDE_W - width) / 2) if centered else x
+    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, y, width, thickness)
     bar.fill.solid()
-    bar.fill.fore_color.rgb = ACCENT
+    bar.fill.fore_color.rgb = color
     bar.line.fill.background()
     bar.shadow.inherit = False
     return bar
 
 
-def textbox(slide, left, top, width, height, anchor=MSO_ANCHOR.TOP):
-    tb = slide.shapes.add_textbox(left, top, width, height)
-    tf = tb.text_frame
-    tf.word_wrap = True
-    tf.vertical_anchor = anchor
-    tf.margin_left = 0
-    tf.margin_right = 0
-    tf.margin_top = 0
-    tf.margin_bottom = 0
-    return tf
+def slide_title(slide, text, size=SLIDE_TITLE):
+    """Top-aligned, centered title with an accent rule beneath it."""
+    tf = textbox(slide, MARGIN, Inches(0.85), CONTENT_W, Inches(1.35))
+    write(tf, text, size, INK, bold=True, line=1.1, first=True)
+    accent_rule(slide, Inches(2.28))
 
 
-def style(para, text, size, color, bold=False, align=PP_ALIGN.LEFT,
-          font=FONT, space_after=None, space_before=None):
-    para.alignment = align
-    if space_after is not None:
-        para.space_after = space_after
-    if space_before is not None:
-        para.space_before = space_before
-    run = para.add_run()
-    run.text = text
-    run.font.name = font
-    run.font.size = Pt(size)
-    run.font.bold = bold
-    run.font.color.rgb = color
-    return run
+def footer(slide, number):
+    tf = textbox(slide, MARGIN, Inches(6.72), Inches(3.0), Inches(0.3))
+    write(tf, "Marrow", FOOTER, MUTED, align=PP_ALIGN.LEFT, first=True)
+    tf = textbox(slide, SLIDE_W - MARGIN - Inches(3.0), Inches(6.72),
+                 Inches(3.0), Inches(0.3))
+    write(tf, str(number), FOOTER, MUTED, align=PP_ALIGN.RIGHT, first=True)
 
 
-# =========================================================
-# Slide 1 — Title
-# =========================================================
-s = add_slide()
-accent_bar(s, Inches(1.0), Inches(2.55), w=Inches(1.4), h=Inches(0.12))
-tf = textbox(s, Inches(1.0), Inches(2.75), Inches(11.3), Inches(2.4))
-style(tf.paragraphs[0], "Marrow", 88, TEXT, bold=True)
-p = tf.add_paragraph()
-style(p, "Know what your tests actually cover.", 30, MUTED, space_before=Pt(14))
+def bullets(slide, lines, top, width=Inches(9.4)):
+    """Left-aligned bullet column, centered on the slide."""
+    x = int((SLIDE_W - width) / 2)
+    tf = textbox(slide, x, top, width, Inches(2.6))
+    for i, text in enumerate(lines):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        p.space_after = Pt(16)
+        p.line_spacing = 1.3
+        dot = p.add_run()
+        dot.text = "•   "
+        dot.font.name = FONT
+        dot.font.size = BODY
+        dot.font.bold = True
+        dot.font.color.rgb = ACCENT
+        run = p.add_run()
+        run.text = text
+        run.font.name = FONT
+        run.font.size = BODY
+        run.font.color.rgb = INK
 
-# =========================================================
-# Slide 2 — The problem
-# =========================================================
-s = add_slide()
-accent_bar(s, Inches(1.0), Inches(1.1))
-tf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(1.4))
-style(tf.paragraphs[0], "Big test suites hide their gaps.", 44, TEXT, bold=True)
 
-tf = textbox(s, Inches(1.0), Inches(3.2), Inches(10.8), Inches(3.0))
-lines = [
-    "Large suites are slow to run.",
+# ---------------------------------------------------------------- 1. Title
+
+s = new_slide()
+tf = textbox(s, MARGIN, Inches(2.55), CONTENT_W, Inches(1.3))
+write(tf, "Marrow", DECK_TITLE, INK, bold=True, first=True)
+accent_rule(s, Inches(3.95), width=Inches(2.0))
+tf = textbox(s, MARGIN, Inches(4.35), CONTENT_W, Inches(0.7))
+write(tf, "Know what your tests actually cover.", LEAD, MUTED, first=True)
+tf = textbox(s, MARGIN, Inches(6.62), CONTENT_W, Inches(0.4))
+write(tf, "A CLI that maps a repo's tests to the code they actually cover.",
+      FOOTER, MUTED, first=True)
+
+# ---------------------------------------------------------------- 2. The problem
+
+s = new_slide()
+slide_title(s, "Big test suites hide their gaps.")
+bullets(s, [
+    "Large suites are slow — a full run is a coffee break, not a feedback loop.",
     "Nobody knows which tests cover which code.",
-    "Dead tests linger, and real gaps go unnoticed.",
-]
-for i, t in enumerate(lines):
-    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-    r = style(p, "—  ", 26, ACCENT, bold=True, space_after=Pt(16))
-    run = p.add_run()
-    run.text = t
-    run.font.name = FONT
-    run.font.size = Pt(26)
-    run.font.color.rgb = TEXT
+    "So dead tests linger, and real gaps go unnoticed.",
+], Inches(3.05))
+footer(s, 2)
 
-# =========================================================
-# Slide 3 — The idea
-# =========================================================
-s = add_slide()
-accent_bar(s, Inches(1.0), Inches(1.1))
-tf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(2.2))
-style(tf.paragraphs[0], "Watch one run.", 52, TEXT, bold=True)
-p = tf.add_paragraph()
-style(p, "Draw the real map.", 52, ACCENT, bold=True)
+# ---------------------------------------------------------------- 3. The idea
 
-tf = textbox(s, Inches(1.0), Inches(4.35), Inches(10.6), Inches(2.2))
-style(tf.paragraphs[0],
-      "Marrow instruments a single test run and produces a "
-      "test → code coverage map.", 26, TEXT, space_after=Pt(10))
-p = tf.add_paragraph()
-style(p, "No annotations. No config.", 24, MUTED)
+s = new_slide()
+slide_title(s, "Watch one run. Draw the real map.")
+tf = textbox(s, Inches(2.1), Inches(3.1), SLIDE_W - 2 * Inches(2.1), Inches(1.6))
+write(tf, "Marrow instruments a single test run and produces a "
+          "test→code coverage map.", LEAD, INK, line=1.35, first=True)
+tf = textbox(s, MARGIN, Inches(4.62), CONTENT_W, Inches(0.6))
+write(tf, "No annotations.   No config.", BODY, ACCENT, bold=True, first=True)
+footer(s, 3)
 
-# =========================================================
-# Slide 4 — How it works
-# =========================================================
-s = add_slide()
-accent_bar(s, Inches(1.0), Inches(1.1))
-tf = textbox(s, Inches(1.0), Inches(1.45), Inches(11.3), Inches(1.2))
-style(tf.paragraphs[0], "How it works", 44, TEXT, bold=True)
+# ---------------------------------------------------------------- 4. How it works
+
+s = new_slide()
+slide_title(s, "How it works")
 
 steps = [
-    ("1", "Run", "marrow watch -- <your test cmd>", True),
-    ("2", "Record", "Marrow records which lines each test exercised.", False),
-    ("3", "Map", "It emits an interactive map plus a list of dead "
-                 "tests and untested lines.", False),
+    ("01", "Run", "marrow watch -- <your test cmd>", ""),
+    ("02", "", "", "Marrow records which lines each test exercised."),
+    ("03", "", "", "It emits an interactive map, plus a list of dead tests "
+                   "and untested lines."),
 ]
-col_w = Inches(3.6)
-gap = Inches(0.35)
-start_x = Inches(1.0)
-top = Inches(3.1)
-h = Inches(3.0)
-for i, (num, head, body, mono) in enumerate(steps):
-    x = start_x + (col_w + gap) * i
-    card = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, top, col_w, h)
+
+gap = Inches(0.5)
+col_w = int((CONTENT_W - 2 * gap) / 3)
+card_top, card_h = Inches(2.95), Inches(2.75)
+
+for i, (num, prefix, code, plain) in enumerate(steps):
+    x = MARGIN + i * (col_w + gap)
+
+    card = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, card_top,
+                              col_w, card_h)
     card.fill.solid()
-    card.fill.fore_color.rgb = PANEL
-    card.line.color.rgb = ACCENT
-    card.line.width = Pt(1.0)
+    card.fill.fore_color.rgb = CARD
+    card.line.color.rgb = HAIRLINE
+    card.line.width = Pt(1)
     card.shadow.inherit = False
+    card.adjustments[0] = 0.04
 
-    tf = textbox(s, x + Inches(0.35), top + Inches(0.3),
-                 col_w - Inches(0.7), h - Inches(0.6))
-    style(tf.paragraphs[0], num, 40, ACCENT, bold=True, space_after=Pt(6))
-    p = tf.add_paragraph()
-    style(p, head, 24, TEXT, bold=True, space_after=Pt(12))
-    p = tf.add_paragraph()
-    if mono:
-        r = style(p, body, 16, TEXT, font="Courier New")
-    else:
-        style(p, body, 18, MUTED)
+    inset = Inches(0.4)
+    tf = textbox(s, x + inset, card_top + Inches(0.4),
+                 col_w - 2 * inset, Inches(0.45))
+    write(tf, num, Pt(15), ACCENT, bold=True, align=PP_ALIGN.LEFT, first=True)
 
-# =========================================================
-# Slide 5 — Call to action
-# =========================================================
-s = add_slide()
-accent_bar(s, Inches(1.0), Inches(2.35), w=Inches(1.4), h=Inches(0.12))
-tf = textbox(s, Inches(1.0), Inches(2.6), Inches(11.3), Inches(1.2))
-style(tf.paragraphs[0], "Install Marrow", 60, TEXT, bold=True)
+    tf = textbox(s, x + inset, card_top + Inches(1.05),
+                 col_w - 2 * inset, Inches(1.5))
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.LEFT
+    p.line_spacing = 1.3
+    for text, font, color in (
+        (prefix + " " if prefix else "", FONT, INK),
+        (code, MONO, ACCENT),
+        (plain, FONT, INK),
+    ):
+        if not text:
+            continue
+        run = p.add_run()
+        run.text = text
+        run.font.name = font
+        run.font.size = STEP
+        run.font.color.rgb = color
 
-# command chip
+footer(s, 4)
+
+# ---------------------------------------------------------------- 5. Call to action
+
+s = new_slide()
+slide_title(s, "Install Marrow")
+
+chip_w, chip_h = Inches(5.4), Inches(1.15)
 chip = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
-                          Inches(1.0), Inches(3.95), Inches(5.2), Inches(0.95))
+                          int((SLIDE_W - chip_w) / 2), Inches(3.15),
+                          chip_w, chip_h)
 chip.fill.solid()
-chip.fill.fore_color.rgb = PANEL
+chip.fill.fore_color.rgb = CARD
 chip.line.color.rgb = ACCENT
-chip.line.width = Pt(1.0)
+chip.line.width = Pt(1.25)
 chip.shadow.inherit = False
-ctf = chip.text_frame
-ctf.vertical_anchor = MSO_ANCHOR.MIDDLE
-ctf.margin_left = Inches(0.35)
-style(ctf.paragraphs[0], "pipx install marrow", 28, TEXT, font="Courier New")
+chip.adjustments[0] = 0.16
 
-tf = textbox(s, Inches(1.0), Inches(5.35), Inches(11.3), Inches(0.8))
-style(tf.paragraphs[0], "Works with pytest, Jest, go test.", 24, MUTED)
+tf = chip.text_frame
+tf.word_wrap = True
+tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+write(tf, "pipx install marrow", Pt(28), INK, bold=True, font=MONO, first=True)
+
+tf = textbox(s, MARGIN, Inches(4.72), CONTENT_W, Inches(0.5))
+write(tf, "Works with pytest, Jest, go test.", LEAD, MUTED, first=True)
+footer(s, 5)
+
+# ---------------------------------------------------------------- save
 
 prs.save("deck.pptx")
-print("Saved deck.pptx")
+print(f"Wrote deck.pptx — {len(prs.slides)} slides")
