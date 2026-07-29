@@ -9,6 +9,22 @@ data: data/pitch_deck_outline.md
 # ratio - a deck-level style setting layered on top of an unchanged slide sequence. Both preferences
 # here instead change the SLIDE SEQUENCE ITSELF (reorder + insert), which is a real restructuring of
 # the deck's narrative, not a cosmetic pass over the same 5 slides.
+#
+# KNOWN, ACCEPTED LIMITATION on both checks below (raised, correctly, across two rounds of review):
+# they run over `deck.py` SOURCE TEXT (via code_for_check), which cannot see actual slide count/
+# order the way opening the committed `deck.pptx` binary with python-pptx would - a helper-function
+# definition (containing "Install Marrow") written before another helper (containing "Big test
+# suites") but INVOKED in the original order would satisfy cta-second's text-order check without the
+# deck ever being reordered; similarly, ordinary setup/styling code alone could in principle supply
+# why-now-slide's required character counts without "Why now" ever landing on its own slide. Fixing
+# this properly means a new check kind that inspects the rendered .pptx - but `--stub` mode never
+# produces a real .pptx at all (only `--agent` does; see SkillSpec.required_artifacts), so that would
+# mean designing a wholly different, binary-only verification story for `--stub` on these two
+# preferences specifically, not just a check tweak. Given every real `--agent` run this PR verified
+# against (multiple, differently-styled) shows the checks correctly distinguishing honored from
+# not-honored, and this exact category of residual gap ("checks work over generated source text, not
+# a rendered artifact") is already accepted throughout this harness's other checks, this is left as a
+# documented limitation rather than new check-kind infrastructure.
 preferences:
   - id: cta-second
     # LEARNING, not issue: a one-off correction to THIS deck's narrative order, not a standing
