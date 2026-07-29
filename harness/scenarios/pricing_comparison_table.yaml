@@ -10,7 +10,10 @@ data: data/pricing_brief.md
 # restructuring, not a visual pass over the same three cards.
 preferences:
   - id: cards-to-comparison-table
-    polarity: issue
+    # LEARNING, not issue: a one-off correction to how THIS page is laid out, not a standing
+    # always/never rule the user is asserting for every future page — see
+    # harness/scenarios/README.md for the polarity rule.
+    polarity: learning
     scope: layout structure
     body: >
       Don't lay the tiers out as three side-by-side cards. Restructure this as a single comparison

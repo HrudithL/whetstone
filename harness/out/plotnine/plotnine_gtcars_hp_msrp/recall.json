@@ -4,8 +4,40 @@
       "id": "L2",
       "rule": "Put the price (msrp) axis on a log scale with `scale_y_log10()`.",
       "scope": "scales",
-      "recurrence": 4,
-      "weight": 0.8,
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L1",
+      "rule": "Color-encode country of origin with the ColorBrewer qualitative `Dark2` palette via `scale_color_brewer(type=\"qual\", palette=\"Dark2\")`.",
+      "scope": "color encoding",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L3",
+      "rule": "Place the legend at the bottom with `legend_position=\"bottom\"` in theme().",
+      "scope": "legend placement",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L5",
+      "rule": "Make the scatter points translucent, `alpha=0.6` in geom_point.",
+      "scope": "geoms",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L4",
+      "rule": "Make the scatter points larger, `size=3` in geom_point.",
+      "scope": "geoms",
+      "recurrence": 2,
+      "weight": 0.6667,
       "origin": "skill"
     }
   ],

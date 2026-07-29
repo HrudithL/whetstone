@@ -1,4 +1,8 @@
 You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
 
 Learnings (preferences):
-  - [L2] (scales, weight 0.80) Put the price (msrp) axis on a log scale with `scale_y_log10()`.
+  - [L2] (scales, weight 0.67) Put the price (msrp) axis on a log scale with `scale_y_log10()`.
+  - [L1] (color encoding, weight 0.67) Color-encode country of origin with the ColorBrewer qualitative `Dark2` palette via `scale_color_brewer(type="qual", palette="Dark2")`.
+  - [L3] (legend placement, weight 0.67) Place the legend at the bottom with `legend_position="bottom"` in theme().
+  - [L5] (geoms, weight 0.67) Make the scatter points translucent, `alpha=0.6` in geom_point.
+  - [L4] (geoms, weight 0.67) Make the scatter points larger, `size=3` in geom_point.

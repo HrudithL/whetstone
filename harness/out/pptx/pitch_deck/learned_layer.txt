@@ -1,6 +1,5 @@
 You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
 
 Learnings (preferences):
+  - [L2] (aspect ratio, weight 0.67) Use a SQUARE 1:1 slide format: set `prs.slide_width = Inches(10)` AND `prs.slide_height = Inches(10)` on the Presentation (import Inches from `pptx.util`).
   - [L1] (typography, weight 0.67) Set every text run's font to Consolas (`run.font.name = "Consolas"`) — titles and body, on all slides.
-Issues (mandatory constraints):
-  - [I1] (aspect ratio) Use a SQUARE 1:1 slide format: set `prs.slide_width = Inches(10)` AND `prs.slide_height = Inches(10)` on the Presentation (import Inches from `pptx.util`).

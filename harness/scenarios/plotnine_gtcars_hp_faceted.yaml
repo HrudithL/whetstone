@@ -10,7 +10,10 @@ data: data/gtcars.csv
 # with independent axes - a real re-encoding of the chart, not a styling pass on the same single panel.
 preferences:
   - id: facet-by-country
-    polarity: issue
+    # LEARNING, not issue: a one-off correction to how THIS chart is structured, not a standing
+    # always/never rule the user is asserting for every future chart — see
+    # harness/scenarios/README.md for the polarity rule.
+    polarity: learning
     scope: layout structure
     body: >
       Don't color-encode country of origin on one combined scatter plot. Split it into small

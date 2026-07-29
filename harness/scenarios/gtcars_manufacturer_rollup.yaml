@@ -12,7 +12,12 @@ data: data/gtcars.csv
 # just repaint it.
 preferences:
   - id: rollup-by-manufacturer
-    polarity: issue
+    # LEARNING, not issue: this is a one-off correction to how THIS table is shaped ("I want it
+    # rolled up"), not a standing always/never house rule the user is asserting for every future
+    # table — it just happens to be structural rather than cosmetic. Polarity tracks "a soft
+    # preference to re-apply" vs. "a mandatory rule stated as an explicit always/never" (§5.2/§6),
+    # not "structural vs. cosmetic" or "how big a change it is" — see harness/scenarios/README.md.
+    polarity: learning
     scope: data organization
     body: >
       Don't list one row per car model. Roll the data up to one row per manufacturer (`mfr`), showing

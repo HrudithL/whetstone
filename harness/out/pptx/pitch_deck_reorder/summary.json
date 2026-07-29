@@ -8,41 +8,13 @@
     "max_runs": 5,
     "stick_streak": 2
   },
-  "runs": 5,
+  "runs": 3,
   "preferences": {
     "cta-second": {
-      "polarity": "issue",
+      "polarity": "learning",
       "scope": "slide order",
       "cold_honored": false,
       "runs_to_stick": 2,
-      "value_over_time": [
-        {
-          "run": 2,
-          "weight": null,
-          "recurrence": null
-        },
-        {
-          "run": 3,
-          "weight": null,
-          "recurrence": null
-        },
-        {
-          "run": 4,
-          "weight": null,
-          "recurrence": null
-        },
-        {
-          "run": 5,
-          "weight": null,
-          "recurrence": null
-        }
-      ]
-    },
-    "why-now-slide": {
-      "polarity": "learning",
-      "scope": "slide structure",
-      "cold_honored": false,
-      "runs_to_stick": 4,
       "value_over_time": [
         {
           "run": 2,
@@ -53,34 +25,43 @@
           "run": 3,
           "weight": 0.6667,
           "recurrence": 2
+        }
+      ]
+    },
+    "why-now-slide": {
+      "polarity": "learning",
+      "scope": "slide structure",
+      "cold_honored": false,
+      "runs_to_stick": 2,
+      "value_over_time": [
+        {
+          "run": 2,
+          "weight": 0.5,
+          "recurrence": 1
         },
         {
-          "run": 4,
-          "weight": 0.75,
-          "recurrence": 3
-        },
-        {
-          "run": 5,
-          "weight": 0.8,
-          "recurrence": 4
+          "run": 3,
+          "weight": 0.6667,
+          "recurrence": 2
         }
       ]
     }
   },
   "usage_kpis": {
     "skill": "pptx-pitch_deck_reorder",
-    "runs": 5,
-    "avg_learnings_applied_per_run": 0.8,
+    "runs": 3,
+    "avg_learnings_applied_per_run": 1.3333,
     "captures_by_status": {
       "committed": 2,
       "reinforced": 4,
       "noop": 0,
-      "conflict": 0
+      "conflict": 0,
+      "possible_contradiction": 0
     },
     "repeat_correction_proxy": {
-      "reinforcement_rate": 0.8,
+      "reinforcement_rate": 0.6667,
       "reinforcements": 4,
-      "learnings_created": 1
+      "learnings_created": 2
     },
     "learnings_survived_pct": {
       "value": 1.0,

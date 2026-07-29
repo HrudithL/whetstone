@@ -1,140 +1,5 @@
 [
   {
-    "type": "system",
-    "subtype": "init",
-    "data": {
-      "type": "system",
-      "subtype": "init",
-      "cwd": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u",
-      "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
-      "tools": [
-        "Bash",
-        "Edit",
-        "Glob",
-        "Grep",
-        "Read",
-        "Skill",
-        "Write"
-      ],
-      "mcp_servers": [],
-      "model": "claude-opus-5[1m]",
-      "permissionMode": "default",
-      "slash_commands": [
-        "pptx",
-        "design-sync",
-        "dataviz",
-        "update-config",
-        "verify",
-        "debug",
-        "code-review",
-        "simplify",
-        "batch",
-        "fewer-permission-prompts",
-        "doctor",
-        "loop",
-        "schedule",
-        "claude-api",
-        "run",
-        "run-skill-generator",
-        "agents",
-        "clear",
-        "color",
-        "compact",
-        "config",
-        "context",
-        "effort",
-        "fast",
-        "heapdump",
-        "init",
-        "mcp",
-        "model",
-        "__remote-workflow",
-        "workflow-launch-exec",
-        "reload-skills",
-        "rename",
-        "review",
-        "security-review",
-        "usage-credits",
-        "extra-usage",
-        "usage",
-        "insights",
-        "recap",
-        "goal",
-        "design",
-        "design-consent",
-        "design-revoke",
-        "team-onboarding"
-      ],
-      "apiKeySource": "none",
-      "claude_code_version": "2.1.220",
-      "output_style": "default",
-      "agents": [
-        "claude",
-        "claude-code-guide",
-        "Explore",
-        "general-purpose",
-        "Plan",
-        "statusline-setup"
-      ],
-      "skills": [
-        "pptx",
-        "design-sync",
-        "dataviz",
-        "update-config",
-        "verify",
-        "debug",
-        "code-review",
-        "simplify",
-        "batch",
-        "fewer-permission-prompts",
-        "doctor",
-        "loop",
-        "schedule",
-        "claude-api",
-        "run",
-        "run-skill-generator"
-      ],
-      "plugins": [],
-      "capabilities": [
-        "interrupt_receipt_v1",
-        "interrupt_cancel_queued_v1",
-        "msg_lifecycle_v1"
-      ],
-      "analytics_disabled": false,
-      "product_feedback_disabled": false,
-      "uuid": "f99d042b-bff8-488f-97df-f3ec1b096d29",
-      "memory_paths": {
-        "auto": "/Users/hrudithl/.claude/projects/-private-var-folders-3m-v29g5g8n3m737cc9llvckcjr0000gp-T-whetstone-showcase-pitch-deck-o7mm022u/memory/"
-      },
-      "fast_mode_state": "off",
-      "fast_mode_disabled_reason": "preference"
-    }
-  },
-  {
-    "type": "RateLimitEvent",
-    "rate_limit_info": {
-      "type": "RateLimitInfo",
-      "status": "allowed_warning",
-      "resets_at": 1785542400,
-      "rate_limit_type": "overage",
-      "utilization": 0.78,
-      "overage_status": null,
-      "overage_resets_at": null,
-      "overage_disabled_reason": null,
-      "raw": {
-        "status": "allowed_warning",
-        "resetsAt": 1785542400,
-        "rateLimitType": "overage",
-        "utilization": 0.78,
-        "isUsingOverage": false,
-        "overageInUse": true,
-        "surpassedThreshold": 0.75
-      }
-    },
-    "uuid": "2036afa1-ba60-46e0-ba5c-bee1400da24b",
-    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204"
-  },
-  {
     "type": "assistant",
     "content": [
       {
@@ -166,12 +31,9 @@
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_01JhbzRCeYaqigoNLQZQLYLv",
-        "name": "Read",
-        "input": {
-          "file_path": "/Users/hrudith.lakshminarasimman/pitch_deck_outline.md"
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Read"
       }
     ],
     "model": "claude-opus-5",
@@ -198,26 +60,24 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_01JhbzRCeYaqigoNLQZQLYLv",
-        "content": "File does not exist. Note: your current working directory is /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u.",
-        "is_error": true
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "27bad712-40a5-4a07-bcf1-55dd164bc8a0",
     "parent_tool_use_id": null,
-    "tool_use_result": "Error: File does not exist. Note: your current working directory is /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u."
+    "tool_use_result": {
+      "type": "elided",
+      "reason": "tool result"
+    }
   },
   {
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_01TPzpJWKNu1Zfg84489HCwd",
-        "name": "Skill",
-        "input": {
-          "skill": "pptx"
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Skill"
       }
     ],
     "model": "claude-opus-5",
@@ -244,25 +104,24 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_01TPzpJWKNu1Zfg84489HCwd",
-        "content": "Launching skill: pptx",
-        "is_error": null
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "e85480ce-4155-4aab-bb7f-e869a5428f7e",
     "parent_tool_use_id": null,
     "tool_use_result": {
-      "success": true,
-      "commandName": "pptx"
+      "type": "elided",
+      "reason": "tool result"
     }
   },
   {
     "type": "user",
     "content": [
       {
-        "type": "text",
-        "text": "Base directory for this skill: /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/.claude/skills/pptx\n\n# PPTX (slide decks)\n\nBuild presentation decks in Python with **python-pptx**. Produce one deck that reads as a single,\nconsistent product: a coherent type scale, a small palette, and a predictable slide layout.\n\n## Workflow\n\n1. **Plan the deck** from the brief: the slide sequence (title slide \u2192 one idea per content slide),\n   a small palette (a background, a text color, one accent), and a type treatment (one family, a\n   title size and a body size).\n2. **Build it** with `python-pptx`:\n   - `from pptx import Presentation`, `from pptx.util import Inches, Pt`, and (as needed)\n     `from pptx.dml.color import RGBColor`, `from pptx.enum.text import PP_ALIGN`.\n   - Add slides from layouts (`prs.slide_layouts[...]`); set each slide's title and body text.\n   - Style deliberately: set `run.font.name`, `run.font.size = Pt(...)`, `run.font.color.rgb =\n     RGBColor(...)`, and paragraph `alignment` where it serves the design.\n   - Keep one slide per idea; do not overfill.\n3. **Save and verify**: `prs.save(\"deck.pptx\")`, then run the script so the `.pptx` is actually\n   produced.\n\n## Defaults (used only absent an instruction)\n\n- A clean, legible sans-serif family, titles noticeably larger than body.\n- Titles read top-aligned and, by convention, **centered** unless the design says otherwise.\n- A light slide background with dark text and a single restrained accent color.\n- Generous margins; a handful of bullets per slide at most.\n\n## Rule 0 \u2014 the user's instructions override every default\n\nEvery default above is just a default. Any explicit instruction in the prompt or the learned layer\n(a specific font, title alignment, slide size, background color, accent) **wins** \u2014 apply it exactly\nto every slide and drop the conflicting default silently. The defaults decide what to do only *in\nthe absence of* an instruction; they never override one.\n"
+        "type": "elided",
+        "reason": "long text",
+        "length": 2004
       }
     ],
     "uuid": "110d4087-7176-4cd5-9815-4f67fe6c6043",
@@ -302,13 +161,9 @@
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_016xA3GojU2vXbXETRKXyPSF",
-        "name": "Bash",
-        "input": {
-          "command": "ls -la && cat pitch_deck_outline.md",
-          "description": "List directory and read outline"
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
       }
     ],
     "model": "claude-opus-5",
@@ -335,20 +190,15 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_016xA3GojU2vXbXETRKXyPSF",
-        "content": "total 8\ndrwx------@   4 hrudithl  staff    128 Jul 28 23:43 .\ndrwx------@ 452 hrudithl  staff  14464 Jul 28 23:43 ..\ndrwxr-xr-x@   3 hrudithl  staff     96 Jul 28 23:43 .claude\n-rw-r--r--@   1 hrudithl  staff    887 Jul 28 14:37 pitch_deck_outline.md\n# Outline: Marrow \u2014 short pitch deck\n\nA 5-slide pitch deck for Marrow, a CLI that maps a repo's tests to the code they actually cover.\nOne idea per slide.\n\n1. **Title** \u2014 \"Marrow\" / subtitle: \"Know what your tests actually cover.\"\n2. **The problem** \u2014 \"Big test suites hide their gaps.\" Large suites are slow and nobody knows which\n   tests cover which code, so dead tests linger and real gaps go unnoticed.\n3. **The idea** \u2014 \"Watch one run. Draw the real map.\" Marrow instruments a single test run and\n   produces a test\u2192code coverage map \u2014 no annotations, no config.\n4. **How it works** \u2014 three steps: run `marrow watch -- <your test cmd>`; Marrow records which lines\n   each test exercised; it emits an interactive map plus a list of dead tests and untested lines.\n5. **Call to action** \u2014 \"Install Marrow\" / `pipx install marrow` / \"Works with pytest, Jest, go test.\"",
-        "is_error": false
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "62162874-1f6b-4607-aa6e-6cfa4146bf60",
     "parent_tool_use_id": null,
     "tool_use_result": {
-      "stdout": "total 8\ndrwx------@   4 hrudithl  staff    128 Jul 28 23:43 .\ndrwx------@ 452 hrudithl  staff  14464 Jul 28 23:43 ..\ndrwxr-xr-x@   3 hrudithl  staff     96 Jul 28 23:43 .claude\n-rw-r--r--@   1 hrudithl  staff    887 Jul 28 14:37 pitch_deck_outline.md\n# Outline: Marrow \u2014 short pitch deck\n\nA 5-slide pitch deck for Marrow, a CLI that maps a repo's tests to the code they actually cover.\nOne idea per slide.\n\n1. **Title** \u2014 \"Marrow\" / subtitle: \"Know what your tests actually cover.\"\n2. **The problem** \u2014 \"Big test suites hide their gaps.\" Large suites are slow and nobody knows which\n   tests cover which code, so dead tests linger and real gaps go unnoticed.\n3. **The idea** \u2014 \"Watch one run. Draw the real map.\" Marrow instruments a single test run and\n   produces a test\u2192code coverage map \u2014 no annotations, no config.\n4. **How it works** \u2014 three steps: run `marrow watch -- <your test cmd>`; Marrow records which lines\n   each test exercised; it emits an interactive map plus a list of dead tests and untested lines.\n5. **Call to action** \u2014 \"Install Marrow\" / `pipx install marrow` / \"Works with pytest, Jest, go test.\"",
-      "stderr": "",
-      "interrupted": false,
-      "isImage": false,
-      "noOutputExpected": false
+      "type": "elided",
+      "reason": "tool result"
     }
   },
   {
@@ -384,13 +234,9 @@
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_01TwGjeDRa6Kf3F48qGiyxsw",
-        "name": "Bash",
-        "input": {
-          "command": "python3 -c \"import pptx; print(pptx.__version__)\"",
-          "description": "Check python-pptx version"
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
       }
     ],
     "model": "claude-opus-5",
@@ -417,20 +263,15 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_01TwGjeDRa6Kf3F48qGiyxsw",
-        "content": "1.0.2",
-        "is_error": false
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "9b3561ac-30f3-4eef-8c73-2464aaf75c58",
     "parent_tool_use_id": null,
     "tool_use_result": {
-      "stdout": "1.0.2",
-      "stderr": "",
-      "interrupted": false,
-      "isImage": false,
-      "noOutputExpected": false
+      "type": "elided",
+      "reason": "tool result"
     }
   },
   {
@@ -520,13 +361,9 @@
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_01Lbyju3fiJkHjREaaKJUFX6",
-        "name": "Bash",
-        "input": {
-          "command": "python3 deck.py && ls -la",
-          "description": "Run deck.py to build deck.pptx"
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
       }
     ],
     "model": "claude-opus-5",
@@ -553,20 +390,15 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_01Lbyju3fiJkHjREaaKJUFX6",
-        "content": "wrote deck.pptx \u2014 5 slides, 10x10 in\ntotal 104\ndrwx------@   6 hrudithl  staff    192 Jul 28 23:44 .\ndrwx------@ 452 hrudithl  staff  14464 Jul 28 23:44 ..\ndrwxr-xr-x@   3 hrudithl  staff     96 Jul 28 23:43 .claude\n-rw-r--r--@   1 hrudithl  staff  35356 Jul 28 23:44 deck.pptx\n-rw-r--r--@   1 hrudithl  staff   9441 Jul 28 23:44 deck.py\n-rw-r--r--@   1 hrudithl  staff    887 Jul 28 14:37 pitch_deck_outline.md",
-        "is_error": false
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "231af489-84cf-45b6-82c1-4fc8746a54fd",
     "parent_tool_use_id": null,
     "tool_use_result": {
-      "stdout": "wrote deck.pptx \u2014 5 slides, 10x10 in\ntotal 104\ndrwx------@   6 hrudithl  staff    192 Jul 28 23:44 .\ndrwx------@ 452 hrudithl  staff  14464 Jul 28 23:44 ..\ndrwxr-xr-x@   3 hrudithl  staff     96 Jul 28 23:43 .claude\n-rw-r--r--@   1 hrudithl  staff  35356 Jul 28 23:44 deck.pptx\n-rw-r--r--@   1 hrudithl  staff   9441 Jul 28 23:44 deck.py\n-rw-r--r--@   1 hrudithl  staff    887 Jul 28 14:37 pitch_deck_outline.md",
-      "stderr": "",
-      "interrupted": false,
-      "isImage": false,
-      "noOutputExpected": false
+      "type": "elided",
+      "reason": "tool result"
     }
   },
   {
@@ -602,14 +434,9 @@
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_01T7jW5gRN9VMUPPrb4uKUZR",
-        "name": "Bash",
-        "input": {
-          "command": "T=$(mktemp -d); soffice --headless --convert-to pdf --outdir \"$T\" deck.pptx >/dev/null 2>&1; cd \"$T\" && ls && python3 -c \"\nimport subprocess\nsubprocess.run(['pdftoppm','-r','60','-png','deck.pdf','p'])\n\"; ls \"$T\"; echo \"$T\"",
-          "description": "Render deck to PNGs in temp dir for visual check",
-          "timeout": 180000
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
       }
     ],
     "model": "claude-opus-5",
@@ -636,20 +463,15 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_01T7jW5gRN9VMUPPrb4uKUZR",
-        "content": "I/O Error: Couldn't open file 'deck.pdf': No such file or directory.\n/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/tmp.9B32FYXoWN\nShell cwd was reset to /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u",
-        "is_error": false
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "e85a3eac-48e0-4617-8415-21832f4763b9",
     "parent_tool_use_id": null,
     "tool_use_result": {
-      "stdout": "I/O Error: Couldn't open file 'deck.pdf': No such file or directory.\n/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/tmp.9B32FYXoWN",
-      "stderr": "\nShell cwd was reset to /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u",
-      "interrupted": false,
-      "isImage": false,
-      "noOutputExpected": false
+      "type": "elided",
+      "reason": "tool result"
     }
   },
   {
@@ -685,13 +507,9 @@
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_01YKtnQfeBpPefstokzXbLfR",
-        "name": "Bash",
-        "input": {
-          "command": "python3 - <<'EOF'\nfrom pptx import Presentation\nfrom pptx.util import Emu\np=Presentation(\"deck.pptx\")\nfor i,s in enumerate(p.slides,1):\n    print(f\"--- slide {i}\")\n    for sh in s.shapes:\n        if not sh.has_text_frame or not sh.text_frame.text.strip():\n            continue\n        w=Emu(sh.width).inches; l=Emu(sh.left).inches; t=Emu(sh.top).inches\n        for para in sh.text_frame.paragraphs:\n            txt=\"\".join(r.text for r in para.runs)\n            if not txt.strip(): continue\n            pt=max((r.font.size.pt for r in para.runs if r.font.size),default=18)\n            # Consolas advance = 0.55 em\n            est=len(txt)*0.55*pt/72\n            avail=w - (sh.text_frame.margin_left+sh.text_frame.margin_right)/914400\n            flag=\"OVERFLOW\" if est>avail+0.02 else \"\"\n            print(f\" [{l:.2f},{t:.2f} w{w:.2f}] {pt:g}pt est{est:.2f}/{avail:.2f} {flag} {txt[:55]!r}\")\n        if t+Emu(sh.height).inches>10.05: print(\"   !! bottom past slide\")\nEOF",
-          "description": "Check text fit and overflow across slides"
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
       }
     ],
     "model": "claude-opus-5",
@@ -718,20 +536,15 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_01YKtnQfeBpPefstokzXbLfR",
-        "content": "--- slide 1\n [0.95,3.50 w8.10] 76pt est3.48/8.10  'Marrow'\n [0.95,5.50 w8.10] 21pt est5.78/8.10  'Know what your tests actually cover.'\n [0.95,6.40 w8.10] 15pt est2.75/8.10  '$ marrow watch -- pytest'\n [0.95,9.15 w8.10] 10.5pt est3.53/8.10  'a CLI that maps tests to the code they cover'\n--- slide 2\n [0.95,1.00 w8.10] 34pt est8.31/8.10 OVERFLOW 'Big test suites hide their gaps.'\n [0.95,9.15 w8.10] 10.5pt est1.60/8.10  'the problem   \u00b7   02'\n [0.95,3.10 w8.10] 21pt est8.18/8.10 OVERFLOW 'Large suites are slow, and nobody knows which tests'\n [0.95,3.10 w8.10] 21pt est2.73/8.10  'cover which code.'\n [1.50,4.60 w7.55] 16pt est2.20/7.55  'Dead tests linger.'\n [1.50,4.94 w7.55] 16pt est4.40/7.55  'They pass forever and guard nothing.'\n [1.50,5.75 w7.55] 16pt est2.81/7.55  'Real gaps go unnoticed.'\n [1.50,6.09 w7.55] 16pt est4.77/7.55  'A green run says little about coverage.'\n [1.50,6.90 w7.55] 16pt est1.71/7.55  'Slow feedback.'\n [1.50,7.24 w7.55] 16pt est5.13/7.55  'Everything runs because nothing is mapped.'\n--- slide 3\n [0.95,1.00 w8.10] 34pt est8.57/8.10 OVERFLOW 'Watch one run. Draw the real map.'\n [0.95,9.15 w8.10] 10.5pt est1.36/8.10  'the idea   \u00b7   03'\n [0.95,3.20 w8.10] 21pt est8.18/8.10 OVERFLOW 'Marrow instruments a single test run and produces a'\n [0.95,3.20 w8.10] 21pt est4.01/8.10  'test \u2192 code coverage map.'\n [0.95,5.20 w8.10] 21pt est2.25/7.10  'no annotations'\n [0.95,5.20 w8.10] 21pt est1.44/7.10  'no config'\n [0.95,5.20 w8.10] 21pt est3.53/7.10  'one run, the whole map'\n [0.95,7.80 w8.10] 16pt est5.50/8.10  'Point it at the test command you already use.'\n--- slide 4\n [0.95,1.00 w8.10] 34pt est3.12/8.10  'How it works'\n [0.95,9.15 w8.10] 10.5pt est1.68/8.10  'how it works   \u00b7   04'\n [0.95,3.20 w1.00] 30pt est0.46/1.00  '01'\n [2.05,3.25 w7.00] 21pt est0.96/7.00  'Run it'\n [2.05,3.80 w7.00] 15pt est3.78/6.60  '$ marrow watch -- <your test cmd>'\n [0.95,5.00 w1.00] 30pt est0.46/1.00  '02'\n [2.05,5.05 w7.00] 21pt est1.60/7.00  'It records'\n [2.05,5.62 w7.00] 16pt est3.79/7.00  'which lines each test exercised'\n [0.95,6.80 w1.00] 30pt est0.46/1.00  '03'\n [2.05,6.85 w7.00] 21pt est1.28/7.00  'It emits'\n [2.05,7.42 w7.00] 16pt est5.87/7.00  'an interactive map + dead tests + untested lines'\n--- slide 5\n [0.95,1.00 w8.10] 34pt est3.64/8.10  'Install Marrow'\n [0.95,9.15 w8.10] 10.5pt est1.60/8.10  'get started   \u00b7   05'\n [0.95,4.00 w8.10] 27pt est4.33/7.90  '$ pipx install marrow'\n [0.95,6.10 w8.10] 21pt est5.29/8.10  'Works with pytest, Jest, go test.'\n [0.95,7.60 w8.10] 16pt est4.40/8.10  'Know what your tests actually cover.'",
-        "is_error": false
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "fdc767b0-281c-4d51-9af9-f8e778994845",
     "parent_tool_use_id": null,
     "tool_use_result": {
-      "stdout": "--- slide 1\n [0.95,3.50 w8.10] 76pt est3.48/8.10  'Marrow'\n [0.95,5.50 w8.10] 21pt est5.78/8.10  'Know what your tests actually cover.'\n [0.95,6.40 w8.10] 15pt est2.75/8.10  '$ marrow watch -- pytest'\n [0.95,9.15 w8.10] 10.5pt est3.53/8.10  'a CLI that maps tests to the code they cover'\n--- slide 2\n [0.95,1.00 w8.10] 34pt est8.31/8.10 OVERFLOW 'Big test suites hide their gaps.'\n [0.95,9.15 w8.10] 10.5pt est1.60/8.10  'the problem   \u00b7   02'\n [0.95,3.10 w8.10] 21pt est8.18/8.10 OVERFLOW 'Large suites are slow, and nobody knows which tests'\n [0.95,3.10 w8.10] 21pt est2.73/8.10  'cover which code.'\n [1.50,4.60 w7.55] 16pt est2.20/7.55  'Dead tests linger.'\n [1.50,4.94 w7.55] 16pt est4.40/7.55  'They pass forever and guard nothing.'\n [1.50,5.75 w7.55] 16pt est2.81/7.55  'Real gaps go unnoticed.'\n [1.50,6.09 w7.55] 16pt est4.77/7.55  'A green run says little about coverage.'\n [1.50,6.90 w7.55] 16pt est1.71/7.55  'Slow feedback.'\n [1.50,7.24 w7.55] 16pt est5.13/7.55  'Everything runs because nothing is mapped.'\n--- slide 3\n [0.95,1.00 w8.10] 34pt est8.57/8.10 OVERFLOW 'Watch one run. Draw the real map.'\n [0.95,9.15 w8.10] 10.5pt est1.36/8.10  'the idea   \u00b7   03'\n [0.95,3.20 w8.10] 21pt est8.18/8.10 OVERFLOW 'Marrow instruments a single test run and produces a'\n [0.95,3.20 w8.10] 21pt est4.01/8.10  'test \u2192 code coverage map.'\n [0.95,5.20 w8.10] 21pt est2.25/7.10  'no annotations'\n [0.95,5.20 w8.10] 21pt est1.44/7.10  'no config'\n [0.95,5.20 w8.10] 21pt est3.53/7.10  'one run, the whole map'\n [0.95,7.80 w8.10] 16pt est5.50/8.10  'Point it at the test command you already use.'\n--- slide 4\n [0.95,1.00 w8.10] 34pt est3.12/8.10  'How it works'\n [0.95,9.15 w8.10] 10.5pt est1.68/8.10  'how it works   \u00b7   04'\n [0.95,3.20 w1.00] 30pt est0.46/1.00  '01'\n [2.05,3.25 w7.00] 21pt est0.96/7.00  'Run it'\n [2.05,3.80 w7.00] 15pt est3.78/6.60  '$ marrow watch -- <your test cmd>'\n [0.95,5.00 w1.00] 30pt est0.46/1.00  '02'\n [2.05,5.05 w7.00] 21pt est1.60/7.00  'It records'\n [2.05,5.62 w7.00] 16pt est3.79/7.00  'which lines each test exercised'\n [0.95,6.80 w1.00] 30pt est0.46/1.00  '03'\n [2.05,6.85 w7.00] 21pt est1.28/7.00  'It emits'\n [2.05,7.42 w7.00] 16pt est5.87/7.00  'an interactive map + dead tests + untested lines'\n--- slide 5\n [0.95,1.00 w8.10] 34pt est3.64/8.10  'Install Marrow'\n [0.95,9.15 w8.10] 10.5pt est1.60/8.10  'get started   \u00b7   05'\n [0.95,4.00 w8.10] 27pt est4.33/7.90  '$ pipx install marrow'\n [0.95,6.10 w8.10] 21pt est5.29/8.10  'Works with pytest, Jest, go test.'\n [0.95,7.60 w8.10] 16pt est4.40/8.10  'Know what your tests actually cover.'",
-      "stderr": "",
-      "interrupted": false,
-      "isImage": false,
-      "noOutputExpected": false
+      "type": "elided",
+      "reason": "tool result"
     }
   },
   {
@@ -1023,13 +836,9 @@
     "type": "assistant",
     "content": [
       {
-        "type": "tool_use",
-        "id": "toolu_01LTN4c42qfGxeYFg69MHVdh",
-        "name": "Bash",
-        "input": {
-          "command": "python3 deck.py && python3 - <<'EOF'\nfrom pptx import Presentation\nfrom pptx.util import Emu\np=Presentation(\"deck.pptx\")\nbad=0; fonts=set()\nfor i,s in enumerate(p.slides,1):\n    for sh in s.shapes:\n        if not sh.has_text_frame: continue\n        for para in sh.text_frame.paragraphs:\n            for r in para.runs: fonts.add(r.font.name)\n            txt=\"\".join(r.text for r in para.runs)\n            if not txt.strip(): continue\n            pt=max((r.font.size.pt for r in para.runs if r.font.size),default=18)\n            est=len(txt)*0.55*pt/72\n            avail=Emu(sh.width).inches-(sh.text_frame.margin_left+sh.text_frame.margin_right)/914400\n            if est>avail: bad+=1; print(f\"slide{i} OVERFLOW {est:.2f}/{avail:.2f} {txt!r}\")\nprint(\"slides:\",len(p.slides.__iter__.__self__._sldIdLst),\"size:\",p.slide_width.inches,\"x\",p.slide_height.inches)\nprint(\"fonts:\",fonts,\"| overflows:\",bad)\nEOF",
-          "description": "Rebuild deck and re-verify fit, fonts, size"
-        }
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
       }
     ],
     "model": "claude-opus-5",
@@ -1056,28 +865,24 @@
     "type": "user",
     "content": [
       {
-        "type": "tool_result",
-        "tool_use_id": "toolu_01LTN4c42qfGxeYFg69MHVdh",
-        "content": "wrote deck.pptx \u2014 5 slides, 10x10 in\nslides: 5 size: 10.0 x 10.0\nfonts: {'Consolas'} | overflows: 0",
-        "is_error": false
+        "type": "elided",
+        "reason": "tool result"
       }
     ],
     "uuid": "3c476a1f-1294-4b01-a59b-745d932007cc",
     "parent_tool_use_id": null,
     "tool_use_result": {
-      "stdout": "wrote deck.pptx \u2014 5 slides, 10x10 in\nslides: 5 size: 10.0 x 10.0\nfonts: {'Consolas'} | overflows: 0",
-      "stderr": "",
-      "interrupted": false,
-      "isImage": false,
-      "noOutputExpected": false
+      "type": "elided",
+      "reason": "tool result"
     }
   },
   {
     "type": "assistant",
     "content": [
       {
-        "type": "text",
-        "text": "Built and verified. `deck.py` produces `deck.pptx` \u2014 5 slides, no other files created.\n\n**Design:** square 10\u00d710 in slides, Consolas on every run (titles and body), warm off-white page (`#F6F5F2`) with near-black ink, gray secondary text, and one accent \u2014 burnt orange (`#C2410C`). Titles are top-aligned and centered over a short accent rule; each content slide carries a small `section \u00b7 number` footer.\n\n**Slides:**\n1. **Title** \u2014 \"Marrow\" at 76pt, subtitle \"Know what your tests actually cover.\", plus a `$ marrow watch -- pytest` accent line.\n2. **The problem** \u2014 \"Big test suites hide their gaps.\" with the lead statement and three accent-ticked items (dead tests, unnoticed gaps, slow feedback).\n3. **The idea** \u2014 \"Watch one run. Draw the real map.\" over a dark rounded panel: no annotations / no config / **one run, the whole map**.\n4. **How it works** \u2014 three numbered steps; step 1's command sits in a dark code panel with an accent `$` prompt.\n5. **CTA** \u2014 \"Install Marrow\" with `$ pipx install marrow` in a large code panel, then \"Works with pytest, Jest, go test.\"\n\nSince LibreOffice wasn't available to render, I verified programmatically instead: all 5 slides at 10\u00d710 in, every run Consolas, and zero text lines exceeding their box width. That check caught two real problems on the first pass \u2014 Consolas is wide, so the 34pt titles on slides 2\u20133 and the 51-character 21pt lead lines both overran the margins. I dropped titles to 30pt (still a clear step above the 20pt lead), reduced the lead size, and rebroke the two long lines so each title stays on one line."
+        "type": "elided",
+        "reason": "long text",
+        "length": 1578
       }
     ],
     "model": "claude-opus-5",
@@ -1099,80 +904,5 @@
     "stop_reason": null,
     "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
     "uuid": "ed6c4ac4-2f4a-43f7-84df-7d822f46cd0f"
-  },
-  {
-    "type": "result",
-    "subtype": "success",
-    "duration_ms": 117133,
-    "duration_api_ms": 117435,
-    "is_error": false,
-    "num_turns": 14,
-    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
-    "stop_reason": "end_turn",
-    "total_cost_usd": 0.4198345,
-    "usage": {
-      "input_tokens": 20,
-      "cache_creation_input_tokens": 13387,
-      "cache_read_input_tokens": 102699,
-      "output_tokens": 9344,
-      "server_tool_use": {
-        "web_search_requests": 0,
-        "web_fetch_requests": 0
-      },
-      "service_tier": "standard",
-      "cache_creation": {
-        "ephemeral_1h_input_tokens": 13387,
-        "ephemeral_5m_input_tokens": 0
-      },
-      "inference_geo": "global",
-      "iterations": [
-        {
-          "input_tokens": 2,
-          "output_tokens": 592,
-          "cache_read_input_tokens": 17510,
-          "cache_creation_input_tokens": 572,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 572
-          },
-          "type": "message"
-        }
-      ],
-      "speed": "standard"
-    },
-    "result": "Built and verified. `deck.py` produces `deck.pptx` \u2014 5 slides, no other files created.\n\n**Design:** square 10\u00d710 in slides, Consolas on every run (titles and body), warm off-white page (`#F6F5F2`) with near-black ink, gray secondary text, and one accent \u2014 burnt orange (`#C2410C`). Titles are top-aligned and centered over a short accent rule; each content slide carries a small `section \u00b7 number` footer.\n\n**Slides:**\n1. **Title** \u2014 \"Marrow\" at 76pt, subtitle \"Know what your tests actually cover.\", plus a `$ marrow watch -- pytest` accent line.\n2. **The problem** \u2014 \"Big test suites hide their gaps.\" with the lead statement and three accent-ticked items (dead tests, unnoticed gaps, slow feedback).\n3. **The idea** \u2014 \"Watch one run. Draw the real map.\" over a dark rounded panel: no annotations / no config / **one run, the whole map**.\n4. **How it works** \u2014 three numbered steps; step 1's command sits in a dark code panel with an accent `$` prompt.\n5. **CTA** \u2014 \"Install Marrow\" with `$ pipx install marrow` in a large code panel, then \"Works with pytest, Jest, go test.\"\n\nSince LibreOffice wasn't available to render, I verified programmatically instead: all 5 slides at 10\u00d710 in, every run Consolas, and zero text lines exceeding their box width. That check caught two real problems on the first pass \u2014 Consolas is wide, so the 34pt titles on slides 2\u20133 and the 51-character 21pt lead lines both overran the margins. I dropped titles to 30pt (still a clear step above the 20pt lead), reduced the lead size, and rebroke the two long lines so each title stays on one line.",
-    "structured_output": null,
-    "model_usage": {
-      "claude-haiku-4-5-20251001": {
-        "inputTokens": 815,
-        "outputTokens": 20,
-        "cacheReadInputTokens": 0,
-        "cacheCreationInputTokens": 0,
-        "webSearchRequests": 0,
-        "costUSD": 0.000915,
-        "contextWindow": 200000,
-        "maxOutputTokens": 32000,
-        "canonicalModel": "claude-haiku-4-5",
-        "provider": "firstParty"
-      },
-      "claude-opus-5[1m]": {
-        "inputTokens": 20,
-        "outputTokens": 9344,
-        "cacheReadInputTokens": 102699,
-        "cacheCreationInputTokens": 13387,
-        "webSearchRequests": 0,
-        "costUSD": 0.4189195,
-        "contextWindow": 1000000,
-        "maxOutputTokens": 64000,
-        "canonicalModel": "claude-opus-5",
-        "provider": "firstParty"
-      }
-    },
-    "permission_denials": [],
-    "deferred_tool_use": null,
-    "errors": null,
-    "api_error_status": null,
-    "uuid": "a0e34ad6-4b73-4f1f-87bb-d6dbf5e270fd",
-    "terminal_reason": "completed"
   }
 ]

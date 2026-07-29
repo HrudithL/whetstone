@@ -35,7 +35,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "mcp",
+    # mcp 2.0.0 (released today) is a breaking major release that removes `mcp.server.fastmcp`
+    # (the FastMCP API server.py is built on) entirely in favor of a new `MCPServer`/`mcpserver`
+    # API — unrelated to this PR, but pinned here so CI (and any fresh install) doesn't silently
+    # break on it. Revisit when server.py is migrated to the new API.
+    "mcp<2",
 ]
 
 [project.urls]

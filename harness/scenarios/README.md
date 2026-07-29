@@ -10,5 +10,19 @@ validate every file and error on a missing or invalid field. Scenario `name`s ar
 **all** files (independent of skill) — a name is the `out/<skill>/<name>/` leaf and half the store id.
 
 The original six (skill `great-tables`, from the sibling `gtskill` corpus): `gtcars_hp_price`,
-`islands_sizes`, `airquality_monthly_summary`, `gtcars_top10_by_country`, `towny_growth_trends`,
-`sp500_monthly_performance`.
+`airquality_monthly_summary`, `gtcars_top10_by_country`, `towny_growth_trends`,
+`sp500_monthly_performance`, and `islands_sizes` (retired — a near-duplicate of `gtcars_hp_price`'s
+"light format tweak + heatmap color" template; five remain).
+
+## Choosing `polarity: learning` vs. `polarity: issue`
+
+This is decided by **how the correction is phrased**, not by how big or structural the change is.
+A preference is `issue` only when it reads as a standing, always/never house rule the user is
+stating for every future task in this scope — e.g. `towny_growth_trends.yaml`'s `density-magenta`
+("Never fill growth with green here (house rule)") or `pricing_cards.yaml`'s `sharp-corners`
+("Never round any corner"). Everything else — including a real data-shape/layout/slide-order
+restructuring that is a one-off correction to *this* task, not an eternal rule — is `learning`.
+Reaching for `issue` because a preference is a big or structural change (rather than a cosmetic
+tweak) mislabels a subjective, one-off correction as an objective, mandatory, permanent rule; the
+showcase's `polarity` column is read directly by site visitors (see `docs/methodology.qmd`), so a
+mislabeled entry there is not just an internal inconsistency.

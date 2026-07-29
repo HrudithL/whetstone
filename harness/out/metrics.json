@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-27T15:13:58.529106+00:00",
+  "generated_at": "2026-07-29T05:09:57.380890+00:00",
   "scenarios": {
     "landing_hero": {
       "scenario": "landing_hero",
@@ -179,30 +179,30 @@
       "runs": 5,
       "preferences": {
         "cards-to-comparison-table": {
-          "polarity": "issue",
+          "polarity": "learning",
           "scope": "layout structure",
           "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             },
             {
               "run": 4,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.75,
+              "recurrence": 3
             },
             {
               "run": 5,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.8,
+              "recurrence": 4
             }
           ]
         },
@@ -238,17 +238,18 @@
       "usage_kpis": {
         "skill": "frontend-design-pricing_comparison_table",
         "runs": 5,
-        "avg_learnings_applied_per_run": 0.0,
+        "avg_learnings_applied_per_run": 0.8,
         "captures_by_status": {
           "committed": 2,
-          "reinforced": 4,
+          "reinforced": 8,
           "noop": 0,
-          "conflict": 0
+          "conflict": 0,
+          "possible_contradiction": 0
         },
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.8,
-          "reinforcements": 4,
-          "learnings_created": 1
+          "reinforcements": 8,
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -443,20 +444,20 @@
       "runs": 3,
       "preferences": {
         "rollup-by-manufacturer": {
-          "polarity": "issue",
+          "polarity": "learning",
           "scope": "data organization",
           "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         },
@@ -468,13 +469,13 @@
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         }
@@ -482,17 +483,18 @@
       "usage_kpis": {
         "skill": "great-tables-gtcars_manufacturer_rollup",
         "runs": 3,
-        "avg_learnings_applied_per_run": 0.0,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
           "committed": 2,
-          "reinforced": 2,
+          "reinforced": 4,
           "noop": 0,
-          "conflict": 0
+          "conflict": 0,
+          "possible_contradiction": 0
         },
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.6667,
-          "reinforcements": 2,
-          "learnings_created": 1
+          "reinforcements": 4,
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -561,87 +563,6 @@
       },
       "usage_kpis": {
         "skill": "gtcars_top10_by_country",
-        "runs": 3,
-        "avg_learnings_applied_per_run": 1.3333,
-        "captures_by_status": {
-          "committed": 2,
-          "reinforced": 4,
-          "noop": 0,
-          "conflict": 0
-        },
-        "repeat_correction_proxy": {
-          "reinforcement_rate": 0.6667,
-          "reinforcements": 4,
-          "learnings_created": 2
-        },
-        "learnings_survived_pct": {
-          "value": 1.0,
-          "note": null
-        },
-        "capture_rate": {
-          "value": null,
-          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
-        },
-        "regressions_prevented": {
-          "value": null,
-          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
-        },
-        "retrieval_precision": {
-          "value": null,
-          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
-        }
-      },
-      "skill": "great-tables"
-    },
-    "islands_sizes": {
-      "scenario": "islands_sizes",
-      "difficulty": "easy",
-      "generator": "agent",
-      "params": {
-        "max_runs": 5,
-        "stick_streak": 2
-      },
-      "runs": 3,
-      "preferences": {
-        "sort-size-desc": {
-          "polarity": "learning",
-          "scope": "row ordering",
-          "cold_honored": true,
-          "runs_to_stick": 2,
-          "value_over_time": [
-            {
-              "run": 2,
-              "weight": 0.5,
-              "recurrence": 1
-            },
-            {
-              "run": 3,
-              "weight": 0.6667,
-              "recurrence": 2
-            }
-          ]
-        },
-        "size-heatmap-purple": {
-          "polarity": "learning",
-          "scope": "color encoding",
-          "cold_honored": false,
-          "runs_to_stick": 2,
-          "value_over_time": [
-            {
-              "run": 2,
-              "weight": 0.5,
-              "recurrence": 1
-            },
-            {
-              "run": 3,
-              "weight": 0.6667,
-              "recurrence": 2
-            }
-          ]
-        }
-      },
-      "usage_kpis": {
-        "skill": "islands_sizes",
         "runs": 3,
         "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
@@ -846,33 +767,23 @@
         "max_runs": 5,
         "stick_streak": 2
       },
-      "runs": 5,
+      "runs": 3,
       "preferences": {
         "facet-by-country": {
-          "polarity": "issue",
+          "polarity": "learning",
           "scope": "layout structure",
           "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 4,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 5,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         },
@@ -880,45 +791,36 @@
           "polarity": "learning",
           "scope": "scales",
           "cold_honored": false,
-          "runs_to_stick": null,
+          "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 4,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 5,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         }
       },
       "usage_kpis": {
         "skill": "plotnine-plotnine_gtcars_hp_faceted",
-        "runs": 5,
-        "avg_learnings_applied_per_run": 0.0,
+        "runs": 3,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
           "committed": 2,
           "reinforced": 4,
           "noop": 0,
-          "conflict": 0
+          "conflict": 0,
+          "possible_contradiction": 0
         },
         "repeat_correction_proxy": {
-          "reinforcement_rate": 0.8,
+          "reinforcement_rate": 0.6667,
           "reinforcements": 4,
-          "learnings_created": 1
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -948,33 +850,23 @@
         "max_runs": 5,
         "stick_streak": 2
       },
-      "runs": 5,
+      "runs": 3,
       "preferences": {
         "palette-dark2": {
           "polarity": "learning",
           "scope": "color encoding",
           "cold_honored": false,
-          "runs_to_stick": null,
+          "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 4,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 5,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         },
@@ -993,16 +885,6 @@
               "run": 3,
               "weight": 0.6667,
               "recurrence": 2
-            },
-            {
-              "run": 4,
-              "weight": 0.75,
-              "recurrence": 3
-            },
-            {
-              "run": 5,
-              "weight": 0.8,
-              "recurrence": 4
             }
           ]
         },
@@ -1010,27 +892,17 @@
           "polarity": "learning",
           "scope": "legend placement",
           "cold_honored": false,
-          "runs_to_stick": null,
+          "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 4,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 5,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         },
@@ -1038,27 +910,17 @@
           "polarity": "learning",
           "scope": "geoms",
           "cold_honored": false,
-          "runs_to_stick": null,
+          "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 4,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 5,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         },
@@ -1066,44 +928,35 @@
           "polarity": "learning",
           "scope": "geoms",
           "cold_honored": false,
-          "runs_to_stick": null,
+          "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 4,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 5,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         }
       },
       "usage_kpis": {
         "skill": "plotnine-plotnine_gtcars_hp_msrp",
-        "runs": 5,
-        "avg_learnings_applied_per_run": 0.8,
+        "runs": 3,
+        "avg_learnings_applied_per_run": 3.3333,
         "captures_by_status": {
           "committed": 5,
-          "reinforced": 20,
+          "reinforced": 10,
           "noop": 0,
-          "conflict": 0
+          "conflict": 0,
+          "possible_contradiction": 0
         },
         "repeat_correction_proxy": {
-          "reinforcement_rate": 0.8,
-          "reinforcements": 20,
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 10,
           "learnings_created": 5
         },
         "learnings_survived_pct": {
@@ -1301,20 +1154,20 @@
           ]
         },
         "square-format": {
-          "polarity": "issue",
+          "polarity": "learning",
           "scope": "aspect ratio",
           "cold_honored": false,
           "runs_to_stick": 2,
           "value_over_time": [
             {
               "run": 2,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
               "run": 3,
-              "weight": null,
-              "recurrence": null
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         }
@@ -1322,17 +1175,18 @@
       "usage_kpis": {
         "skill": "pptx-pitch_deck",
         "runs": 3,
-        "avg_learnings_applied_per_run": 0.6667,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
           "committed": 2,
-          "reinforced": 2,
+          "reinforced": 4,
           "noop": 0,
-          "conflict": 0
+          "conflict": 0,
+          "possible_contradiction": 0
         },
         "repeat_correction_proxy": {
           "reinforcement_rate": 0.6667,
-          "reinforcements": 2,
-          "learnings_created": 1
+          "reinforcements": 4,
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -1362,41 +1216,13 @@
         "max_runs": 5,
         "stick_streak": 2
       },
-      "runs": 5,
+      "runs": 3,
       "preferences": {
         "cta-second": {
-          "polarity": "issue",
+          "polarity": "learning",
           "scope": "slide order",
           "cold_honored": false,
           "runs_to_stick": 2,
-          "value_over_time": [
-            {
-              "run": 2,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 3,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 4,
-              "weight": null,
-              "recurrence": null
-            },
-            {
-              "run": 5,
-              "weight": null,
-              "recurrence": null
-            }
-          ]
-        },
-        "why-now-slide": {
-          "polarity": "learning",
-          "scope": "slide structure",
-          "cold_honored": false,
-          "runs_to_stick": 4,
           "value_over_time": [
             {
               "run": 2,
@@ -1407,34 +1233,43 @@
               "run": 3,
               "weight": 0.6667,
               "recurrence": 2
+            }
+          ]
+        },
+        "why-now-slide": {
+          "polarity": "learning",
+          "scope": "slide structure",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
             },
             {
-              "run": 4,
-              "weight": 0.75,
-              "recurrence": 3
-            },
-            {
-              "run": 5,
-              "weight": 0.8,
-              "recurrence": 4
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
             }
           ]
         }
       },
       "usage_kpis": {
         "skill": "pptx-pitch_deck_reorder",
-        "runs": 5,
-        "avg_learnings_applied_per_run": 0.8,
+        "runs": 3,
+        "avg_learnings_applied_per_run": 1.3333,
         "captures_by_status": {
           "committed": 2,
           "reinforced": 4,
           "noop": 0,
-          "conflict": 0
+          "conflict": 0,
+          "possible_contradiction": 0
         },
         "repeat_correction_proxy": {
-          "reinforcement_rate": 0.8,
+          "reinforcement_rate": 0.6667,
           "reinforcements": 4,
-          "learnings_created": 1
+          "learnings_created": 2
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -1466,22 +1301,22 @@
       "median_runs_to_stick": 2
     },
     "great-tables": {
-      "scenarios": 7,
-      "preferences_total": 14,
-      "preferences_wrong_in_cold": 10,
-      "preferences_stuck": 14,
+      "scenarios": 6,
+      "preferences_total": 12,
+      "preferences_wrong_in_cold": 9,
+      "preferences_stuck": 12,
       "stuck_rate": 1.0,
-      "corrected_and_stuck": 10,
+      "corrected_and_stuck": 9,
       "median_runs_to_stick": 2.0
     },
     "plotnine": {
       "scenarios": 4,
       "preferences_total": 10,
       "preferences_wrong_in_cold": 10,
-      "preferences_stuck": 5,
-      "stuck_rate": 0.5,
-      "corrected_and_stuck": 5,
-      "median_runs_to_stick": 2
+      "preferences_stuck": 10,
+      "stuck_rate": 1.0,
+      "corrected_and_stuck": 10,
+      "median_runs_to_stick": 2.0
     },
     "pptx": {
       "scenarios": 2,
@@ -1494,26 +1329,121 @@
     }
   },
   "aggregate": {
-    "scenarios": 16,
-    "preferences_total": 34,
-    "preferences_wrong_in_cold": 30,
-    "preferences_stuck": 28,
-    "stuck_rate": 0.8235,
-    "corrected_and_stuck": 24,
-    "median_runs_to_stick": 2.0
+    "scenarios": 15,
+    "preferences_total": 32,
+    "preferences_wrong_in_cold": 29,
+    "preferences_stuck": 31,
+    "stuck_rate": 0.9688,
+    "corrected_and_stuck": 28,
+    "median_runs_to_stick": 2
   },
   "showcase_only_kpis": {
     "capture_rate": {
-      "value": null,
-      "note": "Not computed here: the scenario runner seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator in the scenario pass. Run `python -m harness.calibrate` to compute it against the labeled set; see runs_to_stick and value_over_time for the metrics the scenario pass does measure."
+      "value": 0.75,
+      "n_corrections": 4,
+      "captured": 3,
+      "note": null,
+      "detail": [
+        {
+          "scope": "currency formatting",
+          "status": "committed",
+          "captured": true
+        },
+        {
+          "scope": "row banding",
+          "status": "committed",
+          "captured": true
+        },
+        {
+          "scope": "small tables",
+          "status": "committed",
+          "captured": true
+        },
+        {
+          "scope": "small tables",
+          "status": "noop",
+          "captured": false
+        }
+      ]
     },
     "regressions_prevented": {
-      "value": null,
-      "note": "Not computed here: the scenario runner seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator in the scenario pass. Run `python -m harness.calibrate` to compute it against the labeled set; see runs_to_stick and value_over_time for the metrics the scenario pass does measure."
+      "value": 1.0,
+      "n_cases": 3,
+      "prevented": 3,
+      "note": "Key-free proxy: verifies the in-scope issue was recalled for a violating intent (not a live generation). The published figure uses the --agent cold-vs-warm variant.",
+      "detail": [
+        {
+          "intent": "styling a small six-row summary table: row banding, striping, density",
+          "issue_scope": "small tables",
+          "recalled_in_scope": true
+        },
+        {
+          "intent": "adding gridlines and cell borders to separate the columns of a table",
+          "issue_scope": "gridlines",
+          "recalled_in_scope": true
+        },
+        {
+          "intent": "choosing text colors and a muted low-contrast palette for table body text",
+          "issue_scope": "color contrast",
+          "recalled_in_scope": true
+        }
+      ]
     },
     "retrieval_precision": {
-      "value": null,
-      "note": "Not computed here: the scenario runner seeds corrections via capture() directly against per-scenario isolated stores, so this labeled KPI has no honest denominator in the scenario pass. Run `python -m harness.calibrate` to compute it against the labeled set; see runs_to_stick and value_over_time for the metrics the scenario pass does measure."
+      "value": 0.5,
+      "recall": 1.0,
+      "f1": 0.6556,
+      "n_cases": 3,
+      "note": null,
+      "detail": [
+        {
+          "intent": "formatting monetary columns: currency alignment, decimal places, thousands separators, negative sign style",
+          "returned_scopes": [
+            "column headers",
+            "currency formatting",
+            "negative numbers"
+          ],
+          "relevant_scopes": [
+            "currency formatting",
+            "negative numbers"
+          ],
+          "precision": 0.6667,
+          "recall": 1.0,
+          "f1": 0.8
+        },
+        {
+          "intent": "row striping and banding density for a long wide financial table",
+          "returned_scopes": [
+            "row banding",
+            "small tables",
+            "sparklines"
+          ],
+          "relevant_scopes": [
+            "row banding"
+          ],
+          "precision": 0.3333,
+          "recall": 1.0,
+          "f1": 0.5
+        },
+        {
+          "intent": "styling the header row of a table: header weight, caps, emphasis",
+          "returned_scopes": [
+            "column headers",
+            "small tables"
+          ],
+          "relevant_scopes": [
+            "column headers"
+          ],
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667
+        }
+      ]
+    },
+    "calibration_source": {
+      "backend": "sentence-transformers",
+      "generated_at": "2026-07-29T05:08:07.979254+00:00",
+      "labels": "harness/calibration/labels.yaml"
     }
   }
 }

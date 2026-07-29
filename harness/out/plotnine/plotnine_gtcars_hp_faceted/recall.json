@@ -1,11 +1,21 @@
 {
-  "learnings": [],
-  "issues": [
+  "learnings": [
     {
-      "id": "I1",
+      "id": "L1",
       "rule": "Don't color-encode country of origin on one combined scatter plot. Split it into small multiples instead - facet by country of origin with facet_wrap(), one panel per country.",
       "scope": "layout structure",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L2",
+      "rule": "Let each facet panel use its own y-axis range (`scales=\"free_y\"`) instead of a shared axis, since some countries have a much narrower price range than others and a shared axis would flatten them to near-invisible lines.",
+      "scope": "scales",
+      "recurrence": 2,
+      "weight": 0.6667,
       "origin": "skill"
     }
-  ]
+  ],
+  "issues": []
 }

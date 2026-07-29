@@ -1,0 +1,193 @@
+{
+  "backend": "sentence-transformers",
+  "generated_at": "2026-07-29T05:28:21.326640+00:00",
+  "labels": "harness/calibration/labels.yaml",
+  "retrieval_precision": {
+    "value": 0.5,
+    "recall": 1.0,
+    "f1": 0.6556,
+    "n_cases": 3,
+    "note": null,
+    "detail": [
+      {
+        "intent": "formatting monetary columns: currency alignment, decimal places, thousands separators, negative sign style",
+        "returned_scopes": [
+          "column headers",
+          "currency formatting",
+          "negative numbers"
+        ],
+        "relevant_scopes": [
+          "currency formatting",
+          "negative numbers"
+        ],
+        "precision": 0.6667,
+        "recall": 1.0,
+        "f1": 0.8
+      },
+      {
+        "intent": "row striping and banding density for a long wide financial table",
+        "returned_scopes": [
+          "row banding",
+          "small tables",
+          "sparklines"
+        ],
+        "relevant_scopes": [
+          "row banding"
+        ],
+        "precision": 0.3333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      {
+        "intent": "styling the header row of a table: header weight, caps, emphasis",
+        "returned_scopes": [
+          "column headers",
+          "small tables"
+        ],
+        "relevant_scopes": [
+          "column headers"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6667
+      }
+    ]
+  },
+  "capture_rate": {
+    "value": 0.75,
+    "n_corrections": 4,
+    "captured": 3,
+    "note": null,
+    "detail": [
+      {
+        "scope": "currency formatting",
+        "status": "committed",
+        "captured": true
+      },
+      {
+        "scope": "row banding",
+        "status": "committed",
+        "captured": true
+      },
+      {
+        "scope": "small tables",
+        "status": "committed",
+        "captured": true
+      },
+      {
+        "scope": "small tables",
+        "status": "noop",
+        "captured": false
+      }
+    ]
+  },
+  "regressions_prevented": {
+    "value": 1.0,
+    "n_cases": 3,
+    "prevented": 3,
+    "note": "Key-free proxy: verifies the in-scope issue was recalled for a violating intent (not a live generation). The published figure uses the --agent cold-vs-warm variant.",
+    "detail": [
+      {
+        "intent": "styling a small six-row summary table: row banding, striping, density",
+        "issue_scope": "small tables",
+        "recalled_in_scope": true
+      },
+      {
+        "intent": "adding gridlines and cell borders to separate the columns of a table",
+        "issue_scope": "gridlines",
+        "recalled_in_scope": true
+      },
+      {
+        "intent": "choosing text colors and a muted low-contrast palette for table body text",
+        "issue_scope": "color contrast",
+        "recalled_in_scope": true
+      }
+    ]
+  },
+  "same_polarity_contradiction": {
+    "value": 1.0,
+    "recall": 1.0,
+    "n_contradiction_pairs": 6,
+    "n_duplicate_pairs": 6,
+    "true_positives": 6,
+    "false_negatives": 0,
+    "true_negatives": 6,
+    "false_positives": 0,
+    "not_reached": 0,
+    "note": "Experimental (\u00a7M7c spike): a small, non-exhaustive antonym/negation lexicon flags a same-scope near-duplicate learning pair as `possible_contradiction` instead of silently reinforcing. `value` is precision over fired flags; `recall` is the fraction of labeled contradiction pairs caught, of the pairs the heuristic actually reached (`not_reached` pairs, where the dedup match itself failed, are excluded from both rather than counted as correct by default). Measured with the config flag forced ON regardless of its shipped default -- see config.py's `same_polarity_contradiction_check`.",
+    "detail": [
+      {
+        "scope": "currency columns",
+        "kind": "contradiction",
+        "status": "possible_contradiction",
+        "correct": true
+      },
+      {
+        "scope": "accent color",
+        "kind": "contradiction",
+        "status": "possible_contradiction",
+        "correct": true
+      },
+      {
+        "scope": "table theme",
+        "kind": "contradiction",
+        "status": "possible_contradiction",
+        "correct": true
+      },
+      {
+        "scope": "cell padding",
+        "kind": "contradiction",
+        "status": "possible_contradiction",
+        "correct": true
+      },
+      {
+        "scope": "gridline orientation",
+        "kind": "contradiction",
+        "status": "possible_contradiction",
+        "correct": true
+      },
+      {
+        "scope": "row banding style",
+        "kind": "contradiction",
+        "status": "possible_contradiction",
+        "correct": true
+      },
+      {
+        "scope": "currency columns precision",
+        "kind": "duplicate",
+        "status": "reinforced",
+        "correct": true
+      },
+      {
+        "scope": "row banding",
+        "kind": "duplicate",
+        "status": "reinforced",
+        "correct": true
+      },
+      {
+        "scope": "column headers",
+        "kind": "duplicate",
+        "status": "reinforced",
+        "correct": true
+      },
+      {
+        "scope": "numeric column padding",
+        "kind": "duplicate",
+        "status": "reinforced",
+        "correct": true
+      },
+      {
+        "scope": "neon color avoidance",
+        "kind": "duplicate",
+        "status": "reinforced",
+        "correct": true
+      },
+      {
+        "scope": "background tone",
+        "kind": "duplicate",
+        "status": "reinforced",
+        "correct": true
+      }
+    ]
+  }
+}

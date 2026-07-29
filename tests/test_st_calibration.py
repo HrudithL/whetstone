@@ -171,6 +171,48 @@ def test_recall_ranks_relevant_scope_first(env):
     assert result["learnings"][0]["scope"] == "currency columns"
 
 
+def test_recall_recovers_all_scopes_from_a_multi_dimension_intent(env):
+    """A single intent naming several styling dimensions at once must not lose the minority ones.
+
+    A pooled sentence embedding of a multi-topic intent sits roughly equidistant from every scope
+    it names, none of them necessarily close enough to individually clear the cutoff a
+    single-topic calibration intent was tuned against — even when a dimension's own words (e.g.
+    "legend placement") appear verbatim in the intent. Four genuinely different preferences are
+    captured, each under its own scope; the intent below names all four dimensions in one
+    sentence, comma-separated (the same shape as this file's calibration intents and §5.4's own
+    worked example). Every scope must come back, not just whichever one happens to dominate the
+    pooled vector.
+    """
+    capture(
+        "plot",
+        "learning",
+        "Color-encode the category with the ColorBrewer Dark2 qualitative palette.",
+        "color encoding",
+        "prov",
+    )
+    capture("plot", "learning", "Put the value axis on a log scale.", "axis scales", "prov")
+    capture(
+        "plot", "learning", "Place the legend at the bottom of the figure.", "legend placement",
+        "prov",
+    )
+    capture(
+        "plot",
+        "learning",
+        "Make the scatter points larger and semi-transparent.",
+        "point style",
+        "prov",
+    )
+
+    intent = (
+        "Styling a plot for this task: show how two variables relate, grouped by category. "
+        "Consider color palette and encoding, axis scales, legend placement, and point size and "
+        "opacity."
+    )
+    result = recall("plot", intent)
+    scopes = {x["scope"] for x in result["learnings"]}
+    assert scopes == {"color encoding", "axis scales", "legend placement", "point style"}
+
+
 def _load(store_root):
     """The same Config the server sees (temp store root + ST backend), for direct store reads."""
     from whetstone.config import load_config

@@ -1,5 +1,0 @@
-You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
-
-Learnings (preferences):
-  - [L2] (color encoding, weight 0.67) Heat-map the size column with a purple ramp — use the ColorBrewer `Purples` palette via data_color(columns="size", palette="Purples").
-  - [L1] (row ordering, weight 0.67) Order the rows by size from largest to smallest.

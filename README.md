@@ -318,11 +318,17 @@ Two embedding backends plug in behind the same interface:
 - **`sentence-transformers`** (optional `[embeddings]` extra) — the `all-MiniLM-L6-v2` model, for
   higher-quality semantic matching of your intent to stored scopes.
 
-Retrieval (given the elaborated `intent`, embedded once):
+Retrieval (given the elaborated `intent`):
 
-1. **Scope match** — a scope matches when `max(cos(intent, centroid), cos(intent, phrase))` clears
-   its cutoff. Learnings and issues have separate cutoffs (issues lower — including a marginally
-   relevant mandatory "don't do X" is cheap).
+1. **Scope match** — a scope matches when `max(cos(q, centroid), cos(q, phrase))` clears its cutoff
+   for ANY of the intent's query vectors: the full intent, plus each of its top-level
+   comma/semicolon/period-separated clauses (2+ words each, capped at 16 total). A single-topic
+   intent is embedded and matched exactly as one vector, same as before; a multi-topic intent (e.g.
+   "color palette, axis scales, legend placement") pools into one sentence embedding whose per-topic
+   signal dilutes as more topics are named, so matching each clause too recovers scopes the pooled
+   vector alone would miss — this can only add matched scopes relative to matching on the full
+   intent alone, never drop one. Learnings and issues have separate cutoffs (issues lower —
+   including a marginally relevant mandatory "don't do X" is cheap).
 2. **Rank & cap** — learnings from matched scopes are capped to `learnings_k` by **MMR** (a diverse,
    high-value subset, not `k` near-duplicates); issues from matched scopes are all returned.
 3. **Fallback floor** — if *no* scope clears its cutoff, return the top-weight learnings plus the

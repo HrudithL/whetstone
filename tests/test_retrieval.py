@@ -7,13 +7,74 @@ from dataclasses import replace
 from datetime import date
 
 from conftest import make_issue, make_learning, seed
-from whetstone.retrieval import retrieve
+from whetstone.retrieval import _MAX_CLAUSES, _intent_clauses, retrieve
 from whetstone.store import index
 
 
 def _prepare(store, backend, learnings=(), issues=()):
     seed(store, learnings=learnings, issues=issues)
     index.rebuild_index(store, backend)
+
+
+def test_intent_clauses_single_topic_intent_is_unsplit():
+    # Nothing to split -> exactly the original intent, so a single-topic caller embeds/matches
+    # precisely as before the clause-decomposition change.
+    assert _intent_clauses("formatting the currency columns") == ["formatting the currency columns"]
+
+
+def test_intent_clauses_splits_on_commas_and_semicolons_and_keeps_the_whole_intent():
+    intent = "Styling a table: color palette; row banding, currency formatting"
+    clauses = _intent_clauses(intent)
+    assert clauses[0] == intent  # whole intent always first/kept
+    assert "Styling a table: color palette" in clauses  # split on ";", not ":"
+    assert "row banding" in clauses
+    assert "currency formatting" in clauses
+    assert len(clauses) == len(set(clauses))  # deduped
+
+
+def test_intent_clauses_does_not_split_decimals_filenames_or_abbreviations():
+    # A bare "." mid-token is not a sentence boundary (caught by review, not hypothetical: the
+    # naive [,;.] split produced the bogus, truncated probe "Set opacity to 0" out of "0.5"). Only
+    # a period followed by whitespace-then-uppercase (a new sentence) or end-of-string counts.
+    clauses = _intent_clauses("Set opacity to 0.5, and use a thick line for the trend")
+    assert not any(c.rstrip().endswith(" 0") for c in clauses)
+    assert "Produce a single self-contained index" not in _intent_clauses(
+        "Produce a single self-contained index.html. Consider color palette and accent, typography."
+    )
+    # "e.g." is followed by a space then a LOWERCASE letter, not a new sentence -> not a boundary.
+    assert _intent_clauses("styling a table, e.g. muted colors") == [
+        "styling a table, e.g. muted colors",
+        "styling a table",
+        "e.g. muted colors",
+    ]
+
+
+def test_intent_clauses_dedupes_repeated_clauses():
+    # A trailing near-empty fragment or a repeated phrase must not produce duplicate query vectors.
+    assert _intent_clauses("color palette, color palette,") == ["color palette, color palette,",
+                                                                  "color palette"]
+
+
+def test_intent_clauses_keeps_the_sole_surviving_clause():
+    # Regression (caught by review): an earlier version bailed out to [intent] whenever fewer than
+    # two RAW split parts survived the word-count filter, discarding the one usable clause a
+    # two-part intent reduces to once its one-word fragment ("caps") is filtered out — exactly the
+    # dilution this function exists to prevent. "header emphasis" must still be probed on its own.
+    clauses = _intent_clauses("caps, header emphasis")
+    assert clauses[0] == "caps, header emphasis"
+    assert "header emphasis" in clauses
+    assert "caps" not in clauses
+
+
+def test_intent_clauses_caps_total_count():
+    # `intent` is a caller-controlled MCP argument; an adversarial or just very long, heavily-
+    # punctuated one must not blow the embed-batch size up unboundedly (real memory/CPU cost per
+    # clause). A pathological intent with 100 distinct two-word clauses still yields at most
+    # _MAX_CLAUSES query vectors (the full intent + capped clauses), not 101.
+    intent = ", ".join(f"topic {i}" for i in range(100))
+    clauses = _intent_clauses(intent)
+    assert len(clauses) == _MAX_CLAUSES
+    assert clauses[0] == intent
 
 
 def test_matched_scope_learnings_are_returned(store, backend, config):

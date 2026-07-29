@@ -17,19 +17,37 @@ preferences:
     feedback: >
       Use Consolas for all the slide text, not the default sans-serif.
     check:
-      # Match a real font assignment, not a bare mention/comment. This is a LEARNING (a soft taste),
-      # so confirming the model actually reached for Consolas is the honored signal — the committed
-      # deck sets it on every paragraph. AST-unparse normalizes quotes to single, so `= "Consolas"`
-      # in the source matches this too.
-      kind: code_contains
-      pattern: "font.name = 'Consolas'"
+      # PRIOR VERSION #1 (a real, observed false negative): a literal `code_contains` on
+      # `font.name = 'Consolas'` assumed the assignment is always a direct string literal. A live
+      # model just as often factors it into a constant (`FONT = "Consolas"` then `run.font.name =
+      # FONT`), which the literal check failed on every single time — a false negative.
+      # PRIOR VERSION #2 (a real, observed false POSITIVE — caught by Codex review, not
+      # hypothetical): two independent presence lookaheads ("Consolas" appears somewhere, AND some
+      # `font.name` assignment appears somewhere) is not cold-clean. A committed real cold run
+      # defines `FONT = "Arial"` (the actual body font) AND a SEPARATE `MONO = "Consolas"` used only
+      # for command-snippet styling, with `run.font.name = over.get("font", font)` unrelated to
+      # either constant by name — both lookaheads pass by coincidence, so `cold_honored` was recorded
+      # `true` for a deck that never set Consolas as the general font.
+      # Current version: ties them together properly. Matches either the direct literal, OR a
+      # variable `X` assigned `"Consolas"` that is later itself the RHS of a `font.name =` assignment
+      # (the indirection style version #1 exists to tolerate) — the backreference requires the SAME
+      # constant to flow into `font.name`, which the cold run's `MONO`/`over.get(...)` shape never
+      # does. Verified against both this run's and an earlier, differently-styled real run's cold AND
+      # warm deck.py.
+      kind: regex
+      pattern: "font\\.name\\s*=\\s*'Consolas'|(\\w+)\\s*=\\s*'Consolas'[\\s\\S]*?font\\.name\\s*=\\s*\\1\\b"
   - id: square-format
-    polarity: issue
+    # LEARNING, not issue: a deliberately unusual house taste ("I like my decks square"), not a
+    # standing always/never rule stated as one (contrast towny_growth_trends.yaml's density-magenta,
+    # phrased as "Never fill growth with green here (house rule)" — that phrasing is what earns
+    # `issue`, not that a preference happens to be a single deck-level setting or a big change from
+    # the default). See harness/scenarios/README.md for the polarity rule.
+    polarity: learning
     scope: aspect ratio
-    # A hard rule (issue) and a deliberately unusual one: a SQUARE 1:1 deck. This is a single
-    # DECK-LEVEL setting (not per-slide), so its presence honors it fully — no partial-compliance
-    # gap. Crucially it is cold-clean: normal decks are 4:3/16:9 with height 7.5in, so a cold run
-    # never sets slide_height to 10in (checking width=10 would false-positive — cold sets 4:3 width).
+    # A single DECK-LEVEL setting (not per-slide), so its presence honors it fully — no partial-
+    # compliance gap. Crucially it is cold-clean: normal decks are 4:3/16:9 with height 7.5in, so a
+    # cold run never sets slide_height to 10in (checking width=10 would false-positive — cold sets
+    # 4:3 width).
     body: >
       Use a SQUARE 1:1 slide format: set `prs.slide_width = Inches(10)` AND
       `prs.slide_height = Inches(10)` on the Presentation (import Inches from `pptx.util`).
