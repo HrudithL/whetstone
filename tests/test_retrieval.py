@@ -32,6 +32,23 @@ def test_intent_clauses_splits_on_commas_and_semicolons_and_keeps_the_whole_inte
     assert len(clauses) == len(set(clauses))  # deduped
 
 
+def test_intent_clauses_does_not_split_decimals_filenames_or_abbreviations():
+    # A bare "." mid-token is not a sentence boundary (caught by review, not hypothetical: the
+    # naive [,;.] split produced the bogus, truncated probe "Set opacity to 0" out of "0.5"). Only
+    # a period followed by whitespace-then-uppercase (a new sentence) or end-of-string counts.
+    clauses = _intent_clauses("Set opacity to 0.5, and use a thick line for the trend")
+    assert not any(c.rstrip().endswith(" 0") for c in clauses)
+    assert "Produce a single self-contained index" not in _intent_clauses(
+        "Produce a single self-contained index.html. Consider color palette and accent, typography."
+    )
+    # "e.g." is followed by a space then a LOWERCASE letter, not a new sentence -> not a boundary.
+    assert _intent_clauses("styling a table, e.g. muted colors") == [
+        "styling a table, e.g. muted colors",
+        "styling a table",
+        "e.g. muted colors",
+    ]
+
+
 def test_intent_clauses_dedupes_repeated_clauses():
     # A trailing near-empty fragment or a repeated phrase must not produce duplicate query vectors.
     assert _intent_clauses("color palette, color palette,") == ["color palette, color palette,",

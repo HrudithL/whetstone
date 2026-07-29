@@ -98,13 +98,17 @@ def _scope_similarity(query: list[float], scope: ScopeVectors) -> float:
 # and matching each clause too (in ADDITION to the whole intent, never instead of it) recovers the
 # per-dimension signal a pooled vector drowns out, without changing what a single-clause intent
 # already matched. This is the fix the design doc itself calls for: "No threshold value fixes the
-# abstraction gap; fixing the query does" (§5.4 point 1). Periods split too, not just commas/
-# semicolons: an intent that leads with a multi-sentence task description before naming its
-# dimensions (e.g. "...Produce a single self-contained index.html. Consider color palette and
-# accent, typography, ...") would otherwise leave that first dimension's clause glued to the
-# entire preamble — measured to sit right at the cutoff's edge, while every later comma-bounded
-# dimension clears it easily; splitting on "." too isolates it the same way.
-_CLAUSE_SPLIT_RE = re.compile(r"[,;.]")
+# abstraction gap; fixing the query does" (§5.4 point 1). Sentence-ending periods split too, not
+# just commas/semicolons: an intent that leads with a multi-sentence task description before naming
+# its dimensions (e.g. "...Produce a single self-contained index.html. Consider color palette and
+# accent, typography, ...") would otherwise leave that first dimension's clause glued to the entire
+# preamble — measured to sit right at the cutoff's edge, while every later comma-bounded dimension
+# clears it easily; splitting on a sentence-ending "." too isolates it the same way. Only a period
+# followed by whitespace-then-uppercase (a new sentence) or whitespace-then-end-of-string counts as
+# a boundary — a bare `.` (caught by review, not hypothetical: "Set opacity to 0.5" would otherwise
+# produce the bogus, truncated probe "Set opacity to 0") does not, so numbers, filenames, and
+# abbreviations like "index.html" or "e.g." stay intact.
+_CLAUSE_SPLIT_RE = re.compile(r"[,;]|\.(?=\s+[A-Z]|\s*$)")
 
 # A real elaborated intent (per-skill dimension lists in this repo, and §5.4's own worked example)
 # names on the order of 5-7 topics; this leaves generous headroom while bounding the embedding work
