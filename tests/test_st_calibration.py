@@ -192,7 +192,8 @@ def test_recall_recovers_all_scopes_from_a_multi_dimension_intent(env):
     )
     capture("plot", "learning", "Put the value axis on a log scale.", "axis scales", "prov")
     capture(
-        "plot", "learning", "Place the legend at the bottom of the figure.", "legend placement", "prov"
+        "plot", "learning", "Place the legend at the bottom of the figure.", "legend placement",
+        "prov",
     )
     capture(
         "plot",

@@ -134,8 +134,11 @@ def _intent_clauses(intent: str) -> list[str]:
     return clauses
 
 
-def _matched_scopes(queries: list[list[float]], scopes: list[ScopeVectors], cutoff: float) -> set[str]:
-    """A scope matches if ANY query vector (the full intent, or one of its clauses) clears cutoff."""
+def _matched_scopes(
+    queries: list[list[float]], scopes: list[ScopeVectors], cutoff: float
+) -> set[str]:
+    """A scope matches if ANY query vector (the full intent, or one of its clauses) clears
+    cutoff."""
     return {
         s.scope for s in scopes if max(_scope_similarity(q, s) for q in queries) >= cutoff
     }
