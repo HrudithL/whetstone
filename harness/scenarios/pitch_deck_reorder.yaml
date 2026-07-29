@@ -57,19 +57,22 @@ preferences:
       # (not "Why now" bolted onto the idea or how-it-works slide as a subtitle). That again assumed
       # a direct `add_slide(` call per slide, which a real model's helper-function style defeats —
       # observed failing on every run of a real deck.py that DID insert the slide correctly. Replaced
-      # the code-structure requirement with a minimum-content-length gate instead: "Why now" must be
-      # followed by at least 80 characters of OTHER content before "How it works" appears, which a
-      # bolted-on subtitle (immediately adjacent to its host slide's own title/tagline) cannot satisfy
-      # but a genuinely separate slide's worth of body content can — verified against both this run's
-      # helper-based deck.py and an earlier, differently-styled real run. Still anchored on "Watch one
-      # run" (the idea slide's own on-slide tagline) and "How it works" (that slide's on-slide title).
+      # the code-structure requirement with a minimum-content-length gate on EACH side of "Why now":
+      # at least 150 characters between "Watch one run" and "Why now", and at least 80 between "Why
+      # now" and "How it works". A single one-sided gate (caught by Codex review — a real gap, not
+      # hypothetical: a subtitle bolted directly onto the idea slide would still have ~80 chars of
+      # the how-it-works slide's own setup code before its title, satisfying a "Why now" -> gap ->
+      # "How it works" check alone) is why BOTH sides now need real distance — a "Why now" glued to
+      # either neighboring slide's own content has a small gap on THAT side, which a two-sided gate
+      # catches; a genuinely separate slide has a full slide's worth of setup code (new-slide call +
+      # textbox positioning + title styling) on both sides. Verified this still matches a real
+      # honored run (gaps of 385/469 chars) and rejects a synthetic bolted-on-subtitle sample.
       # Cold-clean: the outline has no "Why now" slide at all, so a cold run never produces this
-      # sequence regardless of the gate. Known --stub-only gap (verified real-agent-correct above,
-      # same trade-off already accepted for facet-by-country/cta-second elsewhere in this harness):
-      # generate._regex_sample has no general handling for a bounded/unbounded quantifier like
-      # `{80,}` (it does not expand a character class into N literal repeats), so it cannot
-      # synthesize a self-matching stub literal for this check — the free `--stub` smoke test never
-      # converges for `why-now-slide`, though the check is correct and honors properly against a
-      # real `--agent` run.
+      # sequence regardless of the gate. Known --stub-only gap (same trade-off already accepted for
+      # facet-by-country/cta-second elsewhere in this harness): generate._regex_sample has no general
+      # handling for a bounded/unbounded quantifier like `{150,}` (it does not expand a character
+      # class into N literal repeats), so it cannot synthesize a self-matching stub literal for this
+      # check — the free `--stub` smoke test never converges for `why-now-slide`, though the check is
+      # correct and honors properly against a real `--agent` run.
       kind: regex
-      pattern: 'Watch one run[\s\S]*?Why now[\s\S]{80,}How it works'
+      pattern: 'Watch one run[\s\S]{150,}?Why now[\s\S]{80,}How it works'

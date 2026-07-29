@@ -17,17 +17,25 @@ preferences:
     feedback: >
       Use Consolas for all the slide text, not the default sans-serif.
     check:
-      # PRIOR VERSION (reverted — a real, observed false negative): a literal `code_contains` on
+      # PRIOR VERSION #1 (a real, observed false negative): a literal `code_contains` on
       # `font.name = 'Consolas'` assumed the assignment is always a direct string literal. A live
       # model just as often factors it into a constant (`FONT = "Consolas"` then `run.font.name =
-      # FONT`, observed on every run of a real deck.py that genuinely does set Consolas throughout) —
-      # the literal check failed on every single one of those runs, a false negative, not a real miss.
-      # Two independent presence lookaheads instead: "Consolas" appears somewhere, AND some
-      # `font.name` assignment appears somewhere — tolerates any indirection style. Still cold-clean:
-      # a cold run's default sans-serif deck contains neither "Consolas" nor (checked against a real
-      # committed cold run) any coincidental co-occurrence.
+      # FONT`), which the literal check failed on every single time — a false negative.
+      # PRIOR VERSION #2 (a real, observed false POSITIVE — caught by Codex review, not
+      # hypothetical): two independent presence lookaheads ("Consolas" appears somewhere, AND some
+      # `font.name` assignment appears somewhere) is not cold-clean. A committed real cold run
+      # defines `FONT = "Arial"` (the actual body font) AND a SEPARATE `MONO = "Consolas"` used only
+      # for command-snippet styling, with `run.font.name = over.get("font", font)` unrelated to
+      # either constant by name — both lookaheads pass by coincidence, so `cold_honored` was recorded
+      # `true` for a deck that never set Consolas as the general font.
+      # Current version: ties them together properly. Matches either the direct literal, OR a
+      # variable `X` assigned `"Consolas"` that is later itself the RHS of a `font.name =` assignment
+      # (the indirection style version #1 exists to tolerate) — the backreference requires the SAME
+      # constant to flow into `font.name`, which the cold run's `MONO`/`over.get(...)` shape never
+      # does. Verified against both this run's and an earlier, differently-styled real run's cold AND
+      # warm deck.py.
       kind: regex
-      pattern: '(?=[\s\S]*Consolas)(?=[\s\S]*font\.name\s*=)'
+      pattern: "font\\.name\\s*=\\s*'Consolas'|(\\w+)\\s*=\\s*'Consolas'[\\s\\S]*?font\\.name\\s*=\\s*\\1\\b"
   - id: square-format
     # LEARNING, not issue: a deliberately unusual house taste ("I like my decks square"), not a
     # standing always/never rule stated as one (contrast towny_growth_trends.yaml's density-magenta,

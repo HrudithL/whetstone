@@ -1,5 +1,5 @@
 You have a LEARNED LAYER of this user's preferences for this skill, captured from earlier runs. Apply ALL of it. Learnings are weighted tastes (higher weight = more established); issues are mandatory rules.
 
 Learnings (preferences):
-  - [L1] (slide order, weight 0.80) Don't save the call-to-action for last. Move the "Install Marrow" call-to-action slide to be the SECOND slide - right after the title, before the problem/idea/how-it-works slides. Lead with the install command, then explain why it matters.
-  - [L2] (slide structure, weight 0.80) Insert a new slide titled "Why now" between "The idea" and "How it works", making the case that test suites have grown large enough that manual coverage tracking has become untenable - this is new content the outline doesn't ask for, added because it strengthens the pitch.
+  - [L1] (slide order, weight 0.67) Don't save the call-to-action for last. Move the "Install Marrow" call-to-action slide to be the SECOND slide - right after the title, before the problem/idea/how-it-works slides. Lead with the install command, then explain why it matters.
+  - [L2] (slide structure, weight 0.67) Insert a new slide titled "Why now" between "The idea" and "How it works", making the case that test suites have grown large enough that manual coverage tracking has become untenable - this is new content the outline doesn't ask for, added because it strengthens the pitch.

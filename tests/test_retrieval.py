@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import date
 
 from conftest import make_issue, make_learning, seed
-from whetstone.retrieval import _intent_clauses, retrieve
+from whetstone.retrieval import _MAX_CLAUSES, _intent_clauses, retrieve
 from whetstone.store import index
 
 
@@ -36,6 +36,17 @@ def test_intent_clauses_dedupes_repeated_clauses():
     # A trailing near-empty fragment or a repeated phrase must not produce duplicate query vectors.
     assert _intent_clauses("color palette, color palette,") == ["color palette, color palette,",
                                                                   "color palette"]
+
+
+def test_intent_clauses_caps_total_count():
+    # `intent` is a caller-controlled MCP argument; an adversarial or just very long, heavily-
+    # punctuated one must not blow the embed-batch size up unboundedly (real memory/CPU cost per
+    # clause). A pathological intent with 100 distinct two-word clauses still yields at most
+    # _MAX_CLAUSES query vectors (the full intent + capped clauses), not 101.
+    intent = ", ".join(f"topic {i}" for i in range(100))
+    clauses = _intent_clauses(intent)
+    assert len(clauses) == _MAX_CLAUSES
+    assert clauses[0] == intent
 
 
 def test_matched_scope_learnings_are_returned(store, backend, config):

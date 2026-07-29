@@ -106,14 +106,25 @@ def _scope_similarity(query: list[float], scope: ScopeVectors) -> float:
 # dimension clears it easily; splitting on "." too isolates it the same way.
 _CLAUSE_SPLIT_RE = re.compile(r"[,;.]")
 
+# A real elaborated intent (per-skill dimension lists in this repo, and §5.4's own worked example)
+# names on the order of 5-7 topics; this leaves generous headroom while bounding the embedding work
+# a single `recall` call can trigger. `intent` is a caller-controlled MCP argument — with no cap, a
+# pathological or just very long, heavily-punctuated intent would blow the clause list up to one
+# entry per punctuation mark, and every entry costs a full `backend.embed` vector (real memory/CPU,
+# especially on the sentence-transformers backend's `encode`) plus an `O(clauses × scopes)` scope
+# comparison — caught by Codex review, not hypothetical for a caller that isn't the well-behaved
+# harness. Capped at the FULL INTENT plus the first 15 usable clauses (16 embeddings total).
+_MAX_CLAUSES = 16
+
 
 def _intent_clauses(intent: str) -> list[str]:
-    """``intent`` plus each of its top-level comma/semicolon-separated clauses, deduped.
+    """``intent`` plus up to ``_MAX_CLAUSES - 1`` of its top-level comma/semicolon/period-separated
+    clauses, deduped.
 
     Returns just ``[intent]`` when there is nothing to split (0 or 1 usable clause) — a
     single-topic intent is embedded and matched exactly as before. A multi-clause intent embeds
     the clauses IN ADDITION to the full sentence, so scope-matching only ever gains candidates
-    relative to the whole-intent-only baseline, never loses one.
+    relative to the whole-intent-only baseline, never loses one (short of the cap below).
 
     A single bare word ("caps", "emphasis") carries no context once split out on its own and, on
     the calibration labeled set, was measured to spuriously drift into an unrelated scope's cutoff
@@ -128,6 +139,8 @@ def _intent_clauses(intent: str) -> list[str]:
     seen = {intent}
     clauses = [intent]
     for p in parts:
+        if len(clauses) >= _MAX_CLAUSES:
+            break
         if p not in seen:
             seen.add(p)
             clauses.append(p)

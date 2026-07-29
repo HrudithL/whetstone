@@ -11,7 +11,8 @@ validate every file and error on a missing or invalid field. Scenario `name`s ar
 
 The original six (skill `great-tables`, from the sibling `gtskill` corpus): `gtcars_hp_price`,
 `airquality_monthly_summary`, `gtcars_top10_by_country`, `towny_growth_trends`,
-`sp500_monthly_performance`.
+`sp500_monthly_performance`, and `islands_sizes` (retired — a near-duplicate of `gtcars_hp_price`'s
+"light format tweak + heatmap color" template; five remain).
 
 ## Choosing `polarity: learning` vs. `polarity: issue`
 

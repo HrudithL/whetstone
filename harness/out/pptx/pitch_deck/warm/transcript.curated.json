@@ -4,7 +4,7 @@
     "content": [
       {
         "type": "text",
-        "text": "I'll start by reading the outline and invoking the pptx skill."
+        "text": "I'll start by reading the outline and loading the pptx skill."
       }
     ],
     "model": "claude-opus-5",
@@ -12,20 +12,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 5431,
+      "cache_creation_input_tokens": 736,
+      "cache_read_input_tokens": 4695,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 0
+        "ephemeral_1h_input_tokens": 736
       },
       "output_tokens": 8,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9h2MwFzuHZUhqfTwAm",
+    "message_id": "msg_011CdVjkp656jqnREUQU5r1G",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "e950d0b2-3703-4b09-a4cf-a38008375c9a"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "5d056462-b9cf-4855-938f-bc4d7ff46d50"
   },
   {
     "type": "assistant",
@@ -41,20 +41,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 5431,
+      "cache_creation_input_tokens": 736,
+      "cache_read_input_tokens": 4695,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 0
+        "ephemeral_1h_input_tokens": 736
       },
       "output_tokens": 8,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9h2MwFzuHZUhqfTwAm",
+    "message_id": "msg_011CdVjkp656jqnREUQU5r1G",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "f2207e15-5813-4942-9b6d-279d5ceed91a"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "6462a2af-c30f-4044-aaa5-9832773a5d92"
   },
   {
     "type": "user",
@@ -64,7 +64,7 @@
         "reason": "tool result"
       }
     ],
-    "uuid": "010c749e-9a6e-4969-a648-cb479faac642",
+    "uuid": "27bad712-40a5-4a07-bcf1-55dd164bc8a0",
     "parent_tool_use_id": null,
     "tool_use_result": {
       "type": "elided",
@@ -85,20 +85,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 5431,
+      "cache_creation_input_tokens": 736,
+      "cache_read_input_tokens": 4695,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 0
+        "ephemeral_1h_input_tokens": 736
       },
       "output_tokens": 8,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9h2MwFzuHZUhqfTwAm",
+    "message_id": "msg_011CdVjkp656jqnREUQU5r1G",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "ff4e83fa-582f-4217-a95c-1321b82adb13"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "9444cbe0-3098-41ef-a6c3-63bae97b9728"
   },
   {
     "type": "user",
@@ -108,7 +108,7 @@
         "reason": "tool result"
       }
     ],
-    "uuid": "0382de1f-be34-4f52-8d26-22dce0c700a8",
+    "uuid": "e85480ce-4155-4aab-bb7f-e869a5428f7e",
     "parent_tool_use_id": null,
     "tool_use_result": {
       "type": "elided",
@@ -124,7 +124,7 @@
         "length": 2004
       }
     ],
-    "uuid": "8ad4c931-ede3-43f4-ad57-b7b47f3c5e79",
+    "uuid": "110d4087-7176-4cd5-9815-4f67fe6c6043",
     "parent_tool_use_id": null,
     "tool_use_result": null
   },
@@ -134,7 +134,7 @@
       {
         "type": "thinking",
         "thinking": "",
-        "signature": "CAIS5gMKhwEIEBgCKkAeSaTgVRhPSx/3ni6QjSVeRxIojBn3+gYV+wsn2h8X5ThPjrqMkXJXozCRfrN3mN7zGh6OMW8pSpOkv4s83FanMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDEK16agkoF8cza19VRoMcK7c2OfOnozS2TwYIjBhs6SkRyfYRxL3NAmPp6A4C7bf1/zJ6ItW8bGKlwPCVl5E9E6oOj2/GvA0I7hqcWIqiwKTfJDtO6eT2H4XBNUShpJSYRriZC6AZ1T2XdS9UyXI7yY6aBNs1Ss9hnTDP0PLMaXAJ3YNCPf8DMJbFRu6+0a15vm4ECrjVvsZb8oQ2C2CYoGt9uIF8hM/YOJq7y25qO9pz6P/rwdl/o2ADG7fWqPNAr5qq+PfyhsqatI1Gu06O+EIVUQ4nS60LqUXcZixnbb+WFC6nuPwi0tPHPfQ0rivOuET/4z5butGjk/uprdbrMta9QC5lXlHrxEQXbriWooTNzss28X1vzTK+WXVtbR7cFmGJKJEzG7pAmVedPwqzOkCZ3U1rQ04dOwl5twuSnNgVM7h3ZLKZ2et/DLx+HmYe05wl2TmVTOcbeUYAQ=="
+        "signature": "CAISoAIKhwEIEBgCKkA0UXvi6/RCyY49SvtcRmJjLE7lqTs3Qw+UqFZp6HeKzso5kdKpK51AEsNUxpjBDtnxYroaft+5ffXxmQdb63TyMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDAQVqamufs2ZyUWLeRoMSoZCImzRef2qNn2gIjC9giGSwGjyNC1UsRNp7SyB258fzWLXwqmyEvpo1QvGaST3Gm+BISTg3PymaIIlQ54qRvSieZ+5vuW5KrE0qTpvLCJP+emLo/m6u+koQzx6bWdFP/ivm0KcnBT+EQiXN8ByfaP1cZTa+6o4VJUGOaWp7ftuv2vMiqsYAQ=="
       }
     ],
     "model": "claude-opus-5",
@@ -142,20 +142,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 1300,
+      "cache_creation_input_tokens": 1029,
       "cache_read_input_tokens": 5431,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 1300
+        "ephemeral_1h_input_tokens": 1029
       },
-      "output_tokens": 5,
+      "output_tokens": 3,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9hFzEfwJmEpW5DK6Vo",
+    "message_id": "msg_011CdVjm5SYoCpN2yKhhnZhk",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "45df2782-42ec-43b2-bf47-bc13a71a1f9d"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "0a3a23b5-f25c-44d8-9b86-2d72b842105d"
   },
   {
     "type": "assistant",
@@ -171,20 +171,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 1300,
+      "cache_creation_input_tokens": 1029,
       "cache_read_input_tokens": 5431,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 1300
+        "ephemeral_1h_input_tokens": 1029
       },
-      "output_tokens": 5,
+      "output_tokens": 3,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9hFzEfwJmEpW5DK6Vo",
+    "message_id": "msg_011CdVjm5SYoCpN2yKhhnZhk",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "8f75b222-293a-4940-8f18-5f0052b4bdc7"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "19011b58-1742-4c3d-b279-ffd1127fb06f"
   },
   {
     "type": "user",
@@ -194,7 +194,7 @@
         "reason": "tool result"
       }
     ],
-    "uuid": "2c242234-0d8b-4ce7-a405-e8d3de71e1de",
+    "uuid": "62162874-1f6b-4607-aa6e-6cfa4146bf60",
     "parent_tool_use_id": null,
     "tool_use_result": {
       "type": "elided",
@@ -207,7 +207,7 @@
       {
         "type": "thinking",
         "thinking": "",
-        "signature": "CAISpAgKhwEIEBgCKkBZg5O8N5+Z2u2rZ9pGjPC25xgH2ZIXcmqy38n6JqJ2T4OX6WpSf74DLocWfwTBtK5cASCjAWEVBCdhl6FdCQSBMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDBo6yP4uH5GI2BF2SBoMjbGAkEZVKU/IpIKBIjBuQ8Kd6ZcpuwwrGVV/hwdPwfC/5h+D2AiW49xw4qUBreEmhL+PM+UPmrGH+0w8nLQqyQaZhQiXOwGt/mGKe5sGkAEfqvTaLEzZel1aWim6zb6nvDiRFJ61eMSb+/D7XKg+QA4aI0SxEtMNABiiDFzXV7FGyWUtwQrkrEAcTu2UmnWFAfyCfOlskZdzmfPKoRnzGy+S81WEp7rmx81z66ftcH0JwIMhJF7mlfFSxClwx5+LrITBew2Ek363Cfo1r4+QB+JCgGLhEHvx0DsIoN5VaNtaDi3+8S5BrZisiKlblbG2IzcfVINKJxXysvKldMsnRTvbzC+v0sCjcSmSf1xlz2U2mbcBM7OvHpbGWXCThll4H3dpT3s/Z8fm4W0uLmwY3Z/CgOxOPoKYglNIn51LSsDl+ejUaFnwq3KD+dLLb4TMF/wTtdhVSuy1+pcX/2R47VVmEBkBXjUautnIiehmnPJrsJXrh0d/9oqkjSnnFSWrRc1mnccdg8j1t41SeoSUocR+g4hcy82VmoldO2Qubr4Sp3IfmIgZXrY/hywa/F7eGWDWJUZgLGJDRTk/yM6rfB6fltQUV/i2H2q4iNUkuO5Lhg04Uu1mV9iUple1A1NGxuTOsqjq3pjX4SmRHN4rWQv5f4RFWitsKXhIhd7Ib1+qmYUXmrh6opFoDRZIP/RVRVqrES7Vmpw5fIfdTRxX36/Mz1fHd0YqYlErFqe0Ii1MUHvh91xdsl1GIuRWpA0o7L09kJ9N06r37HQxPJLppeRe6W2UJ18VsLwej5gT/2A4KxklRfex4iiGApU1qf2Kv36YU2fWyP87q/GKFnu4H6dw6+F4aXNnBrojOkTSU8rvzkva2TR+HXSb1D2Zh+XtIHWHTL0HBqSbbv9kKN5/XlKGLSIYf+qO/T0UINRAOZb5uV0b/faxRHpJ6/JJv8Bl62Tc7z8gXr1Edpq3bVJPlnTSkzejIueoF6ujj9dgqpCzmgBVKJdyhVGgy23wPLqCaSfgLeBM1EoCloZ6qUXA+c3/W5KOzZKMkw4tUQpzY1A9pj4E1obw4bOLOF5jl6dsOZ9r8dnGaYPNCujwNi4BJAApKN04eff/R6FwePU1UdAseoCqGrB61EPz7Dq8Gc67DN0LfjMl9DPA04Tbe4nxmaVvu5qVEpeNbLQkrOEOm0vI1atyEMTBaqeAGAE="
+        "signature": "CAISiwUKhwEIEBgCKkBPXvUcAAhNumlIIrEzasUfQNDI6IJ2IRgmCarZgBZfOQ0bYkNWgvLBFkT/DSTwuS9VoStrCyKuW8nPRliFXGxhMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDH/PEy9urxPCuM66zxoMoVABKgyqzOGZ9gRKIjACWjFZts8XKbWZXzwQlmm6aVFxIEZ/kggrzxQ6EQkqctuihOr6+X9Oa3Y5eS6vGjkqsAMFHv4CDyL5spdkx3+s5cRuNaLDQ/tngBWFVRdD2JEWRp5JPNB+PjxTaokjhP7eWgkYdMJMZtgpI4QlaKQEykIoSs6LLH6uZ3E6akm/UTEzsOPi5cr/Ky4KBh+wd8pxq6xbn0SKO6n4o2+iaz9b0t3G2dLkM86jmKK024BFHlkdT/Nuh9KQNhVOsrfgOkc3vXlQBZ6os/cmOwos2kEPtAA0gx5LG7TFB+DI1XRDmHsl8mawbzCxeT1+HvlnkHD/6bmp7FHQW2wKEyxqgVUoS1sBHVg3MScDD4LMiOnSMGGj9fm4FGV2SO3UHTo61/Fh65FCuEHxiFnp5P6QaX1BcHYXA8QRGtKrnYPk5VyN8ptGHxLqB33hgl1oH0rq1If3dNpdpsEZWmeptvb9O7B+ZhJ8kTBP4dwinJq6LPwyDvTHC7SHh+XFJ1nthZr2wDKbwQ+X+pmfhQWklQ4ZkNLLQ+vAQvTJOy3tsa+UnGRdQ5ltsnCJCGAI2v4NgPh+nsdi2yu9OOXJ/fjbJSU1hF/oaLAdFE5aF5FC2s/A9ivtH6mPDcYP60aq3rS0QndZwQnyqscYAQ=="
       }
     ],
     "model": "claude-opus-5",
@@ -215,27 +215,28 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 195,
-      "cache_read_input_tokens": 6731,
+      "cache_creation_input_tokens": 601,
+      "cache_read_input_tokens": 6460,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 195
+        "ephemeral_1h_input_tokens": 601
       },
       "output_tokens": 3,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9hZTTmeUYhnbTcK77J",
+    "message_id": "msg_011CdVjmJ45C3hnqhR48BS4T",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "7acf5f97-265a-4337-8500-c8a8d458c92c"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "134b0b6f-095e-482a-a9bd-3a457da4269e"
   },
   {
     "type": "assistant",
     "content": [
       {
-        "type": "text",
-        "text": "Plan: square 10\u00d710 canvas, Consolas throughout, warm off-white background (#F7F6F3), near-black text (#1E1E1E), single burnt-orange accent (#C2410C). Titles top-aligned and centered; one idea per slide."
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
       }
     ],
     "model": "claude-opus-5",
@@ -243,31 +244,75 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 195,
-      "cache_read_input_tokens": 6731,
+      "cache_creation_input_tokens": 601,
+      "cache_read_input_tokens": 6460,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 195
+        "ephemeral_1h_input_tokens": 601
       },
       "output_tokens": 3,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9hZTTmeUYhnbTcK77J",
+    "message_id": "msg_011CdVjmJ45C3hnqhR48BS4T",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "dc4fec49-19cc-4790-968f-8fae40186352"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "3cd60a40-3405-43fb-a6cf-727b87367144"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool result"
+      }
+    ],
+    "uuid": "9b3561ac-30f3-4eef-8c73-2464aaf75c58",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "elided",
+      "reason": "tool result"
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAIS9QcKhwEIEBgCKkBcVxsLQGwlYb+gx5nE02HpYclo0xROv96m2uWMeOev172y/5pDU9pubvsLjBImvdUzStRTwN1DxHxU7vg0PWDgMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDNdtfpWHlowgPNODzBoMEk6RFCa09BG0+QinIjBUf2O9J4zVUeMYOg9Mj7KHOFbv+XFR6zFZJj3MSCvC3m+WZvc7YDUYjp43sfPytUIqmgZ9jPJk7/6gUhB8Ub2RfR2acy/eX2k50ridO6Brfs5j+FixKXQVF1sdM2mHREBHzvRvPAO9hacqXHs4SFwmhlQMArXUcIrITutX4oxtUNL0SpQFzuvg5u//i2FBJJVMhnQ6eLWjmnEc1Yjt/5OR2N4OPLvd2LypEFnvINvpcZfaOpcn3nv0fAyvfGNB8sLk7flquyz9FRpDkmn8w18zEfZTdfjBSg1ae9Qy3ErhghCeJkY2GW622KRw3qMXUEqenfKXHRvmtvsQel12IFTcgCuIKrtkqRVpgjB5bPNCcSaxF6oNjIzaZXyOEndceVv/Mto4/6fBJQhXrM9LsD0wsXwcFWp+spG+V0WIhWPMhQjR6be0uAjCOqN4JZlCcKleTJfJ4UCUocJzCkc48v19URpPgXdE73lwlRoWVAgYTxdGrJ7BjIt0675ACd7UmVXg5gdgRVv8pLpAe7u77CjZXhWHw8V4cZr/8m9oIAjNiGHCY0uzyKT1ewzQ3ZlhnQWV+e5Y+4j4bD7v2bcJqeqIys5i93YzUx8nIUWIC8QclA4bFUsOTB4GXQRdcNhladIfYFTuCPg26z4k+Nezrbuhg6LerhPF+IVSxwX06jCmRUOcV2HJiz/Soqkp3WNgGlqUniIL9Fj4G7UQGUPO3nJ+unFY9njY13t609QZdsSv8WjiU2BGnmhE9yakPUaHL6azNKNrv7vfiIvQzwhYj1B9ywQ+x3rR3D/C4Mib+hTiJi2ponZE47BC4x7csirCXm6Ojmyq/APvNNH1uyv5uCbUjjkBfUIp4n9r1jPFEqphVhe7aHIRvuRob0n9x2NF/XsQNLOu4tO7JG8nDSZZ7pZIT07uNZ587huF5hVXEC4I7JnaeJ22iUN0Xpw/Zweh2w9wAIYF5g7TK9IQFuHSG0adXKgQsHrA+2/6OH7nJDqGBsmMojlMEouL6E4NBOo9IFaCGJMHvLm7joTkDF/+rjy2Tgla1tG4DUHdx/6LyofjvX+RiEx+61qAAF/adxJuh51JgKYlfW8XAw+a87Fr7P3ETJwa2rlpFHXp8nCGrxgB"
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 270,
+      "cache_read_input_tokens": 7061,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 270
+      },
+      "output_tokens": 3,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjmfMjqANH5f9vighTm",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "5c4889a3-921d-4862-ad2b-9d9c64401292"
   },
   {
     "type": "assistant",
     "content": [
       {
         "type": "tool_use",
-        "id": "toolu_017bZPJ9zitwoCb76R86ncUP",
+        "id": "toolu_01MsZXKNZuWPErzNWthh9fiK",
         "name": "Write",
         "input": {
-          "file_path": "deck.py",
-          "content": "\"\"\"Build the 5-slide \"Marrow\" pitch deck (square 10x10 format, Consolas type).\"\"\"\n\nfrom pptx import Presentation\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.text import MSO_ANCHOR, PP_ALIGN\nfrom pptx.util import Inches, Pt\n\n# --- design tokens ---------------------------------------------------------\nFONT = \"Consolas\"\nBG = RGBColor(0xF7, 0xF6, 0xF3)      # warm off-white\nINK = RGBColor(0x1E, 0x1E, 0x1E)     # near-black text\nMUTED = RGBColor(0x6B, 0x67, 0x62)   # secondary text\nACCENT = RGBColor(0xC2, 0x41, 0x0C)  # burnt orange\n\nHERO_SIZE = Pt(76)\nTITLE_SIZE = Pt(38)\nBODY_SIZE = Pt(20)\nSMALL_SIZE = Pt(15)\n\nMARGIN = Inches(0.9)\nCONTENT_W = Inches(10) - 2 * MARGIN\n\n\ndef new_slide(prs):\n    \"\"\"Blank slide with the deck background.\"\"\"\n    slide = prs.slides.add_slide(prs.slide_layouts[6])\n    bg = slide.background.fill\n    bg.solid()\n    bg.fore_color.rgb = BG\n    return slide\n\n\ndef textbox(slide, top, height, left=MARGIN, width=CONTENT_W):\n    box = slide.shapes.add_textbox(left, top, width, height)\n    tf = box.text_frame\n    tf.word_wrap = True\n    tf.margin_left = tf.margin_right = 0\n    tf.margin_top = tf.margin_bottom = 0\n    return tf\n\n\ndef write(tf, lines, size, color=INK, align=PP_ALIGN.CENTER, bold=False,\n          space_after=Pt(0), line_spacing=1.15, first=False):\n    \"\"\"Append paragraphs of text, every run set in Consolas.\"\"\"\n    for i, line in enumerate(lines):\n        p = tf.paragraphs[0] if (first and i == 0) else tf.add_paragraph()\n        p.alignment = align\n        p.line_spacing = line_spacing\n        p.space_after = space_after\n        run = p.add_run()\n        run.text = line\n        run.font.name = FONT\n        run.font.size = size\n        run.font.bold = bold\n        run.font.color.rgb = color\n    return tf\n\n\ndef rule(slide, top, width=Inches(1.6), height=Pt(4), color=ACCENT,\n         left=None):\n    \"\"\"Thin accent rule, centered by default.\"\"\"\n    if left is None:\n        left = (Inches(10) - width) // 2\n    bar = slide.shapes.add_shape(1, left, top, width, height)  # rectangle\n    bar.fill.solid()\n    bar.fill.fore_color.rgb = color\n    bar.line.fill.background()\n    bar.shadow.inherit = False\n    return bar\n\n\ndef title_block(slide, text, eyebrow=None):\n    \"\"\"Top-aligned, centered slide title with an optional eyebrow label.\"\"\"\n    top = Inches(1.1)\n    if eyebrow:\n        tf = textbox(slide, top, Inches(0.4))\n        write(tf, [eyebrow], SMALL_SIZE, ACCENT, first=True)\n        top += Inches(0.55)\n    tf = textbox(slide, top, Inches(2.0))\n    write(tf, [text], TITLE_SIZE, INK, bold=True, line_spacing=1.1, first=True)\n\n\n# --- deck ------------------------------------------------------------------\nprs = Presentation()\nprs.slide_width = Inches(10)\nprs.slide_height = Inches(10)\n\n# 1 \u2014 Title\ns = new_slide(prs)\ntf = textbox(s, Inches(3.5), Inches(1.6))\nwrite(tf, [\"Marrow\"], HERO_SIZE, INK, bold=True, first=True)\nrule(s, Inches(5.35))\ntf = textbox(s, Inches(5.95), Inches(1.0))\nwrite(tf, [\"Know what your tests actually cover.\"], BODY_SIZE, MUTED, first=True)\n\n# 2 \u2014 The problem\ns = new_slide(prs)\ntitle_block(s, \"Big test suites hide their gaps.\", eyebrow=\"THE PROBLEM\")\nrule(s, Inches(3.5), width=Inches(1.2))\ntf = textbox(s, Inches(4.3), Inches(3.0), left=Inches(1.4),\n             width=Inches(10) - 2 * Inches(1.4))\nwrite(tf, [\"Large suites are slow, and nobody knows which tests cover which code.\"],\n      BODY_SIZE, INK, line_spacing=1.4, first=True)\nwrite(tf, [\"So dead tests linger \u2014 and real gaps go unnoticed.\"],\n      BODY_SIZE, MUTED, line_spacing=1.4, space_after=Pt(0))\ntf.paragraphs[1].space_before = Pt(26)\n\n# 3 \u2014 The idea\ns = new_slide(prs)\ntitle_block(s, \"Watch one run.\\nDraw the real map.\", eyebrow=\"THE IDEA\")\nrule(s, Inches(4.2), width=Inches(1.2))\ntf = textbox(s, Inches(5.0), Inches(2.4), left=Inches(1.4),\n             width=Inches(10) - 2 * Inches(1.4))\nwrite(tf, [\"Marrow instruments a single test run and produces a test\u2192code coverage map.\"],\n      BODY_SIZE, INK, line_spacing=1.4, first=True)\ntf2 = textbox(s, Inches(6.9), Inches(0.6))\nwrite(tf2, [\"No annotations. No config.\"], BODY_SIZE, ACCENT, bold=True, first=True)\n\n# 4 \u2014 How it works\ns = new_slide(prs)\ntitle_block(s, \"How it works\", eyebrow=\"THREE STEPS\")\nrule(s, Inches(3.2), width=Inches(1.2))\n\nsteps = [\n    (\"01\", \"Run\", \"marrow watch -- <your test cmd>\"),\n    (\"02\", \"Record\", \"Marrow records which lines each test exercised.\"),\n    (\"03\", \"Map\", \"It emits an interactive map plus a list of dead tests\\nand untested lines.\"),\n]\ntop = Inches(4.0)\nfor num, label, detail in steps:\n    n = textbox(s, top, Inches(0.5), left=Inches(1.1), width=Inches(0.9))\n    write(n, [num], BODY_SIZE, ACCENT, align=PP_ALIGN.LEFT, bold=True, first=True)\n    body = textbox(s, top, Inches(1.5), left=Inches(2.1),\n                   width=Inches(10) - Inches(2.1) - Inches(1.1))\n    write(body, [label], BODY_SIZE, INK, align=PP_ALIGN.LEFT, bold=True, first=True)\n    write(body, [detail], SMALL_SIZE, MUTED, align=PP_ALIGN.LEFT, line_spacing=1.35)\n    body.paragraphs[1].space_before = Pt(6)\n    top += Inches(1.55)\n\n# 5 \u2014 Call to action\ns = new_slide(prs)\ntf = textbox(s, Inches(3.1), Inches(1.2))\nwrite(tf, [\"Install Marrow\"], TITLE_SIZE, INK, bold=True, first=True)\nrule(s, Inches(4.35), width=Inches(1.6))\n\ncard_w, card_h = Inches(6.4), Inches(1.25)\ncard = s.shapes.add_shape(1, (Inches(10) - card_w) // 2, Inches(5.1), card_w, card_h)\ncard.fill.solid()\ncard.fill.fore_color.rgb = RGBColor(0xEC, 0xE8, 0xE1)\ncard.line.color.rgb = ACCENT\ncard.line.width = Pt(1.25)\ncard.shadow.inherit = False\nctf = card.text_frame\nctf.word_wrap = True\nctf.vertical_anchor = MSO_ANCHOR.MIDDLE\nwrite(ctf, [\"pipx install marrow\"], Pt(28), INK, bold=True, first=True)\n\ntf = textbox(s, Inches(6.9), Inches(0.7))\nwrite(tf, [\"Works with pytest, Jest, go test.\"], BODY_SIZE, MUTED, first=True)\n\nprs.save(\"deck.pptx\")\nprint(\"wrote deck.pptx\")\n"
+          "file_path": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+          "content": "\"\"\"Build the 5-slide \"Marrow\" pitch deck (square 1:1, Consolas throughout).\"\"\"\n\nfrom pptx import Presentation\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.shapes import MSO_SHAPE\nfrom pptx.enum.text import MSO_ANCHOR, PP_ALIGN\nfrom pptx.util import Inches, Pt\n\n# --- design tokens -----------------------------------------------------------\n\nFONT = \"Consolas\"\n\nBG = RGBColor(0xF6, 0xF5, 0xF2)        # warm off-white page\nINK = RGBColor(0x1B, 0x1B, 0x1E)       # near-black text\nMUTED = RGBColor(0x6B, 0x6B, 0x73)     # secondary text\nACCENT = RGBColor(0xC2, 0x41, 0x0C)    # burnt orange\nPANEL = RGBColor(0x1B, 0x1B, 0x1E)     # dark code panel\nPANEL_TEXT = RGBColor(0xF6, 0xF5, 0xF2)\n\nSIDE = Inches(0.95)                    # left/right margin\nCONTENT_W = Inches(10) - 2 * SIDE\n\nTITLE_PT = 34\nLEAD_PT = 21\nBODY_PT = 16\nCODE_PT = 15\nSMALL_PT = 10.5\n\nprs = Presentation()\nprs.slide_width = Inches(10)\nprs.slide_height = Inches(10)\nBLANK = prs.slide_layouts[6]\n\n\n# --- helpers -----------------------------------------------------------------\n\ndef add_slide():\n    \"\"\"Blank slide painted with the deck background.\"\"\"\n    slide = prs.slides.add_slide(BLANK)\n    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)\n    bg.fill.solid()\n    bg.fill.fore_color.rgb = BG\n    bg.line.fill.background()\n    bg.shadow.inherit = False\n    return slide\n\n\ndef textbox(slide, left, top, width, height):\n    box = slide.shapes.add_textbox(left, top, width, height)\n    tf = box.text_frame\n    tf.word_wrap = True\n    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0\n    return tf\n\n\ndef write(tf, lines, size, color=INK, bold=False, align=PP_ALIGN.LEFT,\n          space_after=0, line_spacing=1.25, first=None):\n    \"\"\"Fill a text frame; every run is set to Consolas.\"\"\"\n    for i, text in enumerate(lines):\n        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()\n        p.alignment = align\n        p.line_spacing = line_spacing\n        p.space_after = Pt(space_after)\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(size)\n        run.font.bold = bold\n        run.font.color.rgb = color\n        if i == 0 and first:\n            run.font.size = Pt(first.get(\"size\", size))\n            run.font.bold = first.get(\"bold\", bold)\n            run.font.color.rgb = first.get(\"color\", color)\n    return tf\n\n\ndef rule(slide, top, width=Inches(1.5), color=ACCENT, thickness=Pt(3.5), left=SIDE):\n    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, thickness)\n    line.fill.solid()\n    line.fill.fore_color.rgb = color\n    line.line.fill.background()\n    line.shadow.inherit = False\n    return line\n\n\ndef panel(slide, top, height, color=PANEL, left=SIDE, width=CONTENT_W):\n    box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)\n    box.fill.solid()\n    box.fill.fore_color.rgb = color\n    box.line.fill.background()\n    box.shadow.inherit = False\n    box.adjustments[0] = 0.08\n    return box\n\n\ndef slide_title(slide, text):\n    \"\"\"Section title: top-aligned, centered, with an accent rule beneath.\"\"\"\n    tf = textbox(slide, SIDE, Inches(1.0), CONTENT_W, Inches(1.4))\n    write(tf, [text], TITLE_PT, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.1)\n    rule(slide, Inches(2.05), width=Inches(1.6),\n         left=int((prs.slide_width - Inches(1.6)) / 2))\n\n\ndef footer(slide, label, number):\n    tf = textbox(slide, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\n    p = tf.paragraphs[0]\n    p.alignment = PP_ALIGN.LEFT\n    for text, color in ((label, MUTED), (\"   \u00b7   \", MUTED), (number, ACCENT)):\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(SMALL_PT)\n        run.font.color.rgb = color\n\n\n# --- 1. title ----------------------------------------------------------------\n\ns = add_slide()\ntf = textbox(s, SIDE, Inches(3.5), CONTENT_W, Inches(1.6))\nwrite(tf, [\"Marrow\"], 76, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.0)\n\nrule(s, Inches(4.95), width=Inches(2.2), left=int((prs.slide_width - Inches(2.2)) / 2))\n\ntf = textbox(s, SIDE, Inches(5.5), CONTENT_W, Inches(0.8))\nwrite(tf, [\"Know what your tests actually cover.\"], LEAD_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(6.4), CONTENT_W, Inches(0.5))\nwrite(tf, [\"$ marrow watch -- pytest\"], CODE_PT, ACCENT, align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\nwrite(tf, [\"a CLI that maps tests to the code they cover\"], SMALL_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 2. the problem ----------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Big test suites hide their gaps.\")\nfooter(s, \"the problem\", \"02\")\n\ntf = textbox(s, SIDE, Inches(3.1), CONTENT_W, Inches(3.0))\nwrite(tf, [\n    \"Large suites are slow, and nobody knows which tests\",\n    \"cover which code.\",\n], LEAD_PT, INK, line_spacing=1.35, space_after=20)\n\nitems = [\n    (\"Dead tests linger.\", \"They pass forever and guard nothing.\"),\n    (\"Real gaps go unnoticed.\", \"A green run says little about coverage.\"),\n    (\"Slow feedback.\", \"Everything runs because nothing is mapped.\"),\n]\ntop = Inches(4.6)\nfor head, sub in items:\n    rule(s, top + Inches(0.12), width=Inches(0.22), thickness=Pt(9), left=SIDE)\n    tf = textbox(s, SIDE + Inches(0.55), top, CONTENT_W - Inches(0.55), Inches(1.0))\n    write(tf, [head], BODY_PT, INK, bold=True, line_spacing=1.2)\n    tf2 = textbox(s, SIDE + Inches(0.55), top + Inches(0.34),\n                  CONTENT_W - Inches(0.55), Inches(0.6))\n    write(tf2, [sub], BODY_PT, MUTED, line_spacing=1.2)\n    top += Inches(1.15)\n\n\n# --- 3. the idea -------------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Watch one run. Draw the real map.\")\nfooter(s, \"the idea\", \"03\")\n\ntf = textbox(s, SIDE, Inches(3.2), CONTENT_W, Inches(2.2))\nwrite(tf, [\n    \"Marrow instruments a single test run and produces a\",\n    \"test \u2192 code coverage map.\",\n], LEAD_PT, INK, line_spacing=1.35)\n\np = panel(s, Inches(5.2), Inches(2.1))\ntf = p.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\ntf.margin_left = tf.margin_right = Inches(0.5)\nwrite(tf, [\n    \"no annotations\",\n    \"no config\",\n    \"one run, the whole map\",\n], LEAD_PT, PANEL_TEXT, align=PP_ALIGN.CENTER, line_spacing=1.45)\ntf.paragraphs[1].runs[0].font.color.rgb = PANEL_TEXT\ntf.paragraphs[2].runs[0].font.color.rgb = ACCENT\ntf.paragraphs[2].runs[0].font.bold = True\n\ntf = textbox(s, SIDE, Inches(7.8), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Point it at the test command you already use.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 4. how it works ---------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"How it works\")\nfooter(s, \"how it works\", \"04\")\n\nsteps = [\n    (\"01\", \"Run it\", \"marrow watch -- <your test cmd>\", True),\n    (\"02\", \"It records\", \"which lines each test exercised\", False),\n    (\"03\", \"It emits\", \"an interactive map + dead tests + untested lines\", False),\n]\n\ntop = Inches(3.2)\nfor num, head, detail, is_code in steps:\n    tf = textbox(s, SIDE, top, Inches(1.0), Inches(0.8))\n    write(tf, [num], 30, ACCENT, bold=True, line_spacing=1.0)\n\n    tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.05),\n                 CONTENT_W - Inches(1.1), Inches(0.5))\n    write(tf, [head], LEAD_PT, INK, bold=True, line_spacing=1.15)\n\n    if is_code:\n        box = panel(s, top + Inches(0.6), Inches(0.62),\n                    left=SIDE + Inches(1.1), width=CONTENT_W - Inches(1.1))\n        tf = box.text_frame\n        tf.word_wrap = True\n        tf.vertical_anchor = MSO_ANCHOR.MIDDLE\n        tf.margin_left = Inches(0.3)\n        p = tf.paragraphs[0]\n        for text, color in ((\"$ \", ACCENT), (detail, PANEL_TEXT)):\n            run = p.add_run()\n            run.text = text\n            run.font.name = FONT\n            run.font.size = Pt(CODE_PT)\n            run.font.color.rgb = color\n    else:\n        tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.62),\n                     CONTENT_W - Inches(1.1), Inches(0.8))\n        write(tf, [detail], BODY_PT, MUTED, line_spacing=1.3)\n\n    top += Inches(1.8)\n\nrule(s, Inches(8.6), width=CONTENT_W, thickness=Pt(1.5), color=RGBColor(0xDD, 0xDA, 0xD3))\n\n\n# --- 5. call to action -------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Install Marrow\")\nfooter(s, \"get started\", \"05\")\n\nbox = panel(s, Inches(4.0), Inches(1.5))\ntf = box.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\np = tf.paragraphs[0]\np.alignment = PP_ALIGN.CENTER\nfor text, color in ((\"$ \", ACCENT), (\"pipx install marrow\", PANEL_TEXT)):\n    run = p.add_run()\n    run.text = text\n    run.font.name = FONT\n    run.font.size = Pt(27)\n    run.font.bold = True\n    run.font.color.rgb = color\n\ntf = textbox(s, SIDE, Inches(6.1), CONTENT_W, Inches(0.7))\nwrite(tf, [\"Works with pytest, Jest, go test.\"], LEAD_PT, INK,\n      align=PP_ALIGN.CENTER)\n\nrule(s, Inches(7.1), width=Inches(1.6), left=int((prs.slide_width - Inches(1.6)) / 2))\n\ntf = textbox(s, SIDE, Inches(7.6), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Know what your tests actually cover.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\nprs.save(\"deck.pptx\")\nprint(f\"wrote deck.pptx \u2014 {len(prs.slides.__iter__.__self__._sldIdLst)} slides, \"\n      f\"{prs.slide_width.inches:g}x{prs.slide_height.inches:g} in\")\n"
         }
       }
     ],
@@ -276,37 +321,37 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 195,
-      "cache_read_input_tokens": 6731,
+      "cache_creation_input_tokens": 270,
+      "cache_read_input_tokens": 7061,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 195
+        "ephemeral_1h_input_tokens": 270
       },
       "output_tokens": 3,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9hZTTmeUYhnbTcK77J",
+    "message_id": "msg_011CdVjmfMjqANH5f9vighTm",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "d04f0f93-3227-45af-bcb3-a7529c4a68cb"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "82219c6e-5027-4f46-81a7-24a0dabffb97"
   },
   {
     "type": "user",
     "content": [
       {
         "type": "tool_result",
-        "tool_use_id": "toolu_017bZPJ9zitwoCb76R86ncUP",
-        "content": "File created successfully at: deck.py (file state is current in your context \u2014 no need to Read it back)",
+        "tool_use_id": "toolu_01MsZXKNZuWPErzNWthh9fiK",
+        "content": "File created successfully at: /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py (file state is current in your context \u2014 no need to Read it back)",
         "is_error": null
       }
     ],
-    "uuid": "e12cb563-5577-4d43-a5b2-ce50da70af41",
+    "uuid": "d57c72f9-3e6b-4c75-a624-ab6f655d250a",
     "parent_tool_use_id": null,
     "tool_use_result": {
       "type": "create",
-      "filePath": "deck.py",
-      "content": "\"\"\"Build the 5-slide \"Marrow\" pitch deck (square 10x10 format, Consolas type).\"\"\"\n\nfrom pptx import Presentation\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.text import MSO_ANCHOR, PP_ALIGN\nfrom pptx.util import Inches, Pt\n\n# --- design tokens ---------------------------------------------------------\nFONT = \"Consolas\"\nBG = RGBColor(0xF7, 0xF6, 0xF3)      # warm off-white\nINK = RGBColor(0x1E, 0x1E, 0x1E)     # near-black text\nMUTED = RGBColor(0x6B, 0x67, 0x62)   # secondary text\nACCENT = RGBColor(0xC2, 0x41, 0x0C)  # burnt orange\n\nHERO_SIZE = Pt(76)\nTITLE_SIZE = Pt(38)\nBODY_SIZE = Pt(20)\nSMALL_SIZE = Pt(15)\n\nMARGIN = Inches(0.9)\nCONTENT_W = Inches(10) - 2 * MARGIN\n\n\ndef new_slide(prs):\n    \"\"\"Blank slide with the deck background.\"\"\"\n    slide = prs.slides.add_slide(prs.slide_layouts[6])\n    bg = slide.background.fill\n    bg.solid()\n    bg.fore_color.rgb = BG\n    return slide\n\n\ndef textbox(slide, top, height, left=MARGIN, width=CONTENT_W):\n    box = slide.shapes.add_textbox(left, top, width, height)\n    tf = box.text_frame\n    tf.word_wrap = True\n    tf.margin_left = tf.margin_right = 0\n    tf.margin_top = tf.margin_bottom = 0\n    return tf\n\n\ndef write(tf, lines, size, color=INK, align=PP_ALIGN.CENTER, bold=False,\n          space_after=Pt(0), line_spacing=1.15, first=False):\n    \"\"\"Append paragraphs of text, every run set in Consolas.\"\"\"\n    for i, line in enumerate(lines):\n        p = tf.paragraphs[0] if (first and i == 0) else tf.add_paragraph()\n        p.alignment = align\n        p.line_spacing = line_spacing\n        p.space_after = space_after\n        run = p.add_run()\n        run.text = line\n        run.font.name = FONT\n        run.font.size = size\n        run.font.bold = bold\n        run.font.color.rgb = color\n    return tf\n\n\ndef rule(slide, top, width=Inches(1.6), height=Pt(4), color=ACCENT,\n         left=None):\n    \"\"\"Thin accent rule, centered by default.\"\"\"\n    if left is None:\n        left = (Inches(10) - width) // 2\n    bar = slide.shapes.add_shape(1, left, top, width, height)  # rectangle\n    bar.fill.solid()\n    bar.fill.fore_color.rgb = color\n    bar.line.fill.background()\n    bar.shadow.inherit = False\n    return bar\n\n\ndef title_block(slide, text, eyebrow=None):\n    \"\"\"Top-aligned, centered slide title with an optional eyebrow label.\"\"\"\n    top = Inches(1.1)\n    if eyebrow:\n        tf = textbox(slide, top, Inches(0.4))\n        write(tf, [eyebrow], SMALL_SIZE, ACCENT, first=True)\n        top += Inches(0.55)\n    tf = textbox(slide, top, Inches(2.0))\n    write(tf, [text], TITLE_SIZE, INK, bold=True, line_spacing=1.1, first=True)\n\n\n# --- deck ------------------------------------------------------------------\nprs = Presentation()\nprs.slide_width = Inches(10)\nprs.slide_height = Inches(10)\n\n# 1 \u2014 Title\ns = new_slide(prs)\ntf = textbox(s, Inches(3.5), Inches(1.6))\nwrite(tf, [\"Marrow\"], HERO_SIZE, INK, bold=True, first=True)\nrule(s, Inches(5.35))\ntf = textbox(s, Inches(5.95), Inches(1.0))\nwrite(tf, [\"Know what your tests actually cover.\"], BODY_SIZE, MUTED, first=True)\n\n# 2 \u2014 The problem\ns = new_slide(prs)\ntitle_block(s, \"Big test suites hide their gaps.\", eyebrow=\"THE PROBLEM\")\nrule(s, Inches(3.5), width=Inches(1.2))\ntf = textbox(s, Inches(4.3), Inches(3.0), left=Inches(1.4),\n             width=Inches(10) - 2 * Inches(1.4))\nwrite(tf, [\"Large suites are slow, and nobody knows which tests cover which code.\"],\n      BODY_SIZE, INK, line_spacing=1.4, first=True)\nwrite(tf, [\"So dead tests linger \u2014 and real gaps go unnoticed.\"],\n      BODY_SIZE, MUTED, line_spacing=1.4, space_after=Pt(0))\ntf.paragraphs[1].space_before = Pt(26)\n\n# 3 \u2014 The idea\ns = new_slide(prs)\ntitle_block(s, \"Watch one run.\\nDraw the real map.\", eyebrow=\"THE IDEA\")\nrule(s, Inches(4.2), width=Inches(1.2))\ntf = textbox(s, Inches(5.0), Inches(2.4), left=Inches(1.4),\n             width=Inches(10) - 2 * Inches(1.4))\nwrite(tf, [\"Marrow instruments a single test run and produces a test\u2192code coverage map.\"],\n      BODY_SIZE, INK, line_spacing=1.4, first=True)\ntf2 = textbox(s, Inches(6.9), Inches(0.6))\nwrite(tf2, [\"No annotations. No config.\"], BODY_SIZE, ACCENT, bold=True, first=True)\n\n# 4 \u2014 How it works\ns = new_slide(prs)\ntitle_block(s, \"How it works\", eyebrow=\"THREE STEPS\")\nrule(s, Inches(3.2), width=Inches(1.2))\n\nsteps = [\n    (\"01\", \"Run\", \"marrow watch -- <your test cmd>\"),\n    (\"02\", \"Record\", \"Marrow records which lines each test exercised.\"),\n    (\"03\", \"Map\", \"It emits an interactive map plus a list of dead tests\\nand untested lines.\"),\n]\ntop = Inches(4.0)\nfor num, label, detail in steps:\n    n = textbox(s, top, Inches(0.5), left=Inches(1.1), width=Inches(0.9))\n    write(n, [num], BODY_SIZE, ACCENT, align=PP_ALIGN.LEFT, bold=True, first=True)\n    body = textbox(s, top, Inches(1.5), left=Inches(2.1),\n                   width=Inches(10) - Inches(2.1) - Inches(1.1))\n    write(body, [label], BODY_SIZE, INK, align=PP_ALIGN.LEFT, bold=True, first=True)\n    write(body, [detail], SMALL_SIZE, MUTED, align=PP_ALIGN.LEFT, line_spacing=1.35)\n    body.paragraphs[1].space_before = Pt(6)\n    top += Inches(1.55)\n\n# 5 \u2014 Call to action\ns = new_slide(prs)\ntf = textbox(s, Inches(3.1), Inches(1.2))\nwrite(tf, [\"Install Marrow\"], TITLE_SIZE, INK, bold=True, first=True)\nrule(s, Inches(4.35), width=Inches(1.6))\n\ncard_w, card_h = Inches(6.4), Inches(1.25)\ncard = s.shapes.add_shape(1, (Inches(10) - card_w) // 2, Inches(5.1), card_w, card_h)\ncard.fill.solid()\ncard.fill.fore_color.rgb = RGBColor(0xEC, 0xE8, 0xE1)\ncard.line.color.rgb = ACCENT\ncard.line.width = Pt(1.25)\ncard.shadow.inherit = False\nctf = card.text_frame\nctf.word_wrap = True\nctf.vertical_anchor = MSO_ANCHOR.MIDDLE\nwrite(ctf, [\"pipx install marrow\"], Pt(28), INK, bold=True, first=True)\n\ntf = textbox(s, Inches(6.9), Inches(0.7))\nwrite(tf, [\"Works with pytest, Jest, go test.\"], BODY_SIZE, MUTED, first=True)\n\nprs.save(\"deck.pptx\")\nprint(\"wrote deck.pptx\")\n",
+      "filePath": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+      "content": "\"\"\"Build the 5-slide \"Marrow\" pitch deck (square 1:1, Consolas throughout).\"\"\"\n\nfrom pptx import Presentation\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.shapes import MSO_SHAPE\nfrom pptx.enum.text import MSO_ANCHOR, PP_ALIGN\nfrom pptx.util import Inches, Pt\n\n# --- design tokens -----------------------------------------------------------\n\nFONT = \"Consolas\"\n\nBG = RGBColor(0xF6, 0xF5, 0xF2)        # warm off-white page\nINK = RGBColor(0x1B, 0x1B, 0x1E)       # near-black text\nMUTED = RGBColor(0x6B, 0x6B, 0x73)     # secondary text\nACCENT = RGBColor(0xC2, 0x41, 0x0C)    # burnt orange\nPANEL = RGBColor(0x1B, 0x1B, 0x1E)     # dark code panel\nPANEL_TEXT = RGBColor(0xF6, 0xF5, 0xF2)\n\nSIDE = Inches(0.95)                    # left/right margin\nCONTENT_W = Inches(10) - 2 * SIDE\n\nTITLE_PT = 34\nLEAD_PT = 21\nBODY_PT = 16\nCODE_PT = 15\nSMALL_PT = 10.5\n\nprs = Presentation()\nprs.slide_width = Inches(10)\nprs.slide_height = Inches(10)\nBLANK = prs.slide_layouts[6]\n\n\n# --- helpers -----------------------------------------------------------------\n\ndef add_slide():\n    \"\"\"Blank slide painted with the deck background.\"\"\"\n    slide = prs.slides.add_slide(BLANK)\n    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)\n    bg.fill.solid()\n    bg.fill.fore_color.rgb = BG\n    bg.line.fill.background()\n    bg.shadow.inherit = False\n    return slide\n\n\ndef textbox(slide, left, top, width, height):\n    box = slide.shapes.add_textbox(left, top, width, height)\n    tf = box.text_frame\n    tf.word_wrap = True\n    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0\n    return tf\n\n\ndef write(tf, lines, size, color=INK, bold=False, align=PP_ALIGN.LEFT,\n          space_after=0, line_spacing=1.25, first=None):\n    \"\"\"Fill a text frame; every run is set to Consolas.\"\"\"\n    for i, text in enumerate(lines):\n        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()\n        p.alignment = align\n        p.line_spacing = line_spacing\n        p.space_after = Pt(space_after)\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(size)\n        run.font.bold = bold\n        run.font.color.rgb = color\n        if i == 0 and first:\n            run.font.size = Pt(first.get(\"size\", size))\n            run.font.bold = first.get(\"bold\", bold)\n            run.font.color.rgb = first.get(\"color\", color)\n    return tf\n\n\ndef rule(slide, top, width=Inches(1.5), color=ACCENT, thickness=Pt(3.5), left=SIDE):\n    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, thickness)\n    line.fill.solid()\n    line.fill.fore_color.rgb = color\n    line.line.fill.background()\n    line.shadow.inherit = False\n    return line\n\n\ndef panel(slide, top, height, color=PANEL, left=SIDE, width=CONTENT_W):\n    box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)\n    box.fill.solid()\n    box.fill.fore_color.rgb = color\n    box.line.fill.background()\n    box.shadow.inherit = False\n    box.adjustments[0] = 0.08\n    return box\n\n\ndef slide_title(slide, text):\n    \"\"\"Section title: top-aligned, centered, with an accent rule beneath.\"\"\"\n    tf = textbox(slide, SIDE, Inches(1.0), CONTENT_W, Inches(1.4))\n    write(tf, [text], TITLE_PT, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.1)\n    rule(slide, Inches(2.05), width=Inches(1.6),\n         left=int((prs.slide_width - Inches(1.6)) / 2))\n\n\ndef footer(slide, label, number):\n    tf = textbox(slide, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\n    p = tf.paragraphs[0]\n    p.alignment = PP_ALIGN.LEFT\n    for text, color in ((label, MUTED), (\"   \u00b7   \", MUTED), (number, ACCENT)):\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(SMALL_PT)\n        run.font.color.rgb = color\n\n\n# --- 1. title ----------------------------------------------------------------\n\ns = add_slide()\ntf = textbox(s, SIDE, Inches(3.5), CONTENT_W, Inches(1.6))\nwrite(tf, [\"Marrow\"], 76, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.0)\n\nrule(s, Inches(4.95), width=Inches(2.2), left=int((prs.slide_width - Inches(2.2)) / 2))\n\ntf = textbox(s, SIDE, Inches(5.5), CONTENT_W, Inches(0.8))\nwrite(tf, [\"Know what your tests actually cover.\"], LEAD_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(6.4), CONTENT_W, Inches(0.5))\nwrite(tf, [\"$ marrow watch -- pytest\"], CODE_PT, ACCENT, align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\nwrite(tf, [\"a CLI that maps tests to the code they cover\"], SMALL_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 2. the problem ----------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Big test suites hide their gaps.\")\nfooter(s, \"the problem\", \"02\")\n\ntf = textbox(s, SIDE, Inches(3.1), CONTENT_W, Inches(3.0))\nwrite(tf, [\n    \"Large suites are slow, and nobody knows which tests\",\n    \"cover which code.\",\n], LEAD_PT, INK, line_spacing=1.35, space_after=20)\n\nitems = [\n    (\"Dead tests linger.\", \"They pass forever and guard nothing.\"),\n    (\"Real gaps go unnoticed.\", \"A green run says little about coverage.\"),\n    (\"Slow feedback.\", \"Everything runs because nothing is mapped.\"),\n]\ntop = Inches(4.6)\nfor head, sub in items:\n    rule(s, top + Inches(0.12), width=Inches(0.22), thickness=Pt(9), left=SIDE)\n    tf = textbox(s, SIDE + Inches(0.55), top, CONTENT_W - Inches(0.55), Inches(1.0))\n    write(tf, [head], BODY_PT, INK, bold=True, line_spacing=1.2)\n    tf2 = textbox(s, SIDE + Inches(0.55), top + Inches(0.34),\n                  CONTENT_W - Inches(0.55), Inches(0.6))\n    write(tf2, [sub], BODY_PT, MUTED, line_spacing=1.2)\n    top += Inches(1.15)\n\n\n# --- 3. the idea -------------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Watch one run. Draw the real map.\")\nfooter(s, \"the idea\", \"03\")\n\ntf = textbox(s, SIDE, Inches(3.2), CONTENT_W, Inches(2.2))\nwrite(tf, [\n    \"Marrow instruments a single test run and produces a\",\n    \"test \u2192 code coverage map.\",\n], LEAD_PT, INK, line_spacing=1.35)\n\np = panel(s, Inches(5.2), Inches(2.1))\ntf = p.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\ntf.margin_left = tf.margin_right = Inches(0.5)\nwrite(tf, [\n    \"no annotations\",\n    \"no config\",\n    \"one run, the whole map\",\n], LEAD_PT, PANEL_TEXT, align=PP_ALIGN.CENTER, line_spacing=1.45)\ntf.paragraphs[1].runs[0].font.color.rgb = PANEL_TEXT\ntf.paragraphs[2].runs[0].font.color.rgb = ACCENT\ntf.paragraphs[2].runs[0].font.bold = True\n\ntf = textbox(s, SIDE, Inches(7.8), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Point it at the test command you already use.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 4. how it works ---------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"How it works\")\nfooter(s, \"how it works\", \"04\")\n\nsteps = [\n    (\"01\", \"Run it\", \"marrow watch -- <your test cmd>\", True),\n    (\"02\", \"It records\", \"which lines each test exercised\", False),\n    (\"03\", \"It emits\", \"an interactive map + dead tests + untested lines\", False),\n]\n\ntop = Inches(3.2)\nfor num, head, detail, is_code in steps:\n    tf = textbox(s, SIDE, top, Inches(1.0), Inches(0.8))\n    write(tf, [num], 30, ACCENT, bold=True, line_spacing=1.0)\n\n    tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.05),\n                 CONTENT_W - Inches(1.1), Inches(0.5))\n    write(tf, [head], LEAD_PT, INK, bold=True, line_spacing=1.15)\n\n    if is_code:\n        box = panel(s, top + Inches(0.6), Inches(0.62),\n                    left=SIDE + Inches(1.1), width=CONTENT_W - Inches(1.1))\n        tf = box.text_frame\n        tf.word_wrap = True\n        tf.vertical_anchor = MSO_ANCHOR.MIDDLE\n        tf.margin_left = Inches(0.3)\n        p = tf.paragraphs[0]\n        for text, color in ((\"$ \", ACCENT), (detail, PANEL_TEXT)):\n            run = p.add_run()\n            run.text = text\n            run.font.name = FONT\n            run.font.size = Pt(CODE_PT)\n            run.font.color.rgb = color\n    else:\n        tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.62),\n                     CONTENT_W - Inches(1.1), Inches(0.8))\n        write(tf, [detail], BODY_PT, MUTED, line_spacing=1.3)\n\n    top += Inches(1.8)\n\nrule(s, Inches(8.6), width=CONTENT_W, thickness=Pt(1.5), color=RGBColor(0xDD, 0xDA, 0xD3))\n\n\n# --- 5. call to action -------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Install Marrow\")\nfooter(s, \"get started\", \"05\")\n\nbox = panel(s, Inches(4.0), Inches(1.5))\ntf = box.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\np = tf.paragraphs[0]\np.alignment = PP_ALIGN.CENTER\nfor text, color in ((\"$ \", ACCENT), (\"pipx install marrow\", PANEL_TEXT)):\n    run = p.add_run()\n    run.text = text\n    run.font.name = FONT\n    run.font.size = Pt(27)\n    run.font.bold = True\n    run.font.color.rgb = color\n\ntf = textbox(s, SIDE, Inches(6.1), CONTENT_W, Inches(0.7))\nwrite(tf, [\"Works with pytest, Jest, go test.\"], LEAD_PT, INK,\n      align=PP_ALIGN.CENTER)\n\nrule(s, Inches(7.1), width=Inches(1.6), left=int((prs.slide_width - Inches(1.6)) / 2))\n\ntf = textbox(s, SIDE, Inches(7.6), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Know what your tests actually cover.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\nprs.save(\"deck.pptx\")\nprint(f\"wrote deck.pptx \u2014 {len(prs.slides.__iter__.__self__._sldIdLst)} slides, \"\n      f\"{prs.slide_width.inches:g}x{prs.slide_height.inches:g} in\")\n",
       "structuredPatch": [],
       "originalFile": null,
       "userModified": false
@@ -326,20 +371,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 3437,
-      "cache_read_input_tokens": 6926,
+      "cache_creation_input_tokens": 5168,
+      "cache_read_input_tokens": 7331,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 3437
+        "ephemeral_1h_input_tokens": 5168
       },
-      "output_tokens": 66,
+      "output_tokens": 71,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9kFU4o9DVuFqDpKVze",
+    "message_id": "msg_011CdVjqK1jcjUMsmMS8UkPm",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "5fd2effb-fead-4780-b691-8d95ca5221a5"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "e1759cf7-3502-49af-bb05-bab18ea6e50e"
   },
   {
     "type": "user",
@@ -349,7 +394,7 @@
         "reason": "tool result"
       }
     ],
-    "uuid": "face5b99-c9ee-4d4a-a134-50b94f9584f4",
+    "uuid": "231af489-84cf-45b6-82c1-4fc8746a54fd",
     "parent_tool_use_id": null,
     "tool_use_result": {
       "type": "elided",
@@ -362,7 +407,7 @@
       {
         "type": "thinking",
         "thinking": "",
-        "signature": "CAIS0QIKhwEIEBgCKkDwuA6VhQ3eszVs1EoVYzvihfig8rDAb/ZahmpL+xoVUK5UO+t5q7p7t5tlSBhxhttDIiPBYRr6JygtssGTmIk9Mg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDOjvRSEsIi7FsbV87xoMuXelhTeiGORee/eJIjCkK6vM1rHMAG9Xml4JSsr6Y1awVghCYGGOC60BmkxXa+u/J6QHvy6A0fnVOAzx3Ugqd6FrxV5/vFjhnoGyOUDk7tQPgzmRn0OBrVIqwMH/RpFOZ8e0BmxXbQa4AooV0ZZ1BhGeB0iCwhCNg8w9KzWUzGoKWO0sOPSv6RkBAKDZR3KS2LCmEIZdak1O57BKbhqB7UyOKMczbLPVzBaVSFklOdcT4gBmsrgVGAE="
+        "signature": "CAIS/wMKhwEIEBgCKkBALNMvXvmSkAemx5ruw7J8U+lj+5Cknh2Ulb31ndBFsv1zxfGRLBAz8TSFVaE+Q97G3AMcUw4Wc97gQ0yjUXHvMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDGzmqZJGd2kGpaKOqRoM/WqFdTxPEu26A0ruIjBZ2q8OjqjFGn+uSNMAaQR6MymVtll569P9B3Fg+PsMV3OGyWst29CW/KbtQVBbXQYqpAK5Q8Hzbp4LMvR8gGofF10cn261fF693387QJpCDdvQwE3JZcZsn4+xGfElQqcJGQlz+/lZCEPQbP3sWVEAmNvnjStWiXDjR5OA5eW0DfuY7hXh1c5vzrpEmj7D6oflmkCFpO5yRHsTKPB9hxBwUMrSd4ttNmkEHj9DRxXbRozgoGGqcqC8IrPym6FicfLuZFFtk9IAj7QM4hHx+8H/bgD5NE3VXLP53Ro0uqkwTIEE30IbAaVHVQnZEDxIOLQc8AQ7MRJdg/3i4VEKStIpx4gHaMkyu69cPeqEoZtDtSIi1hu7Y+yZ3wgAn9DocE9tZTwSS8oMTSxgZOaxIz9sGtdsZBYKPtGsobiqT0Pa0UB9WkcW8xlkQ6L7rBRlCbr5SEm8GD63GAE="
       }
     ],
     "model": "claude-opus-5",
@@ -370,20 +415,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 131,
-      "cache_read_input_tokens": 10363,
+      "cache_creation_input_tokens": 351,
+      "cache_read_input_tokens": 12499,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 131
+        "ephemeral_1h_input_tokens": 351
       },
-      "output_tokens": 3,
+      "output_tokens": 7,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9kT1M463jw7mSKXy3e",
+    "message_id": "msg_011CdVjqaDHfHBkifD7sTu2i",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "c9179ac8-ff0b-44bc-bc5a-716555c395fb"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "39cff659-2985-40f5-be5a-54c5886001f7"
   },
   {
     "type": "assistant",
@@ -399,20 +444,20 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 131,
-      "cache_read_input_tokens": 10363,
+      "cache_creation_input_tokens": 351,
+      "cache_read_input_tokens": 12499,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 131
+        "ephemeral_1h_input_tokens": 351
       },
-      "output_tokens": 3,
+      "output_tokens": 7,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9kT1M463jw7mSKXy3e",
+    "message_id": "msg_011CdVjqaDHfHBkifD7sTu2i",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "96e39e4c-cc53-47cc-89f8-3203dc7cc825"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "9dfac650-6c5a-4935-b18e-f1c97f058997"
   },
   {
     "type": "user",
@@ -422,7 +467,409 @@
         "reason": "tool result"
       }
     ],
-    "uuid": "d3216815-20fe-418b-9565-cfbcea78c2e8",
+    "uuid": "e85a3eac-48e0-4617-8415-21832f4763b9",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "elided",
+      "reason": "tool result"
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAISjgQKhwEIEBgCKkAeNEBcRDD9yNG3DGJwe0IlPnOyqyZ9oY8ZlmcoO/OUzhT/S5uCYBWMZ0deeLbrzPXxu/U7qtSFzeMmxSbuwS3eMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDDQ4gm7X3HJ8UjsTwhoMwwQH3kJBQGNH1H8uIjBz+cN6DsAyStQ7YvYoUmtf3zUebogFK3KwuDWbsq5KJylv7RP7kxviys41V1NpfxwqswIMNb+D21STQtFzHzVcjp3UTGoOAvmqvZfWnv2QNT54otrZsJ1NcWJWwox70wlZw0R37bTjWoaKxpuNnl7eXLN/s4j6vnq+adV0GQfrp5QxO5NgKDnOR0fRzNohRGBmEB89Qpkt87jyvI8Z+VoJXMWu/5++dn1ZEiK3jZ3KBy+Nb3y6bn3sSPI9COILktB4lQCgulGH3WKk7eJl2GgdkU9pGaUby9pZfsA0QHawF9kEsKnzAN2LzJSZQEmxwSMTENzgdJbbswYvG4DYBL3MM5yvyNDBriuYsSfrisoh3Vz9OPbm2ponRjGjApuvd1u+UvWtNzKNi1/Iu/61oQFLsGSYlDAbJu7cuJk5lUK8rJ2CR58vRovFOWufbSy0+9hS2/h5bS4m1YkOGA+mKrPfgJsqOl6pGAE="
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 474,
+      "cache_read_input_tokens": 12850,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 474
+      },
+      "output_tokens": 2,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjr1BxKSifD2JAU2hub",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "71a67ce3-85b3-4f4b-ad01-58358cd61291"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 474,
+      "cache_read_input_tokens": 12850,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 474
+      },
+      "output_tokens": 2,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjr1BxKSifD2JAU2hub",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "5620c106-af64-45e3-b86a-e22eb96fab50"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool result"
+      }
+    ],
+    "uuid": "fdc767b0-281c-4d51-9af9-f8e778994845",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "type": "elided",
+      "reason": "tool result"
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "thinking",
+        "thinking": "",
+        "signature": "CAISvxAKhwEIEBgCKkDZ7CzbfblBxEhdwzCZ7qUJdoLoZconWCJNNnu/bP9EYKBXpujjlKOgnqWMgNHD8SfmZi2LMjO9YIwhHC1DO/UYMg1jbGF1ZGUtb3B1cy01OAFCCHRoaW5raW5nWiQ1OTE5ZmQ4YS05MTViLTRkYTctYTQ4MS0wN2U2N2RmNTBmN2USDGS/xWXDyFfE9D1jrhoMdsnmUQnJ0fwdQ72vIjAXF4IXYIhbqVVkTVKSkkSC8GwwW2DNA68vARSkfrQDD/pDMdnYyjpbJY3pf/ToF0Qq5A7nD1+RGpyNvLNCFV7AJL4CrFMYogYqv1vD5lczcgES1JZzOEC7dtbtHwGtS32TOX1vCfNBjhzLwo+n5/R9TxMTHVWTMx+WBQ5l8+nnj3DRTTfyotrrCLE+a05Nh6bvKYXjT6j787AKT5HdiAFcxm9xQNzzT2ApjG9psU3KOKa81Ca/9Pt/xZwrLq9V2nG8nXsCjzyCQp8oWTOEHs10KUdR6+fkP8mGxPM5XsrneqLEz+ldKW697/gquq1ZhZo9AORZ/k5OjrnMtsiLGgWRoJBbsg0lLMcHp3jp3a148bIWAwbq9VqMbECjTj6KZypCJfqXm9MakBk9XCmuYV4ghTfaobLVVlp2c5eilSQq1I5cF3hRwZ6huRGzl6PRPkkDD2S591B6VS/usTWhedhw27InFGv3KY4sAfC+8fzQkSKYhk4cDj1Il4bBN4jOEjdwXas4IL+hjh+zTQsOMWWf6UOxHgZKvnb7p1O0/2/Rmvldp8cgveYHBudbPsejir95dzefw3jw8xwtbjZtBJJOyThm+urnSnoRjAqtm8FXqUlW9gsfGeHXlY/gX3j7VcudGjGTSlnGE7DiuGens9Hh565mZC4uw/Z07q6KI/UfyANz4jxqYnmMSFQbHcolVoUpInGx/8iADsmAP4bULtXv9sPMU9+904ZnUidtM9JICKq4O+Dz4h5ORQdbmZCWh53RL1LezInR+eKZKAEvlZmnBv9T6keeSaPiK9d0btH3NripNKHbK3yL4VPGbCHQSYJB5ys/aAcsnwKkfAhtDtU8GWFlJeeU2wqhjuFs9zbiY5jZaTumRUW2sa/DLHkx7wg+NievPgJO4T/j067XXQmWLxbTUjjJquL5II3DQ2zvuzci9HlnO/z1Mj15o0PqYSWPnMDpdyjP1MCLGxn+ImKy3gV7XXG7OT4oCIOTkwORWLiBR4aayIcUI1aCLfx6oIu8Duq1rN7RRlPYsNrq2rN+9Jp7qieoZgZCRzv1l+89YFA7d7knV4njXcKDUW6Xq0Q4X0kRqIxNjK+ADq+Jza2UxffwYLlAWOIT058hpaL/+z43430AB9o+2HQPhTekAFOO8JAefSLY3syzSAbkuuc1/KlRGqYz8t8BHAiFiPb9Za44otOWeD3POEFur3Cwt2LCXrRAIy2WcjEwLlRtEd/7mlBqTS4qA7sZBlJQt8AR+ojajobJ3a5NwWsDVXAp/hU2O5Z5Y5N8TbZjPF+7wT+9zcAyEDUqpvGffl0z9AiSrBFudUmQ2H4YBtY6Wqs+ZbPwSsgW11HIHesuXJrczMHzi0Yfjag34ALWmfEnuPFO8N+y911eN6HHVSHQ3tj5z60NM2fwoSeDF+zpg2szc0mFc+sBaHHBbm8ASqMtm8km3g0+QW6qMqy3ToSAdtaKxV/lJrRg9fh8I59yn+pHKI+xUEJ5Wr28BmfVXeffRT8B22PmTJ5YjGmbzGQCwKveLOcTrjlByEgmgkHqLlcfNqqkPglRnLbP0ftTBf3NSwg0MCh7DU53T7NTwr2zIGtHOrGVhh0RsqDCVWK4ap9CL6EiMuAlGA+e3Tg6BmHEmhc0YBbbE/l2M6GOQFrGUpIM2SO/MplGuQ+vdp621sDvcOT5WM4Nty/RQWUwfbe7b81OukYOMRChsAmMWdmWOuGQKjCe1y905uxA44rJvmFY3PiualSUkCfRtcEbvfXpr5mXHhu3V8YdCQGiJEDIhwhqj5n4hvJaDdSuJnDb8HJN5AT5EvwLxLy5kodK+WPS0LFQqZeaWexUEMCdh9zGLD5I5SO4E/whP0Jm92cS3hj1SOWi1l+TTpfPnHHy8Xfcxlp5DYC/b8p7QwfcdXCdr7WwlHHkrayCJ9CUNdcXokoLdrFpwKPHExQpHUFopJWhYIo50sMUscV331+lwQKqBjYREQOWrk5nyew0CSmji6DKI78L6ybWzOmG4pWkIxQ7/crTmSSECNNGjI7JH6/dVDl0TQkb2wE8DwgHINlClgX1rkfGsD3/SO5WDInRXXEUlFPL8NUPYFn9dAWRX9p4k6DHHYjl7UEhNW/OzBk7REzI9wMTqlp+Ih1bqPls7ZyXJZ5cvKaggkBv1Ch+oRsUFxtgLXCXxTe2mSIfZ9fMK7QX1UY7TvZvww5yM754+QAaupJNNf+XjNxDAcME3X/AE5ueOYOhmbdQtkC/b/kS4xQgUYhYX5RJDn72bJqrOdpF/07Bl37c4ZTzSV25vQM4YhJPQ6emlILeAyj0Jwk17+/W0QIisgwTZqjE3jEs9gScOEIwYj4KkYJ4KHQrfRw38ALMg1iXJSmCsnjh57jU6rOjYvUwnrkjpD7fYPXtxqFN95ACQfxCUxMtLXwjcwlvKfiv4crZJmq/2H0mGT9of9Aa/TsgxTMeCuS7GGYva5aAWIQebi++CC9a9zUM9Go8N8ihsWtzgZI0wl9v9H9NxopdmgFmuDm9U6TLhPhwezBnmhKE9UNeg4kAFjJmAKd6PK4mijGlYqRk+ABlu8LLdIiygOueNxwgpOLHUxgB"
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 2214,
+      "cache_read_input_tokens": 13324,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 2214
+      },
+      "output_tokens": 3,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjrhjzWCWhtgZ775YP1",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "0c3f3eac-21f2-4a4f-93f2-dbe89c1c34ef"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "Two fixes needed: monospace titles and long lead lines slightly exceed the text width. Adjusting the type scale and line breaks:"
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 2214,
+      "cache_read_input_tokens": 13324,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 2214
+      },
+      "output_tokens": 3,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjrhjzWCWhtgZ775YP1",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "c7cf5e19-d2b4-4366-b9d5-ffdaf30ab93c"
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Kj8pBuMZ6oDKosVqHMLo2V",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+          "old_string": "TITLE_PT = 34\nLEAD_PT = 21",
+          "new_string": "TITLE_PT = 30   # Consolas is wide; keeps the longest title on one line\nLEAD_PT = 20"
+        }
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 2214,
+      "cache_read_input_tokens": 13324,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 2214
+      },
+      "output_tokens": 3,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjrhjzWCWhtgZ775YP1",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "25ff180f-1836-4fe5-8797-f67664fe44c1"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01Kj8pBuMZ6oDKosVqHMLo2V",
+        "content": "The file /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py has been updated successfully. (file state is current in your context \u2014 no need to Read it back)",
+        "is_error": null
+      }
+    ],
+    "uuid": "d988c0e6-839f-4094-8f2d-5f8ff33f23d6",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "filePath": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+      "oldString": "TITLE_PT = 34\nLEAD_PT = 21",
+      "newString": "TITLE_PT = 30   # Consolas is wide; keeps the longest title on one line\nLEAD_PT = 20",
+      "originalFile": "\"\"\"Build the 5-slide \"Marrow\" pitch deck (square 1:1, Consolas throughout).\"\"\"\n\nfrom pptx import Presentation\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.shapes import MSO_SHAPE\nfrom pptx.enum.text import MSO_ANCHOR, PP_ALIGN\nfrom pptx.util import Inches, Pt\n\n# --- design tokens -----------------------------------------------------------\n\nFONT = \"Consolas\"\n\nBG = RGBColor(0xF6, 0xF5, 0xF2)        # warm off-white page\nINK = RGBColor(0x1B, 0x1B, 0x1E)       # near-black text\nMUTED = RGBColor(0x6B, 0x6B, 0x73)     # secondary text\nACCENT = RGBColor(0xC2, 0x41, 0x0C)    # burnt orange\nPANEL = RGBColor(0x1B, 0x1B, 0x1E)     # dark code panel\nPANEL_TEXT = RGBColor(0xF6, 0xF5, 0xF2)\n\nSIDE = Inches(0.95)                    # left/right margin\nCONTENT_W = Inches(10) - 2 * SIDE\n\nTITLE_PT = 34\nLEAD_PT = 21\nBODY_PT = 16\nCODE_PT = 15\nSMALL_PT = 10.5\n\nprs = Presentation()\nprs.slide_width = Inches(10)\nprs.slide_height = Inches(10)\nBLANK = prs.slide_layouts[6]\n\n\n# --- helpers -----------------------------------------------------------------\n\ndef add_slide():\n    \"\"\"Blank slide painted with the deck background.\"\"\"\n    slide = prs.slides.add_slide(BLANK)\n    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)\n    bg.fill.solid()\n    bg.fill.fore_color.rgb = BG\n    bg.line.fill.background()\n    bg.shadow.inherit = False\n    return slide\n\n\ndef textbox(slide, left, top, width, height):\n    box = slide.shapes.add_textbox(left, top, width, height)\n    tf = box.text_frame\n    tf.word_wrap = True\n    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0\n    return tf\n\n\ndef write(tf, lines, size, color=INK, bold=False, align=PP_ALIGN.LEFT,\n          space_after=0, line_spacing=1.25, first=None):\n    \"\"\"Fill a text frame; every run is set to Consolas.\"\"\"\n    for i, text in enumerate(lines):\n        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()\n        p.alignment = align\n        p.line_spacing = line_spacing\n        p.space_after = Pt(space_after)\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(size)\n        run.font.bold = bold\n        run.font.color.rgb = color\n        if i == 0 and first:\n            run.font.size = Pt(first.get(\"size\", size))\n            run.font.bold = first.get(\"bold\", bold)\n            run.font.color.rgb = first.get(\"color\", color)\n    return tf\n\n\ndef rule(slide, top, width=Inches(1.5), color=ACCENT, thickness=Pt(3.5), left=SIDE):\n    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, thickness)\n    line.fill.solid()\n    line.fill.fore_color.rgb = color\n    line.line.fill.background()\n    line.shadow.inherit = False\n    return line\n\n\ndef panel(slide, top, height, color=PANEL, left=SIDE, width=CONTENT_W):\n    box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)\n    box.fill.solid()\n    box.fill.fore_color.rgb = color\n    box.line.fill.background()\n    box.shadow.inherit = False\n    box.adjustments[0] = 0.08\n    return box\n\n\ndef slide_title(slide, text):\n    \"\"\"Section title: top-aligned, centered, with an accent rule beneath.\"\"\"\n    tf = textbox(slide, SIDE, Inches(1.0), CONTENT_W, Inches(1.4))\n    write(tf, [text], TITLE_PT, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.1)\n    rule(slide, Inches(2.05), width=Inches(1.6),\n         left=int((prs.slide_width - Inches(1.6)) / 2))\n\n\ndef footer(slide, label, number):\n    tf = textbox(slide, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\n    p = tf.paragraphs[0]\n    p.alignment = PP_ALIGN.LEFT\n    for text, color in ((label, MUTED), (\"   \u00b7   \", MUTED), (number, ACCENT)):\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(SMALL_PT)\n        run.font.color.rgb = color\n\n\n# --- 1. title ----------------------------------------------------------------\n\ns = add_slide()\ntf = textbox(s, SIDE, Inches(3.5), CONTENT_W, Inches(1.6))\nwrite(tf, [\"Marrow\"], 76, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.0)\n\nrule(s, Inches(4.95), width=Inches(2.2), left=int((prs.slide_width - Inches(2.2)) / 2))\n\ntf = textbox(s, SIDE, Inches(5.5), CONTENT_W, Inches(0.8))\nwrite(tf, [\"Know what your tests actually cover.\"], LEAD_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(6.4), CONTENT_W, Inches(0.5))\nwrite(tf, [\"$ marrow watch -- pytest\"], CODE_PT, ACCENT, align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\nwrite(tf, [\"a CLI that maps tests to the code they cover\"], SMALL_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 2. the problem ----------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Big test suites hide their gaps.\")\nfooter(s, \"the problem\", \"02\")\n\ntf = textbox(s, SIDE, Inches(3.1), CONTENT_W, Inches(3.0))\nwrite(tf, [\n    \"Large suites are slow, and nobody knows which tests\",\n    \"cover which code.\",\n], LEAD_PT, INK, line_spacing=1.35, space_after=20)\n\nitems = [\n    (\"Dead tests linger.\", \"They pass forever and guard nothing.\"),\n    (\"Real gaps go unnoticed.\", \"A green run says little about coverage.\"),\n    (\"Slow feedback.\", \"Everything runs because nothing is mapped.\"),\n]\ntop = Inches(4.6)\nfor head, sub in items:\n    rule(s, top + Inches(0.12), width=Inches(0.22), thickness=Pt(9), left=SIDE)\n    tf = textbox(s, SIDE + Inches(0.55), top, CONTENT_W - Inches(0.55), Inches(1.0))\n    write(tf, [head], BODY_PT, INK, bold=True, line_spacing=1.2)\n    tf2 = textbox(s, SIDE + Inches(0.55), top + Inches(0.34),\n                  CONTENT_W - Inches(0.55), Inches(0.6))\n    write(tf2, [sub], BODY_PT, MUTED, line_spacing=1.2)\n    top += Inches(1.15)\n\n\n# --- 3. the idea -------------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Watch one run. Draw the real map.\")\nfooter(s, \"the idea\", \"03\")\n\ntf = textbox(s, SIDE, Inches(3.2), CONTENT_W, Inches(2.2))\nwrite(tf, [\n    \"Marrow instruments a single test run and produces a\",\n    \"test \u2192 code coverage map.\",\n], LEAD_PT, INK, line_spacing=1.35)\n\np = panel(s, Inches(5.2), Inches(2.1))\ntf = p.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\ntf.margin_left = tf.margin_right = Inches(0.5)\nwrite(tf, [\n    \"no annotations\",\n    \"no config\",\n    \"one run, the whole map\",\n], LEAD_PT, PANEL_TEXT, align=PP_ALIGN.CENTER, line_spacing=1.45)\ntf.paragraphs[1].runs[0].font.color.rgb = PANEL_TEXT\ntf.paragraphs[2].runs[0].font.color.rgb = ACCENT\ntf.paragraphs[2].runs[0].font.bold = True\n\ntf = textbox(s, SIDE, Inches(7.8), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Point it at the test command you already use.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 4. how it works ---------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"How it works\")\nfooter(s, \"how it works\", \"04\")\n\nsteps = [\n    (\"01\", \"Run it\", \"marrow watch -- <your test cmd>\", True),\n    (\"02\", \"It records\", \"which lines each test exercised\", False),\n    (\"03\", \"It emits\", \"an interactive map + dead tests + untested lines\", False),\n]\n\ntop = Inches(3.2)\nfor num, head, detail, is_code in steps:\n    tf = textbox(s, SIDE, top, Inches(1.0), Inches(0.8))\n    write(tf, [num], 30, ACCENT, bold=True, line_spacing=1.0)\n\n    tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.05),\n                 CONTENT_W - Inches(1.1), Inches(0.5))\n    write(tf, [head], LEAD_PT, INK, bold=True, line_spacing=1.15)\n\n    if is_code:\n        box = panel(s, top + Inches(0.6), Inches(0.62),\n                    left=SIDE + Inches(1.1), width=CONTENT_W - Inches(1.1))\n        tf = box.text_frame\n        tf.word_wrap = True\n        tf.vertical_anchor = MSO_ANCHOR.MIDDLE\n        tf.margin_left = Inches(0.3)\n        p = tf.paragraphs[0]\n        for text, color in ((\"$ \", ACCENT), (detail, PANEL_TEXT)):\n            run = p.add_run()\n            run.text = text\n            run.font.name = FONT\n            run.font.size = Pt(CODE_PT)\n            run.font.color.rgb = color\n    else:\n        tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.62),\n                     CONTENT_W - Inches(1.1), Inches(0.8))\n        write(tf, [detail], BODY_PT, MUTED, line_spacing=1.3)\n\n    top += Inches(1.8)\n\nrule(s, Inches(8.6), width=CONTENT_W, thickness=Pt(1.5), color=RGBColor(0xDD, 0xDA, 0xD3))\n\n\n# --- 5. call to action -------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Install Marrow\")\nfooter(s, \"get started\", \"05\")\n\nbox = panel(s, Inches(4.0), Inches(1.5))\ntf = box.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\np = tf.paragraphs[0]\np.alignment = PP_ALIGN.CENTER\nfor text, color in ((\"$ \", ACCENT), (\"pipx install marrow\", PANEL_TEXT)):\n    run = p.add_run()\n    run.text = text\n    run.font.name = FONT\n    run.font.size = Pt(27)\n    run.font.bold = True\n    run.font.color.rgb = color\n\ntf = textbox(s, SIDE, Inches(6.1), CONTENT_W, Inches(0.7))\nwrite(tf, [\"Works with pytest, Jest, go test.\"], LEAD_PT, INK,\n      align=PP_ALIGN.CENTER)\n\nrule(s, Inches(7.1), width=Inches(1.6), left=int((prs.slide_width - Inches(1.6)) / 2))\n\ntf = textbox(s, SIDE, Inches(7.6), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Know what your tests actually cover.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\nprs.save(\"deck.pptx\")\nprint(f\"wrote deck.pptx \u2014 {len(prs.slides.__iter__.__self__._sldIdLst)} slides, \"\n      f\"{prs.slide_width.inches:g}x{prs.slide_height.inches:g} in\")\n",
+      "structuredPatch": [
+        {
+          "oldStart": 20,
+          "oldLines": 8,
+          "newStart": 20,
+          "newLines": 8,
+          "lines": [
+            " SIDE = Inches(0.95)                    # left/right margin",
+            " CONTENT_W = Inches(10) - 2 * SIDE",
+            " ",
+            "-TITLE_PT = 34",
+            "-LEAD_PT = 21",
+            "+TITLE_PT = 30   # Consolas is wide; keeps the longest title on one line",
+            "+LEAD_PT = 20",
+            " BODY_PT = 16",
+            " CODE_PT = 15",
+            " SMALL_PT = 10.5"
+          ]
+        }
+      ],
+      "userModified": false,
+      "replaceAll": false
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01Qex1gv6GfDWSQWGX6i3pof",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+          "old_string": "    \"Large suites are slow, and nobody knows which tests\",\n    \"cover which code.\",",
+          "new_string": "    \"Large suites are slow, and nobody knows\",\n    \"which tests cover which code.\","
+        }
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 2214,
+      "cache_read_input_tokens": 13324,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 2214
+      },
+      "output_tokens": 3,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjrhjzWCWhtgZ775YP1",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "2afa509a-4d15-4287-883c-21451084aa3f"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01Qex1gv6GfDWSQWGX6i3pof",
+        "content": "The file /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py has been updated successfully. (file state is current in your context \u2014 no need to Read it back)",
+        "is_error": null
+      }
+    ],
+    "uuid": "08b34732-8def-4784-8e58-0b08117f2df4",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "filePath": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+      "oldString": "    \"Large suites are slow, and nobody knows which tests\",\n    \"cover which code.\",",
+      "newString": "    \"Large suites are slow, and nobody knows\",\n    \"which tests cover which code.\",",
+      "originalFile": "\"\"\"Build the 5-slide \"Marrow\" pitch deck (square 1:1, Consolas throughout).\"\"\"\n\nfrom pptx import Presentation\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.shapes import MSO_SHAPE\nfrom pptx.enum.text import MSO_ANCHOR, PP_ALIGN\nfrom pptx.util import Inches, Pt\n\n# --- design tokens -----------------------------------------------------------\n\nFONT = \"Consolas\"\n\nBG = RGBColor(0xF6, 0xF5, 0xF2)        # warm off-white page\nINK = RGBColor(0x1B, 0x1B, 0x1E)       # near-black text\nMUTED = RGBColor(0x6B, 0x6B, 0x73)     # secondary text\nACCENT = RGBColor(0xC2, 0x41, 0x0C)    # burnt orange\nPANEL = RGBColor(0x1B, 0x1B, 0x1E)     # dark code panel\nPANEL_TEXT = RGBColor(0xF6, 0xF5, 0xF2)\n\nSIDE = Inches(0.95)                    # left/right margin\nCONTENT_W = Inches(10) - 2 * SIDE\n\nTITLE_PT = 30   # Consolas is wide; keeps the longest title on one line\nLEAD_PT = 20\nBODY_PT = 16\nCODE_PT = 15\nSMALL_PT = 10.5\n\nprs = Presentation()\nprs.slide_width = Inches(10)\nprs.slide_height = Inches(10)\nBLANK = prs.slide_layouts[6]\n\n\n# --- helpers -----------------------------------------------------------------\n\ndef add_slide():\n    \"\"\"Blank slide painted with the deck background.\"\"\"\n    slide = prs.slides.add_slide(BLANK)\n    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)\n    bg.fill.solid()\n    bg.fill.fore_color.rgb = BG\n    bg.line.fill.background()\n    bg.shadow.inherit = False\n    return slide\n\n\ndef textbox(slide, left, top, width, height):\n    box = slide.shapes.add_textbox(left, top, width, height)\n    tf = box.text_frame\n    tf.word_wrap = True\n    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0\n    return tf\n\n\ndef write(tf, lines, size, color=INK, bold=False, align=PP_ALIGN.LEFT,\n          space_after=0, line_spacing=1.25, first=None):\n    \"\"\"Fill a text frame; every run is set to Consolas.\"\"\"\n    for i, text in enumerate(lines):\n        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()\n        p.alignment = align\n        p.line_spacing = line_spacing\n        p.space_after = Pt(space_after)\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(size)\n        run.font.bold = bold\n        run.font.color.rgb = color\n        if i == 0 and first:\n            run.font.size = Pt(first.get(\"size\", size))\n            run.font.bold = first.get(\"bold\", bold)\n            run.font.color.rgb = first.get(\"color\", color)\n    return tf\n\n\ndef rule(slide, top, width=Inches(1.5), color=ACCENT, thickness=Pt(3.5), left=SIDE):\n    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, thickness)\n    line.fill.solid()\n    line.fill.fore_color.rgb = color\n    line.line.fill.background()\n    line.shadow.inherit = False\n    return line\n\n\ndef panel(slide, top, height, color=PANEL, left=SIDE, width=CONTENT_W):\n    box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)\n    box.fill.solid()\n    box.fill.fore_color.rgb = color\n    box.line.fill.background()\n    box.shadow.inherit = False\n    box.adjustments[0] = 0.08\n    return box\n\n\ndef slide_title(slide, text):\n    \"\"\"Section title: top-aligned, centered, with an accent rule beneath.\"\"\"\n    tf = textbox(slide, SIDE, Inches(1.0), CONTENT_W, Inches(1.4))\n    write(tf, [text], TITLE_PT, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.1)\n    rule(slide, Inches(2.05), width=Inches(1.6),\n         left=int((prs.slide_width - Inches(1.6)) / 2))\n\n\ndef footer(slide, label, number):\n    tf = textbox(slide, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\n    p = tf.paragraphs[0]\n    p.alignment = PP_ALIGN.LEFT\n    for text, color in ((label, MUTED), (\"   \u00b7   \", MUTED), (number, ACCENT)):\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(SMALL_PT)\n        run.font.color.rgb = color\n\n\n# --- 1. title ----------------------------------------------------------------\n\ns = add_slide()\ntf = textbox(s, SIDE, Inches(3.5), CONTENT_W, Inches(1.6))\nwrite(tf, [\"Marrow\"], 76, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.0)\n\nrule(s, Inches(4.95), width=Inches(2.2), left=int((prs.slide_width - Inches(2.2)) / 2))\n\ntf = textbox(s, SIDE, Inches(5.5), CONTENT_W, Inches(0.8))\nwrite(tf, [\"Know what your tests actually cover.\"], LEAD_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(6.4), CONTENT_W, Inches(0.5))\nwrite(tf, [\"$ marrow watch -- pytest\"], CODE_PT, ACCENT, align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\nwrite(tf, [\"a CLI that maps tests to the code they cover\"], SMALL_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 2. the problem ----------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Big test suites hide their gaps.\")\nfooter(s, \"the problem\", \"02\")\n\ntf = textbox(s, SIDE, Inches(3.1), CONTENT_W, Inches(3.0))\nwrite(tf, [\n    \"Large suites are slow, and nobody knows which tests\",\n    \"cover which code.\",\n], LEAD_PT, INK, line_spacing=1.35, space_after=20)\n\nitems = [\n    (\"Dead tests linger.\", \"They pass forever and guard nothing.\"),\n    (\"Real gaps go unnoticed.\", \"A green run says little about coverage.\"),\n    (\"Slow feedback.\", \"Everything runs because nothing is mapped.\"),\n]\ntop = Inches(4.6)\nfor head, sub in items:\n    rule(s, top + Inches(0.12), width=Inches(0.22), thickness=Pt(9), left=SIDE)\n    tf = textbox(s, SIDE + Inches(0.55), top, CONTENT_W - Inches(0.55), Inches(1.0))\n    write(tf, [head], BODY_PT, INK, bold=True, line_spacing=1.2)\n    tf2 = textbox(s, SIDE + Inches(0.55), top + Inches(0.34),\n                  CONTENT_W - Inches(0.55), Inches(0.6))\n    write(tf2, [sub], BODY_PT, MUTED, line_spacing=1.2)\n    top += Inches(1.15)\n\n\n# --- 3. the idea -------------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Watch one run. Draw the real map.\")\nfooter(s, \"the idea\", \"03\")\n\ntf = textbox(s, SIDE, Inches(3.2), CONTENT_W, Inches(2.2))\nwrite(tf, [\n    \"Marrow instruments a single test run and produces a\",\n    \"test \u2192 code coverage map.\",\n], LEAD_PT, INK, line_spacing=1.35)\n\np = panel(s, Inches(5.2), Inches(2.1))\ntf = p.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\ntf.margin_left = tf.margin_right = Inches(0.5)\nwrite(tf, [\n    \"no annotations\",\n    \"no config\",\n    \"one run, the whole map\",\n], LEAD_PT, PANEL_TEXT, align=PP_ALIGN.CENTER, line_spacing=1.45)\ntf.paragraphs[1].runs[0].font.color.rgb = PANEL_TEXT\ntf.paragraphs[2].runs[0].font.color.rgb = ACCENT\ntf.paragraphs[2].runs[0].font.bold = True\n\ntf = textbox(s, SIDE, Inches(7.8), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Point it at the test command you already use.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 4. how it works ---------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"How it works\")\nfooter(s, \"how it works\", \"04\")\n\nsteps = [\n    (\"01\", \"Run it\", \"marrow watch -- <your test cmd>\", True),\n    (\"02\", \"It records\", \"which lines each test exercised\", False),\n    (\"03\", \"It emits\", \"an interactive map + dead tests + untested lines\", False),\n]\n\ntop = Inches(3.2)\nfor num, head, detail, is_code in steps:\n    tf = textbox(s, SIDE, top, Inches(1.0), Inches(0.8))\n    write(tf, [num], 30, ACCENT, bold=True, line_spacing=1.0)\n\n    tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.05),\n                 CONTENT_W - Inches(1.1), Inches(0.5))\n    write(tf, [head], LEAD_PT, INK, bold=True, line_spacing=1.15)\n\n    if is_code:\n        box = panel(s, top + Inches(0.6), Inches(0.62),\n                    left=SIDE + Inches(1.1), width=CONTENT_W - Inches(1.1))\n        tf = box.text_frame\n        tf.word_wrap = True\n        tf.vertical_anchor = MSO_ANCHOR.MIDDLE\n        tf.margin_left = Inches(0.3)\n        p = tf.paragraphs[0]\n        for text, color in ((\"$ \", ACCENT), (detail, PANEL_TEXT)):\n            run = p.add_run()\n            run.text = text\n            run.font.name = FONT\n            run.font.size = Pt(CODE_PT)\n            run.font.color.rgb = color\n    else:\n        tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.62),\n                     CONTENT_W - Inches(1.1), Inches(0.8))\n        write(tf, [detail], BODY_PT, MUTED, line_spacing=1.3)\n\n    top += Inches(1.8)\n\nrule(s, Inches(8.6), width=CONTENT_W, thickness=Pt(1.5), color=RGBColor(0xDD, 0xDA, 0xD3))\n\n\n# --- 5. call to action -------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Install Marrow\")\nfooter(s, \"get started\", \"05\")\n\nbox = panel(s, Inches(4.0), Inches(1.5))\ntf = box.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\np = tf.paragraphs[0]\np.alignment = PP_ALIGN.CENTER\nfor text, color in ((\"$ \", ACCENT), (\"pipx install marrow\", PANEL_TEXT)):\n    run = p.add_run()\n    run.text = text\n    run.font.name = FONT\n    run.font.size = Pt(27)\n    run.font.bold = True\n    run.font.color.rgb = color\n\ntf = textbox(s, SIDE, Inches(6.1), CONTENT_W, Inches(0.7))\nwrite(tf, [\"Works with pytest, Jest, go test.\"], LEAD_PT, INK,\n      align=PP_ALIGN.CENTER)\n\nrule(s, Inches(7.1), width=Inches(1.6), left=int((prs.slide_width - Inches(1.6)) / 2))\n\ntf = textbox(s, SIDE, Inches(7.6), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Know what your tests actually cover.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\nprs.save(\"deck.pptx\")\nprint(f\"wrote deck.pptx \u2014 {len(prs.slides.__iter__.__self__._sldIdLst)} slides, \"\n      f\"{prs.slide_width.inches:g}x{prs.slide_height.inches:g} in\")\n",
+      "structuredPatch": [
+        {
+          "oldStart": 141,
+          "oldLines": 8,
+          "newStart": 141,
+          "newLines": 8,
+          "lines": [
+            " ",
+            " tf = textbox(s, SIDE, Inches(3.1), CONTENT_W, Inches(3.0))",
+            " write(tf, [",
+            "-    \"Large suites are slow, and nobody knows which tests\",",
+            "-    \"cover which code.\",",
+            "+    \"Large suites are slow, and nobody knows\",",
+            "+    \"which tests cover which code.\",",
+            " ], LEAD_PT, INK, line_spacing=1.35, space_after=20)",
+            " ",
+            " items = ["
+          ]
+        }
+      ],
+      "userModified": false,
+      "replaceAll": false
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_017WfkakBWnCHo1Lsyhrj4Yj",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+          "old_string": "    \"Marrow instruments a single test run and produces a\",\n    \"test \u2192 code coverage map.\",",
+          "new_string": "    \"Marrow instruments a single test run and\",\n    \"produces a test \u2192 code coverage map.\","
+        }
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 2214,
+      "cache_read_input_tokens": 13324,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 2214
+      },
+      "output_tokens": 3,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjrhjzWCWhtgZ775YP1",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "9f44bc23-0564-4588-be3c-ac5465425955"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_017WfkakBWnCHo1Lsyhrj4Yj",
+        "content": "The file /private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py has been updated successfully. (file state is current in your context \u2014 no need to Read it back)",
+        "is_error": null
+      }
+    ],
+    "uuid": "742b916b-d985-4e55-a422-e245b320deca",
+    "parent_tool_use_id": null,
+    "tool_use_result": {
+      "filePath": "/private/var/folders/3m/v29g5g8n3m737cc9llvckcjr0000gp/T/whetstone-showcase-pitch_deck-o7mm022u/deck.py",
+      "oldString": "    \"Marrow instruments a single test run and produces a\",\n    \"test \u2192 code coverage map.\",",
+      "newString": "    \"Marrow instruments a single test run and\",\n    \"produces a test \u2192 code coverage map.\",",
+      "originalFile": "\"\"\"Build the 5-slide \"Marrow\" pitch deck (square 1:1, Consolas throughout).\"\"\"\n\nfrom pptx import Presentation\nfrom pptx.dml.color import RGBColor\nfrom pptx.enum.shapes import MSO_SHAPE\nfrom pptx.enum.text import MSO_ANCHOR, PP_ALIGN\nfrom pptx.util import Inches, Pt\n\n# --- design tokens -----------------------------------------------------------\n\nFONT = \"Consolas\"\n\nBG = RGBColor(0xF6, 0xF5, 0xF2)        # warm off-white page\nINK = RGBColor(0x1B, 0x1B, 0x1E)       # near-black text\nMUTED = RGBColor(0x6B, 0x6B, 0x73)     # secondary text\nACCENT = RGBColor(0xC2, 0x41, 0x0C)    # burnt orange\nPANEL = RGBColor(0x1B, 0x1B, 0x1E)     # dark code panel\nPANEL_TEXT = RGBColor(0xF6, 0xF5, 0xF2)\n\nSIDE = Inches(0.95)                    # left/right margin\nCONTENT_W = Inches(10) - 2 * SIDE\n\nTITLE_PT = 30   # Consolas is wide; keeps the longest title on one line\nLEAD_PT = 20\nBODY_PT = 16\nCODE_PT = 15\nSMALL_PT = 10.5\n\nprs = Presentation()\nprs.slide_width = Inches(10)\nprs.slide_height = Inches(10)\nBLANK = prs.slide_layouts[6]\n\n\n# --- helpers -----------------------------------------------------------------\n\ndef add_slide():\n    \"\"\"Blank slide painted with the deck background.\"\"\"\n    slide = prs.slides.add_slide(BLANK)\n    bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)\n    bg.fill.solid()\n    bg.fill.fore_color.rgb = BG\n    bg.line.fill.background()\n    bg.shadow.inherit = False\n    return slide\n\n\ndef textbox(slide, left, top, width, height):\n    box = slide.shapes.add_textbox(left, top, width, height)\n    tf = box.text_frame\n    tf.word_wrap = True\n    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0\n    return tf\n\n\ndef write(tf, lines, size, color=INK, bold=False, align=PP_ALIGN.LEFT,\n          space_after=0, line_spacing=1.25, first=None):\n    \"\"\"Fill a text frame; every run is set to Consolas.\"\"\"\n    for i, text in enumerate(lines):\n        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()\n        p.alignment = align\n        p.line_spacing = line_spacing\n        p.space_after = Pt(space_after)\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(size)\n        run.font.bold = bold\n        run.font.color.rgb = color\n        if i == 0 and first:\n            run.font.size = Pt(first.get(\"size\", size))\n            run.font.bold = first.get(\"bold\", bold)\n            run.font.color.rgb = first.get(\"color\", color)\n    return tf\n\n\ndef rule(slide, top, width=Inches(1.5), color=ACCENT, thickness=Pt(3.5), left=SIDE):\n    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, thickness)\n    line.fill.solid()\n    line.fill.fore_color.rgb = color\n    line.line.fill.background()\n    line.shadow.inherit = False\n    return line\n\n\ndef panel(slide, top, height, color=PANEL, left=SIDE, width=CONTENT_W):\n    box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)\n    box.fill.solid()\n    box.fill.fore_color.rgb = color\n    box.line.fill.background()\n    box.shadow.inherit = False\n    box.adjustments[0] = 0.08\n    return box\n\n\ndef slide_title(slide, text):\n    \"\"\"Section title: top-aligned, centered, with an accent rule beneath.\"\"\"\n    tf = textbox(slide, SIDE, Inches(1.0), CONTENT_W, Inches(1.4))\n    write(tf, [text], TITLE_PT, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.1)\n    rule(slide, Inches(2.05), width=Inches(1.6),\n         left=int((prs.slide_width - Inches(1.6)) / 2))\n\n\ndef footer(slide, label, number):\n    tf = textbox(slide, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\n    p = tf.paragraphs[0]\n    p.alignment = PP_ALIGN.LEFT\n    for text, color in ((label, MUTED), (\"   \u00b7   \", MUTED), (number, ACCENT)):\n        run = p.add_run()\n        run.text = text\n        run.font.name = FONT\n        run.font.size = Pt(SMALL_PT)\n        run.font.color.rgb = color\n\n\n# --- 1. title ----------------------------------------------------------------\n\ns = add_slide()\ntf = textbox(s, SIDE, Inches(3.5), CONTENT_W, Inches(1.6))\nwrite(tf, [\"Marrow\"], 76, INK, bold=True, align=PP_ALIGN.CENTER, line_spacing=1.0)\n\nrule(s, Inches(4.95), width=Inches(2.2), left=int((prs.slide_width - Inches(2.2)) / 2))\n\ntf = textbox(s, SIDE, Inches(5.5), CONTENT_W, Inches(0.8))\nwrite(tf, [\"Know what your tests actually cover.\"], LEAD_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(6.4), CONTENT_W, Inches(0.5))\nwrite(tf, [\"$ marrow watch -- pytest\"], CODE_PT, ACCENT, align=PP_ALIGN.CENTER)\n\ntf = textbox(s, SIDE, Inches(9.15), CONTENT_W, Inches(0.4))\nwrite(tf, [\"a CLI that maps tests to the code they cover\"], SMALL_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 2. the problem ----------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Big test suites hide their gaps.\")\nfooter(s, \"the problem\", \"02\")\n\ntf = textbox(s, SIDE, Inches(3.1), CONTENT_W, Inches(3.0))\nwrite(tf, [\n    \"Large suites are slow, and nobody knows\",\n    \"which tests cover which code.\",\n], LEAD_PT, INK, line_spacing=1.35, space_after=20)\n\nitems = [\n    (\"Dead tests linger.\", \"They pass forever and guard nothing.\"),\n    (\"Real gaps go unnoticed.\", \"A green run says little about coverage.\"),\n    (\"Slow feedback.\", \"Everything runs because nothing is mapped.\"),\n]\ntop = Inches(4.6)\nfor head, sub in items:\n    rule(s, top + Inches(0.12), width=Inches(0.22), thickness=Pt(9), left=SIDE)\n    tf = textbox(s, SIDE + Inches(0.55), top, CONTENT_W - Inches(0.55), Inches(1.0))\n    write(tf, [head], BODY_PT, INK, bold=True, line_spacing=1.2)\n    tf2 = textbox(s, SIDE + Inches(0.55), top + Inches(0.34),\n                  CONTENT_W - Inches(0.55), Inches(0.6))\n    write(tf2, [sub], BODY_PT, MUTED, line_spacing=1.2)\n    top += Inches(1.15)\n\n\n# --- 3. the idea -------------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Watch one run. Draw the real map.\")\nfooter(s, \"the idea\", \"03\")\n\ntf = textbox(s, SIDE, Inches(3.2), CONTENT_W, Inches(2.2))\nwrite(tf, [\n    \"Marrow instruments a single test run and produces a\",\n    \"test \u2192 code coverage map.\",\n], LEAD_PT, INK, line_spacing=1.35)\n\np = panel(s, Inches(5.2), Inches(2.1))\ntf = p.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\ntf.margin_left = tf.margin_right = Inches(0.5)\nwrite(tf, [\n    \"no annotations\",\n    \"no config\",\n    \"one run, the whole map\",\n], LEAD_PT, PANEL_TEXT, align=PP_ALIGN.CENTER, line_spacing=1.45)\ntf.paragraphs[1].runs[0].font.color.rgb = PANEL_TEXT\ntf.paragraphs[2].runs[0].font.color.rgb = ACCENT\ntf.paragraphs[2].runs[0].font.bold = True\n\ntf = textbox(s, SIDE, Inches(7.8), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Point it at the test command you already use.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\n\n# --- 4. how it works ---------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"How it works\")\nfooter(s, \"how it works\", \"04\")\n\nsteps = [\n    (\"01\", \"Run it\", \"marrow watch -- <your test cmd>\", True),\n    (\"02\", \"It records\", \"which lines each test exercised\", False),\n    (\"03\", \"It emits\", \"an interactive map + dead tests + untested lines\", False),\n]\n\ntop = Inches(3.2)\nfor num, head, detail, is_code in steps:\n    tf = textbox(s, SIDE, top, Inches(1.0), Inches(0.8))\n    write(tf, [num], 30, ACCENT, bold=True, line_spacing=1.0)\n\n    tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.05),\n                 CONTENT_W - Inches(1.1), Inches(0.5))\n    write(tf, [head], LEAD_PT, INK, bold=True, line_spacing=1.15)\n\n    if is_code:\n        box = panel(s, top + Inches(0.6), Inches(0.62),\n                    left=SIDE + Inches(1.1), width=CONTENT_W - Inches(1.1))\n        tf = box.text_frame\n        tf.word_wrap = True\n        tf.vertical_anchor = MSO_ANCHOR.MIDDLE\n        tf.margin_left = Inches(0.3)\n        p = tf.paragraphs[0]\n        for text, color in ((\"$ \", ACCENT), (detail, PANEL_TEXT)):\n            run = p.add_run()\n            run.text = text\n            run.font.name = FONT\n            run.font.size = Pt(CODE_PT)\n            run.font.color.rgb = color\n    else:\n        tf = textbox(s, SIDE + Inches(1.1), top + Inches(0.62),\n                     CONTENT_W - Inches(1.1), Inches(0.8))\n        write(tf, [detail], BODY_PT, MUTED, line_spacing=1.3)\n\n    top += Inches(1.8)\n\nrule(s, Inches(8.6), width=CONTENT_W, thickness=Pt(1.5), color=RGBColor(0xDD, 0xDA, 0xD3))\n\n\n# --- 5. call to action -------------------------------------------------------\n\ns = add_slide()\nslide_title(s, \"Install Marrow\")\nfooter(s, \"get started\", \"05\")\n\nbox = panel(s, Inches(4.0), Inches(1.5))\ntf = box.text_frame\ntf.word_wrap = True\ntf.vertical_anchor = MSO_ANCHOR.MIDDLE\np = tf.paragraphs[0]\np.alignment = PP_ALIGN.CENTER\nfor text, color in ((\"$ \", ACCENT), (\"pipx install marrow\", PANEL_TEXT)):\n    run = p.add_run()\n    run.text = text\n    run.font.name = FONT\n    run.font.size = Pt(27)\n    run.font.bold = True\n    run.font.color.rgb = color\n\ntf = textbox(s, SIDE, Inches(6.1), CONTENT_W, Inches(0.7))\nwrite(tf, [\"Works with pytest, Jest, go test.\"], LEAD_PT, INK,\n      align=PP_ALIGN.CENTER)\n\nrule(s, Inches(7.1), width=Inches(1.6), left=int((prs.slide_width - Inches(1.6)) / 2))\n\ntf = textbox(s, SIDE, Inches(7.6), CONTENT_W, Inches(0.6))\nwrite(tf, [\"Know what your tests actually cover.\"], BODY_PT, MUTED,\n      align=PP_ALIGN.CENTER)\n\nprs.save(\"deck.pptx\")\nprint(f\"wrote deck.pptx \u2014 {len(prs.slides.__iter__.__self__._sldIdLst)} slides, \"\n      f\"{prs.slide_width.inches:g}x{prs.slide_height.inches:g} in\")\n",
+      "structuredPatch": [
+        {
+          "oldStart": 169,
+          "oldLines": 8,
+          "newStart": 169,
+          "newLines": 8,
+          "lines": [
+            " ",
+            " tf = textbox(s, SIDE, Inches(3.2), CONTENT_W, Inches(2.2))",
+            " write(tf, [",
+            "-    \"Marrow instruments a single test run and produces a\",",
+            "-    \"test \u2192 code coverage map.\",",
+            "+    \"Marrow instruments a single test run and\",",
+            "+    \"produces a test \u2192 code coverage map.\",",
+            " ], LEAD_PT, INK, line_spacing=1.35)",
+            " ",
+            " p = panel(s, Inches(5.2), Inches(2.1))"
+          ]
+        }
+      ],
+      "userModified": false,
+      "replaceAll": false
+    }
+  },
+  {
+    "type": "assistant",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool call",
+        "name": "Bash"
+      }
+    ],
+    "model": "claude-opus-5",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+      "input_tokens": 2,
+      "cache_creation_input_tokens": 1972,
+      "cache_read_input_tokens": 15538,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 1972
+      },
+      "output_tokens": 63,
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "message_id": "msg_011CdVjtDSTNqcU36tg3g4tU",
+    "stop_reason": null,
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "674866ac-6415-404f-bb4e-ebc388f604dd"
+  },
+  {
+    "type": "user",
+    "content": [
+      {
+        "type": "elided",
+        "reason": "tool result"
+      }
+    ],
+    "uuid": "3c476a1f-1294-4b01-a59b-745d932007cc",
     "parent_tool_use_id": null,
     "tool_use_result": {
       "type": "elided",
@@ -435,7 +882,7 @@
       {
         "type": "elided",
         "reason": "long text",
-        "length": 1251
+        "length": 1578
       }
     ],
     "model": "claude-opus-5",
@@ -443,19 +890,19 @@
     "error": null,
     "usage": {
       "input_tokens": 2,
-      "cache_creation_input_tokens": 642,
-      "cache_read_input_tokens": 10494,
+      "cache_creation_input_tokens": 572,
+      "cache_read_input_tokens": 17510,
       "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 642
+        "ephemeral_1h_input_tokens": 572
       },
-      "output_tokens": 1,
+      "output_tokens": 2,
       "service_tier": "standard",
       "inference_geo": "global"
     },
-    "message_id": "msg_011CdV9ktRp247Px9PgYKEec",
+    "message_id": "msg_011CdVjth5ND3PPKU69mDELg",
     "stop_reason": null,
-    "session_id": "6cc98cfa-aca5-4dec-84bb-7ddb46a6f637",
-    "uuid": "a555e94e-e3ff-4cda-8319-455b44b28c73"
+    "session_id": "21d5384b-73db-48ae-b26a-e55526e34204",
+    "uuid": "ed6c4ac4-2f4a-43f7-84df-7d822f46cd0f"
   }
 ]

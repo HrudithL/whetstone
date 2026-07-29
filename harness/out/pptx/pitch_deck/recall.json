@@ -4,16 +4,16 @@
       "id": "L2",
       "rule": "Use a SQUARE 1:1 slide format: set `prs.slide_width = Inches(10)` AND `prs.slide_height = Inches(10)` on the Presentation (import Inches from `pptx.util`).",
       "scope": "aspect ratio",
-      "recurrence": 4,
-      "weight": 0.8,
+      "recurrence": 2,
+      "weight": 0.6667,
       "origin": "skill"
     },
     {
       "id": "L1",
       "rule": "Set every text run's font to Consolas (`run.font.name = \"Consolas\"`) \u2014 titles and body, on all slides.",
       "scope": "typography",
-      "recurrence": 4,
-      "weight": 0.8,
+      "recurrence": 2,
+      "weight": 0.6667,
       "origin": "skill"
     }
   ],
