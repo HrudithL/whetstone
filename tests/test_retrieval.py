@@ -38,6 +38,17 @@ def test_intent_clauses_dedupes_repeated_clauses():
                                                                   "color palette"]
 
 
+def test_intent_clauses_keeps_the_sole_surviving_clause():
+    # Regression (caught by review): an earlier version bailed out to [intent] whenever fewer than
+    # two RAW split parts survived the word-count filter, discarding the one usable clause a
+    # two-part intent reduces to once its one-word fragment ("caps") is filtered out — exactly the
+    # dilution this function exists to prevent. "header emphasis" must still be probed on its own.
+    clauses = _intent_clauses("caps, header emphasis")
+    assert clauses[0] == "caps, header emphasis"
+    assert "header emphasis" in clauses
+    assert "caps" not in clauses
+
+
 def test_intent_clauses_caps_total_count():
     # `intent` is a caller-controlled MCP argument; an adversarial or just very long, heavily-
     # punctuated one must not blow the embed-batch size up unboundedly (real memory/CPU cost per

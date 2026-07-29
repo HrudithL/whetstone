@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-29T04:52:18.062128+00:00",
+  "generated_at": "2026-07-29T05:09:57.380890+00:00",
   "scenarios": {
     "landing_hero": {
       "scenario": "landing_hero",
@@ -1442,7 +1442,7 @@
     },
     "calibration_source": {
       "backend": "sentence-transformers",
-      "generated_at": "2026-07-29T04:52:06.037145+00:00",
+      "generated_at": "2026-07-29T05:08:07.979254+00:00",
       "labels": "harness/calibration/labels.yaml"
     }
   }

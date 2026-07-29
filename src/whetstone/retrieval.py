@@ -121,24 +121,40 @@ def _intent_clauses(intent: str) -> list[str]:
     """``intent`` plus up to ``_MAX_CLAUSES - 1`` of its top-level comma/semicolon/period-separated
     clauses, deduped.
 
-    Returns just ``[intent]`` when there is nothing to split (0 or 1 usable clause) — a
-    single-topic intent is embedded and matched exactly as before. A multi-clause intent embeds
-    the clauses IN ADDITION to the full sentence, so scope-matching only ever gains candidates
-    relative to the whole-intent-only baseline, never loses one (short of the cap below).
+    Returns just ``[intent]`` when there is no USABLE clause distinct from the intent itself (see
+    the word-count filter below) — a single-topic intent is embedded and matched exactly as before.
+    Otherwise every usable clause is embedded IN ADDITION to the full sentence — including when
+    exactly one survives filtering — so scope-matching only ever gains candidates relative to the
+    whole-intent-only baseline, never loses one (short of the cap below). An earlier version bailed
+    out to ``[intent]`` whenever fewer than two clauses survived filtering, which silently discarded
+    the one usable clause a two-clause intent like ``"caps, header emphasis"`` reduces to (only
+    "header emphasis" passes the word-count filter) — a real, caught-by-review regression back into
+    the exact dilution this function exists to fix.
 
     A single bare word ("caps", "emphasis") carries no context once split out on its own and, on
     the calibration labeled set, was measured to spuriously drift into an unrelated scope's cutoff
     (a real precision regression, not a hypothetical one) — dropped rather than treated as its own
     probe. Every dimension this fix actually targets (e.g. "legend placement", "color palette and
     encoding") is itself 2+ words, so this costs none of the intended recall.
+
+    One more calibration-measured case: when exactly one clause survives the word-count filter AND
+    it is a literal PREFIX of the intent (i.e. splitting only ever trimmed short trailing fragments
+    off the end — "<lead>: header weight" out of "<lead>: header weight, caps, emphasis"), it isn't
+    a distinct sub-topic, just the intent restated minus a couple of one-word tails, and embedding
+    it separately was measured to spuriously drift into an unrelated scope's cutoff the same way a
+    bare word does — so that one case also falls back to ``[intent]``. This does NOT apply when
+    several clauses survive (a first clause that happens to lead the intent, e.g. "Styling a table:
+    color palette" out of "Styling a table: color palette; row banding, currency formatting", is
+    still a genuine, useful sub-topic there — the prefix relationship alone only disqualifies a
+    SOLE survivor, where it is the only signal an already-thin split produced).
     """
-    parts = [p.strip() for p in _CLAUSE_SPLIT_RE.split(intent) if p.strip()]
-    parts = [p for p in parts if len(p.split()) >= 2]
-    if len(parts) <= 1:
+    raw_parts = [p.strip() for p in _CLAUSE_SPLIT_RE.split(intent) if p.strip()]
+    usable = [p for p in raw_parts if len(p.split()) >= 2]
+    if not usable or (len(usable) == 1 and intent.startswith(usable[0])):
         return [intent]
     seen = {intent}
     clauses = [intent]
-    for p in parts:
+    for p in usable:
         if len(clauses) >= _MAX_CLAUSES:
             break
         if p not in seen:
