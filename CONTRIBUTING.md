@@ -1,3 +1,21 @@
+# Contributing
+
+## For human contributors
+
+1. Fork and clone the repo, then `pip install -e '.[dev]'` (add `,embeddings` if you're touching
+   retrieval — see the README's "Optional: higher-quality recall" section).
+2. Branch off `main`.
+3. Make your change. Run `ruff check .` and `pytest -m "not embeddings"` before opening a PR (add
+   `pytest -m embeddings` too if you touched anything semantic — retrieval, dedup, conflict detection).
+4. Open a PR against `main` using the PR template. Small, focused PRs are easier to review.
+
+The rest of this document is the **Agent Playbook** — the branch/PR/review ceremony this project's
+maintainer uses when building with an autonomous coding agent. It's not a requirement for human
+contributors; read it if you're curious how the project has actually been built, but the four steps
+above are what matter for a normal PR.
+
+---
+
 # Contributing Guide (Agent Playbook)
 
 This guide is a **drop-in template** for any GitHub repository. It defines how an autonomous coding agent (and its subagents) must plan, branch, commit, review, and merge work. It is written in imperative voice: every "MUST" / "MUST NOT" is a hard rule.
