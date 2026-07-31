@@ -112,9 +112,10 @@ def _r_for_check(code: str) -> str:
     """``code`` with R's ``#``-to-end-of-line comments removed, outside string literals.
 
     R has no block comments or docstrings, so unlike Python this is a simple quote-aware scan
-    rather than a full parse: track whether we're inside a ``'``/``"`` string (honoring backslash
-    escapes) so a ``#`` inside a quoted string — e.g. a hex color ``"#FF6B00"`` — is never mistaken
-    for a comment start, while a real ``# avoid green`` comment is dropped.
+    rather than a full parse: track whether we're inside a ``'``/``"``/`` ` `` string or backtick
+    identifier (honoring backslash escapes) so a ``#`` inside one — e.g. a hex color ``"#FF6B00"``
+    or a non-syntactic column name `` `rank#` `` — is never mistaken for a comment start, while a
+    real ``# avoid green`` comment is dropped.
     """
     out: list[str] = []
     quote: str | None = None
@@ -131,7 +132,7 @@ def _r_for_check(code: str) -> str:
                 quote = None
             i += 1
             continue
-        if ch in ("'", '"'):
+        if ch in ("'", '"', "`"):
             quote = ch
             out.append(ch)
             i += 1
@@ -266,16 +267,20 @@ async def _deny_networked_bash(tool_name, tool_input, _ctx):  # noqa: ANN001 - S
 
 
 def _regex_sample(pattern: str) -> str:
-    """Best-effort literal that satisfies ``pattern`` (stub-only; verified against real scenarios).
+    """Best-effort literal that satisfies ``pattern`` (stub-only).
 
     Handles the small regex vocabulary the scenarios use: a leading inline-flag group (``(?i)``),
-    ``\\s*``/``\\s+``, a single character *range* class (``[1-9]`` -> ``1``), and escaped literals.
-    The stub asserts the result actually matches, so an unsupported pattern fails loudly rather than
-    silently producing a non-honoring line.
+    ``\\s*``/``\\s+``, a single character *range* class (``[1-9]`` -> ``1``), a character
+    *enumeration* class (``["']`` -> its first alternative, e.g. ``"``), a trailing ``\\b`` word
+    boundary (dropped — a zero-width assertion, not a literal character; a bare literal token
+    embedded in the stub's carrier syntax, e.g. between quotes, already sits at a natural word
+    boundary), and escaped literals.
     """
     s = re.sub(r"^\(\?[a-zA-Z]+\)", "", pattern)  # drop a leading (?i)/(?is)/... flag group
     s = s.replace(r"\s*", "").replace(r"\s+", " ")
+    s = s.replace(r"\b", "")  # zero-width assertion, not a literal "b" — drop, don't unescape
     s = re.sub(r"\[([^\]^-])-[^\]]\]", r"\1", s)  # single range class -> its first char
+    s = re.sub(r"\[([^\]]+)\]", lambda m: m.group(1)[0], s)  # enum class -> first alternative char
     s = re.sub(r"\\(.)", r"\1", s)  # unescape \X -> X
     return s
 

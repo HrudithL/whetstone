@@ -36,8 +36,11 @@ preferences:
     feedback: >
       Drop the dollar sign on the price axis — just comma-separated numbers, scales::comma.
     check:
-      kind: code_contains
-      pattern: scales::comma
+      # Scoped to scale_y_continuous specifically — a bare `scales::comma` substring check would
+      # spuriously pass if a cold run comma-formats the horsepower x-axis while still dollar-
+      # formatting the price y-axis (Codex review finding on PR #55).
+      kind: regex
+      pattern: 'scale_y_continuous\([^)]*scales::comma'
   - id: legend-bottom
     polarity: learning
     scope: legend placement
