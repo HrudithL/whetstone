@@ -365,9 +365,13 @@ Every `recall`/`capture`/`revise` also appends one line to `events.jsonl`, the l
 
 ## Storage & config
 
-Each skill's learned layer is its **own git repository** under the XDG data dir (default
-`~/.local/share/whetstone/<skill-slug>/`; override with `WHETSTONE_STORE_ROOT` or `store_root` in
-config):
+Supported on **macOS, Linux, and Windows** (file locking and the store path both use the native
+mechanism per OS — `fcntl`/XDG on POSIX, `msvcrt`/`%LOCALAPPDATA%` on Windows; `git` must be on
+`PATH` either way).
+
+Each skill's learned layer is its **own git repository** under the OS data dir (default
+`~/.local/share/whetstone/<skill-slug>/` on macOS/Linux, `%LOCALAPPDATA%\whetstone\<skill-slug>\` on
+Windows; override with `WHETSTONE_STORE_ROOT` or `store_root` in config):
 
 ```
 <store-root>/<skill-slug>/
@@ -381,8 +385,8 @@ config):
 <store-root>/__global__/      the cross-skill learned global layer — same structure, its own git repo
 ```
 
-Configuration is read from `~/.config/whetstone/config.toml`; every key also has a `WHETSTONE_*`
-environment override.
+Configuration is read from `~/.config/whetstone/config.toml` (`%APPDATA%\whetstone\config.toml` on
+Windows); every key also has a `WHETSTONE_*` environment override.
 
 For the full design see
 [`LEARNING_SKILLS_DESIGN.md`](./LEARNING_SKILLS_DESIGN.md),

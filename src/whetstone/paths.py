@@ -1,18 +1,25 @@
-"""XDG base-directory helpers.
+"""Per-OS base-directory helpers.
 
-See the XDG Base Directory Specification. Whetstone stores per-skill data under the XDG data
-dir and reads its config from the XDG config dir; both are overridable by the standard
-``XDG_*`` environment variables.
+POSIX (macOS/Linux) follows the XDG Base Directory Specification, overridable by the standard
+``XDG_*`` environment variables. Windows has no XDG convention, so it uses the native
+``%LOCALAPPDATA%``/``%APPDATA%`` locations instead — ``WHETSTONE_STORE_ROOT`` and the config path
+env override (handled generically in :mod:`whetstone.config`) work identically on every platform
+regardless of which of these a given OS resolves to.
 """
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 
 def xdg_data_home() -> Path:
-    """The XDG data home (``$XDG_DATA_HOME`` or ``~/.local/share``)."""
+    """The per-OS data home: ``$XDG_DATA_HOME``/``~/.local/share`` (POSIX) or ``%LOCALAPPDATA%``
+    (Windows)."""
+    if sys.platform == "win32":
+        value = os.environ.get("LOCALAPPDATA")
+        return Path(value) if value else Path.home() / "AppData" / "Local"
     value = os.environ.get("XDG_DATA_HOME")
     if value:
         return Path(value).expanduser()
@@ -20,7 +27,11 @@ def xdg_data_home() -> Path:
 
 
 def xdg_config_home() -> Path:
-    """The XDG config home (``$XDG_CONFIG_HOME`` or ``~/.config``)."""
+    """The per-OS config home: ``$XDG_CONFIG_HOME``/``~/.config`` (POSIX) or ``%APPDATA%``
+    (Windows)."""
+    if sys.platform == "win32":
+        value = os.environ.get("APPDATA")
+        return Path(value) if value else Path.home() / "AppData" / "Roaming"
     value = os.environ.get("XDG_CONFIG_HOME")
     if value:
         return Path(value).expanduser()

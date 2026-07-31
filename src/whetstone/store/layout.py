@@ -15,20 +15,27 @@ by ``attach`` explicitly or by future ``recall``/``capture`` without an explicit
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import IO
 
 from ..config import Config, load_config
 from .slug import safe_component
 
-try:  # POSIX file locking (macOS/Linux, the XDG target). No-op fallback elsewhere.
+try:  # POSIX file locking (macOS/Linux, the XDG target).
     import fcntl
-except ImportError:  # pragma: no cover - non-POSIX
+except ImportError:  # pragma: no cover - exercised on Windows CI, not locally
     fcntl = None  # type: ignore[assignment]
+
+try:  # Windows file locking.
+    import msvcrt
+except ImportError:  # pragma: no cover - exercised on POSIX CI, not on Windows
+    msvcrt = None  # type: ignore[assignment]
 
 _REGISTRY_NAME = "registry.json"
 # The reserved slug for the M5e learned global layer. It is used verbatim as both the "skill" name
@@ -51,8 +58,10 @@ _GIT_CONFIG = [
     "user.email=whetstone@localhost",
     "-c",
     "commit.gpgsign=false",
+    # os.devnull, not a hardcoded "/dev/null": that literal doesn't exist on Windows (which has
+    # "nul" instead).
     "-c",
-    "core.hooksPath=/dev/null",
+    f"core.hooksPath={os.devnull}",
 ]
 
 
@@ -132,7 +141,7 @@ def store_write_lock(loc: StoreLocation) -> Iterator[None]:
     on ``next_id`` (which would mint duplicate ids or drop entries) or interleave index rebuilds.
     ``recall``'s ``ensure_index`` takes the same lock, so a rebuild never overlaps another rebuild
     or a capture. The lock file sits in the store root (outside the per-skill git repo), so it is
-    never committed. A no-op where ``fcntl`` is unavailable (non-POSIX).
+    never committed. Real mutual exclusion on both POSIX (``fcntl``) and Windows (``msvcrt``).
     """
     with _file_lock(loc.path.parent / f".write-{loc.slug}.lock"):
         yield
@@ -146,7 +155,7 @@ def store_events_lock(loc: StoreLocation) -> Iterator[None]:
     fragments contiguous so a concurrent writer can't interleave a record between them. It is a
     *separate* lock file from :func:`store_write_lock`, so ``capture`` (which emits its event while
     holding the write lock) can take it without self-deadlock. Lock file sits in the store root
-    (outside the per-skill git repo). A no-op where ``fcntl`` is unavailable.
+    (outside the per-skill git repo).
     """
     with _file_lock(loc.path.parent / f".events-{loc.slug}.lock"):
         yield
@@ -182,24 +191,45 @@ def commit_paths(loc: StoreLocation, paths: list[str], message: str) -> None:
     _git(["commit", "-q", "-m", message, "--", *paths], cwd=loc.path)
 
 
+def _lock_exclusive(fh: IO[str]) -> None:
+    if fcntl is not None:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        return
+    assert msvcrt is not None  # one of the two is always available (POSIX or Windows)
+    # msvcrt.locking(LK_LOCK) retries internally for ~10s then raises OSError instead of blocking
+    # indefinitely like fcntl.flock(LOCK_EX) — loop around it so contention just waits, matching
+    # the POSIX side's semantics, rather than surfacing a spurious failure under real contention.
+    while True:  # pragma: no cover - exercised on Windows CI, not on POSIX
+        try:
+            msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)
+            return
+        except OSError:
+            continue
+
+
+def _unlock(fh: IO[str]) -> None:
+    if fcntl is not None:
+        fcntl.flock(fh, fcntl.LOCK_UN)
+    else:  # pragma: no cover - exercised on Windows CI, not on POSIX
+        assert msvcrt is not None
+        msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+
+
 @contextmanager
 def _file_lock(lock_path: Path) -> Iterator[None]:
-    """Cross-call/cross-process mutual exclusion via a POSIX ``flock`` on ``lock_path``.
+    """Cross-call/cross-process mutual exclusion on ``lock_path`` — ``fcntl.flock`` on POSIX,
+    ``msvcrt.locking`` on Windows.
 
     Used to serialize both store creation (the ``is_store`` check + ``git init``/commit) and the
-    registry read-modify-write, so concurrent ``attach``/lazy-create calls can't race. A no-op where
-    ``fcntl`` is unavailable (non-POSIX).
+    registry read-modify-write, so concurrent ``attach``/lazy-create calls can't race.
     """
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    if fcntl is None:  # pragma: no cover - non-POSIX
-        yield
-        return
     with open(lock_path, "w") as fh:
-        fcntl.flock(fh, fcntl.LOCK_EX)
+        _lock_exclusive(fh)
         try:
             yield
         finally:
-            fcntl.flock(fh, fcntl.LOCK_UN)
+            _unlock(fh)
 
 
 def is_store(path: Path) -> bool:
