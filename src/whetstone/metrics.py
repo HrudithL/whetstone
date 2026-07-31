@@ -105,6 +105,7 @@ def compute_metrics(loc: StoreLocation) -> dict:
     created_events = [x for x in created_events if x is not None]
     committed_learning_ids = set(created_events)
     id_reused = len(created_events) != len(committed_learning_ids)
+    survived_pct: dict[str, float | str | None]
     if id_reused:
         # A learning id appears in multiple creation events → it was removed and a later capture
         # reused the id (next_id = max+1). The set then collapses two distinct ever-created

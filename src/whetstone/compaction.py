@@ -54,7 +54,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 
 from .config import Config, load_config
-from .embeddings import cosine, get_backend
+from .embeddings import EmbeddingBackend, cosine, get_backend
 from .scoring import weight
 from .store import index
 from .store.access import (
@@ -65,6 +65,7 @@ from .store.access import (
     save_issue,
     save_learning,
 )
+from .store.entries import LearningEntry
 from .store.index import _centroid, entry_text
 from .store.layout import (
     StoreLocation,
@@ -176,7 +177,7 @@ def _compact_all(config: Config, today: date) -> dict:
 # --------------------------------------------------------------------------- dedupe (step 1)
 
 
-def _dedup(loc: StoreLocation, backend, config: Config, polarity: str) -> int:
+def _dedup(loc: StoreLocation, backend: EmbeddingBackend, config: Config, polarity: str) -> int:
     """Collapse near-duplicate same-scope entries into one; return how many were removed.
 
     Works per scope file (each file holds exactly one scope). Within a file, greedily assign each
@@ -184,10 +185,13 @@ def _dedup(loc: StoreLocation, backend, config: Config, polarity: str) -> int:
     representative. For learnings the representative absorbs the duplicate's recurrence/dates; for
     issues the duplicate is just dropped. Removed ids are recorded so they are never reused.
     """
+    # `parse`/`write` are one skill's worth of (LearningEntry-only | IssueEntry-only) functions
+    # chosen together per branch, never mixed — mypy can't express that correlation across a plain
+    # if/else reassignment without a generic helper, hence the two narrow ignores below.
     if polarity == "learning":
         directory, parse, write = loc.learnings_dir, parse_learnings, write_learnings
     else:
-        directory, parse, write = loc.issues_dir, parse_issues, write_issues
+        directory, parse, write = loc.issues_dir, parse_issues, write_issues  # type: ignore[assignment]
 
     deduped = 0
     for path in sorted(directory.glob("*.md")):
@@ -214,7 +218,7 @@ def _dedup(loc: StoreLocation, backend, config: Config, polarity: str) -> int:
     return deduped
 
 
-def _absorb_learning(survivor, other):
+def _absorb_learning(survivor: LearningEntry, other: LearningEntry) -> LearningEntry:
     """Fold ``other`` into ``survivor``: sum recurrence, widen the date span (earliest first_seen,
     latest last_seen). The survivor's prose/scope/id/provenance are kept."""
     return replace(
@@ -228,7 +232,9 @@ def _absorb_learning(survivor, other):
 # --------------------------------------------------------------------------- merge scopes (step 2)
 
 
-def _merge_scopes(loc: StoreLocation, backend, config: Config, polarity: str) -> int:
+def _merge_scopes(
+    loc: StoreLocation, backend: EmbeddingBackend, config: Config, polarity: str
+) -> int:
     """Merge overlapping same-polarity scopes (§5.4); return how many scopes were folded away.
 
     Two scopes overlap when their centroids are within ε_c OR their name/phrase embeddings are
@@ -236,12 +242,15 @@ def _merge_scopes(loc: StoreLocation, backend, config: Config, polarity: str) ->
     entries becomes canonical and the rest are folded into it (entries moved, ``scope`` field
     rewritten, emptied source files removed). Ids are unchanged by a move, so no id is retired here.
     """
+    # Same correlated-by-branch situation as `_dedup` above: `entries`/`save` are always the
+    # matching (learning | issue) pair, never mixed, but mypy can't see that across the
+    # reassignment.
     if polarity == "learning":
         entries = load_learnings(loc)
         directory, save = loc.learnings_dir, save_learning
     else:
-        entries = load_issues(loc)
-        directory, save = loc.issues_dir, save_issue
+        entries = load_issues(loc)  # type: ignore[assignment]
+        directory, save = loc.issues_dir, save_issue  # type: ignore[assignment]
 
     by_scope: dict[str, list] = {}
     for entry in entries:
@@ -349,10 +358,13 @@ def _reinforced_ids(events: list[dict]) -> set[str]:
     """Ids reinforced via either capture-dedup (``reinforced``) or ``revise(reinforce)``."""
     out: set[str] = set()
     for e in events:
+        eid = e.get("entry_id")
+        if not eid:
+            continue
         if e.get("type") == "capture" and e.get("status") == "reinforced":
-            out.add(e.get("entry_id"))
+            out.add(eid)
         elif e.get("type") == "revise" and e.get("action") == "reinforce":
-            out.add(e.get("entry_id"))
+            out.add(eid)
     return out
 
 
@@ -363,12 +375,14 @@ def _mine_harden(events: list[dict], learnings: dict, config: Config) -> list[di
     weakened: set[str] = set()
     for e in events:
         eid = e.get("entry_id")
+        if not eid:
+            continue
         if e.get("type") == "capture" and e.get("status") == "reinforced":
-            reinforce_runs[eid].append(e.get("run_id"))
+            reinforce_runs[eid].append(e.get("run_id") or "")
         elif e.get("type") == "revise":
             action = e.get("action")
             if action == "reinforce":
-                reinforce_runs[eid].append(e.get("run_id"))
+                reinforce_runs[eid].append(e.get("run_id") or "")
             elif action in ("weaken", "remove"):
                 weakened.add(eid)
 
@@ -496,12 +510,16 @@ def _mine_conflict_residue(events: list[dict], learnings: dict, issues: dict) ->
     pending: dict[str, dict] = {}  # entry id -> the finding data, present only while unresolved
     for e in events:
         etype = e.get("type")
+        eid = e.get("entry_id")
         if etype == "revise":
-            pending.pop(e.get("entry_id"), None)  # any revise since resolves what was pending
+            if eid:
+                pending.pop(eid, None)  # any revise since resolves what was pending
             continue
         if etype != "capture" or e.get("status") not in _RESIDUE_STATUSES:
             continue
-        wid = e.get("entry_id")
+        wid = eid
+        if not wid:
+            continue  # no entry_id on the event — nothing to key the finding by
         if wid in learnings:
             scope = learnings[wid].scope
         elif wid in issues:
@@ -569,8 +587,8 @@ def _write_report(loc: StoreLocation, skill: str, findings: list[dict]) -> str |
 
 
 def find_cross_skill_clusters(
-    config: Config, backend, skills: list[str] | None = None
-) -> list[list[tuple[str, object]]]:
+    config: Config, backend: EmbeddingBackend, skills: list[str] | None = None
+) -> list[list[tuple[str, LearningEntry]]]:
     """Detect learnings that recur across >= ``config.global_skill_count`` distinct skills.
 
     Pure detection — never writes anything. Clustering mirrors dedup: cosine >= ``dedup_similarity``
@@ -582,7 +600,7 @@ def find_cross_skill_clusters(
     if skills is None:
         skills = sorted(read_registry(config))
 
-    items: list[tuple[str, object, list[float]]] = []  # (skill, entry, vector)
+    items: list[tuple[str, LearningEntry, list[float]]] = []  # (skill, entry, vector)
     for s in skills:
         loc = store_location(s, config)
         entries = load_learnings(loc)
@@ -620,7 +638,7 @@ def find_cross_skill_clusters(
     for i in range(n):
         groups[find(i)].append(i)
 
-    clusters: list[list[tuple[str, object]]] = []
+    clusters: list[list[tuple[str, LearningEntry]]] = []
     for members in groups.values():
         cluster = [(items[i][0], items[i][1]) for i in members]
         distinct = {s for s, _ in cluster}
@@ -630,14 +648,16 @@ def find_cross_skill_clusters(
     return clusters
 
 
-def cluster_representative(cluster: list[tuple[str, object]]) -> tuple[str, object]:
+def cluster_representative(cluster: list[tuple[str, LearningEntry]]) -> tuple[str, LearningEntry]:
     """Deterministic representative pick for a cluster: highest recurrence wins; skill then id
     break ties. Shared by ``compact --all``'s reporting and ``promote_cluster``'s enactment so both
     always agree on which entry a given cluster's finding names."""
     return max(cluster, key=lambda c: (c[1].recurrence, c[0], c[1].id))
 
 
-def _global_candidate_findings(skills: list[str], config: Config, backend) -> list[dict]:
+def _global_candidate_findings(
+    skills: list[str], config: Config, backend: EmbeddingBackend
+) -> list[dict]:
     """Shape each detected cross-skill cluster as an advisory ``global_candidate`` finding.
 
     Never writes anything (§M7a) — pairs with :func:`find_cross_skill_clusters` for detection and

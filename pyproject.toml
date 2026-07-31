@@ -33,6 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = [
     # mcp 2.0.0 (released today) is a breaking major release that removes `mcp.server.fastmcp`
@@ -50,7 +51,9 @@ Documentation = "https://github.com/HrudithL/whetstone"
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-cov",
     "ruff",
+    "mypy",
 ]
 # Heavy, optional. The default "hashing" embedding backend needs none of this; only the
 # "sentence-transformers" backend does. Install with: pip install "whetstone-mcp[embeddings]".
@@ -130,3 +133,24 @@ markers = [
     # with `pytest -m "not embeddings"`, and they self-skip when the extra is not installed.
     "embeddings: requires the sentence-transformers backend ([embeddings] extra)",
 ]
+
+[tool.coverage.run]
+source = ["whetstone"]
+
+# Not full --strict: third-party deps (mcp, sentence-transformers) may lack stubs, and the harness/
+# and tests/ trees are out of scope. `disallow_untyped_defs` is on for src/whetstone itself since the
+# codebase is now fully annotated there.
+[tool.mypy]
+# 3.12, not the 3.11 floor in `requires-python`: numpy's bundled stubs (a transitive dep via
+# sentence-transformers) use PEP 695 syntax that mypy only parses under a 3.12+ target. Our own
+# source uses no syntax mypy would reject under 3.11 (`from __future__ import annotations`
+# throughout keeps annotations string-deferred), so this only affects third-party stub parsing.
+python_version = "3.12"
+files = ["src/whetstone"]
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["mcp.*", "sentence_transformers.*"]
+ignore_missing_imports = true

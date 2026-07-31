@@ -20,11 +20,12 @@ each skill) so concurrent promotions can never deadlock.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
 from dataclasses import replace
 
 from .config import Config, load_config
-from .embeddings import get_backend
+from .embeddings import EmbeddingBackend, get_backend
 from .store import index
 from .store.access import (
     find_issue,
@@ -51,7 +52,7 @@ from .telemetry import emit_promote
 
 
 @contextmanager
-def _both_locks(g_loc: StoreLocation, skill_loc: StoreLocation):
+def _both_locks(g_loc: StoreLocation, skill_loc: StoreLocation) -> Iterator[None]:
     """Hold the global and skill write locks in a fixed (global-first) order to avoid deadlock."""
     with store_write_lock(g_loc), store_write_lock(skill_loc):
         yield
@@ -59,7 +60,7 @@ def _both_locks(g_loc: StoreLocation, skill_loc: StoreLocation):
 
 def write_global_entry(
     g_loc: StoreLocation,
-    backend,
+    backend: EmbeddingBackend,
     entry: LearningEntry | IssueEntry,
     source_skill: str,
 ) -> str:
@@ -88,7 +89,7 @@ def write_global_entry(
     return new_id
 
 
-def retire_source(skill_loc: StoreLocation, backend, entry_id: str) -> None:
+def retire_source(skill_loc: StoreLocation, backend: EmbeddingBackend, entry_id: str) -> None:
     """Remove a promoted entry from its source skill store and re-commit. Lock assumed held."""
     if remove_entry(skill_loc, entry_id):
         index.rebuild_index(skill_loc, backend)
@@ -131,7 +132,9 @@ def promote_to_global(skill: str, entry_id: str, config: Config | None = None) -
     }
 
 
-def _find_cluster_for(clusters, skill: str, entry_id: str):
+def _find_cluster_for(
+    clusters: list[list[tuple[str, LearningEntry]]], skill: str, entry_id: str
+) -> list[tuple[str, LearningEntry]] | None:
     """The cluster (if any) containing the given ``(skill, entry_id)`` pair."""
     return next((c for c in clusters if any(s == skill and e.id == entry_id for s, e in c)), None)
 

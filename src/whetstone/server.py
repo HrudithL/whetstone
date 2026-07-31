@@ -16,12 +16,13 @@ import re
 import secrets
 import sys
 from dataclasses import asdict, replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from typing import NoReturn
 
 from mcp.server.fastmcp import FastMCP
 
 from .config import Config, load_config
-from .embeddings import cosine, get_backend
+from .embeddings import EmbeddingBackend, cosine, get_backend
 from .metrics import compute_metrics
 from .retrieval import RecalledIssue, RecalledLearning, RetrievalSnapshot, retrieve
 from .store import index
@@ -392,7 +393,7 @@ def capture(
 
 def _capture_reinforce(
     loc: StoreLocation,
-    backend,
+    backend: EmbeddingBackend,
     duplicate: IndexedEntry,
     run_id: str | None,
     confirm: bool,
@@ -406,6 +407,9 @@ def _capture_reinforce(
     pointing the caller at ``revise(action="promote", ...)``, so the promotion runs against the
     entry's id, never a reworded body re-run through dedup (which could fall below the cutoff and
     mis-create a fresh learning)."""
+    # Only ever called on a "learning" dedup match (the caller's polarity branch) — `recurrence` is
+    # nullable on IndexedEntry only because issues (no scoring fields) share the same dataclass.
+    assert duplicate.recurrence is not None
     if _supervised_hold(config, confirm):
         return _needs_confirmation(
             duplicate.id,
@@ -499,7 +503,16 @@ def revise(
     return result
 
 
-def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+def _revise_reinforce(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+    confirm: bool | str,
+    config: Config,
+) -> dict:
     """``reinforce``: recurrence +1, refresh ``last_seen``; prompt at the promotion threshold (§6).
 
     ``confirm:"promote"``/``"keep"`` answer a prior threshold prompt (the +1 already committed), so
@@ -557,7 +570,16 @@ def _revise_reinforce(loc, backend, entry_id, body, scope, run_id, confirm, conf
     return {"status": "reinforced", "entry_id": updated.id, "recurrence": updated.recurrence}
 
 
-def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+def _revise_weaken(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+    confirm: bool | str,
+    config: Config,
+) -> dict:
     """``weaken``: recurrence −1. Below 0 prompts keep/remove; on an *issue* it's the 3-way
     hard-rule prompt."""
     learning = find_learning(loc, entry_id)
@@ -622,7 +644,16 @@ def _revise_weaken(loc, backend, entry_id, body, scope, run_id, confirm, config)
     return {"status": "revised", "entry_id": entry_id, "recurrence": new_recurrence}
 
 
-def _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+def _revise_remove(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+    confirm: bool | str,
+    config: Config,
+) -> dict:
     """``remove``: delete a learning (dial-governed) or route an issue through the hard-rule
     3-way prompt."""
     learning = find_learning(loc, entry_id)
@@ -642,7 +673,16 @@ def _revise_remove(loc, backend, entry_id, body, scope, run_id, confirm, config)
     raise ValueError(f"no entry with id {entry_id!r}")
 
 
-def _revise_promote(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+def _revise_promote(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+    confirm: bool | str,
+    config: Config,
+) -> dict:
     """``promote`` (learning → issue): ALWAYS prompts first (§6), regardless of supervision mode.
 
     Only an explicit yes promotes: ``confirm in (True, "promote")``. A declined prompt
@@ -663,7 +703,16 @@ def _revise_promote(loc, backend, entry_id, body, scope, run_id, confirm, config
     }
 
 
-def _revise_demote(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+def _revise_demote(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+    confirm: bool | str,
+    config: Config,
+) -> dict:
     """``demote`` (issue → learning): seed recurrence and dates; dial-governed."""
     issue = find_issue(loc, entry_id)
     if issue is None:
@@ -679,7 +728,16 @@ def _revise_demote(loc, backend, entry_id, body, scope, run_id, confirm, config)
     return _do_demote(loc, backend, entry_id, body, scope, run_id, config)
 
 
-def _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, config) -> dict:
+def _issue_contradiction(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+    confirm: bool | str,
+    config: Config,
+) -> dict:
     """The 3-way hard-rule prompt for ``weaken``/``remove`` on an issue — ALWAYS asks (§6),
     regardless of supervision mode: remove it, demote it to a preference, or cancel."""
     if confirm == "remove":
@@ -711,7 +769,15 @@ def _issue_contradiction(loc, backend, entry_id, body, scope, run_id, confirm, c
     }
 
 
-def _do_demote(loc, backend, entry_id, body, scope, run_id, config) -> dict:
+def _do_demote(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+    config: Config,
+) -> dict:
     """Move an issue to ``learnings/`` seeded at ``demote_seed_recurrence`` with today's dates."""
     new_id = next_id(loc, "learning")
     learning = demote_issue_to_learning(
@@ -730,7 +796,14 @@ def _do_demote(loc, backend, entry_id, body, scope, run_id, config) -> dict:
     return {"status": "demoted", "entry_id": learning.id, "recurrence": learning.recurrence}
 
 
-def _promote_or_ask_body(loc, backend, entry_id, body, scope, run_id) -> dict:
+def _promote_or_ask_body(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    entry_id: str,
+    body: str | None,
+    scope: str | None,
+    run_id: str | None,
+) -> dict:
     """Execute a promotion, or ask for the objective rewording when ``body`` is missing (§6)."""
     if not (body and body.strip()):
         return _needs_confirmation(
@@ -776,7 +849,7 @@ def metrics(skill: str | None = None) -> dict:
 # --------------------------------------------------------------------------- helpers
 
 
-def _today():
+def _today() -> date:
     return datetime.now(UTC).date()
 
 
@@ -806,10 +879,11 @@ def _prepare_prose(
     the store), so a body that would corrupt the store fails cleanly with no partial write. The
     returned dict is spread straight into :func:`update_learning_prose`.
     """
-    has_body = bool(body and body.strip())
+    stripped_body = body.strip() if body else ""
+    has_body = bool(stripped_body)
     if not has_body and not scope:
         return None
-    new_body = body.strip() if has_body else current.body
+    new_body = stripped_body if has_body else current.body
     new_scope = scope if scope else current.scope
     new_title = _title_from_body(new_body) if has_body else current.title
     validate_body(entry_id, new_body)
@@ -881,7 +955,7 @@ def _capture_promote_prompt(entry_id: str, recurrence: int) -> str:
     )
 
 
-def _reject_missing_learning(loc: StoreLocation, entry_id: str, action: str) -> None:
+def _reject_missing_learning(loc: StoreLocation, entry_id: str, action: str) -> NoReturn:
     """Raise a clear error when an action needing a learning got an issue id or an unknown id."""
     if find_issue(loc, entry_id) is not None:
         raise ValueError(f"{action} applies to learnings; {entry_id!r} is an issue")
@@ -1089,14 +1163,14 @@ def _recall_conflicts(
 
 
 def _find_conflict(
-    loc,
+    loc: StoreLocation,
     polarity: str,
     scope: str,
     candidate_title: str,
     candidate_body: str,
     candidate_vec: list[float],
     scope_vec: list[float],
-    config,
+    config: Config,
 ) -> tuple[IndexedEntry, str] | None:
     """The nearest OPPOSITE-polarity PROHIBITION in an overlapping scope over the conflict cutoff.
 
@@ -1155,13 +1229,13 @@ def _find_conflict(
 
 
 def _find_issue_conflict(
-    loc,
+    loc: StoreLocation,
     scope: str,
     candidate_title: str,
     candidate_body: str,
     candidate_vec: list[float],
     scope_vec: list[float],
-    config,
+    config: Config,
 ) -> tuple[IndexedEntry, str] | None:
     """The nearest EXISTING issue in an overlapping scope that CONTRADICTS the new issue (§7).
 
@@ -1199,12 +1273,12 @@ def _find_issue_conflict(
 
 
 def _find_duplicate(
-    loc,
+    loc: StoreLocation,
     polarity: str,
     scope: str,
     candidate_vec: list[float],
     scope_vec: list[float],
-    config,
+    config: Config,
 ) -> IndexedEntry | None:
     """The nearest same-polarity entry in the same/close scope, if it clears ``dedup_similarity``.
 
@@ -1392,6 +1466,9 @@ def _same_polarity_asymmetry(candidate_text: str, duplicate_text: str) -> str | 
             word_c, word_d, c_clause, d_clause = a, b, c_clause_a, d_clause_b
         else:
             word_c, word_d, c_clause, d_clause = b, a, c_clause_b, d_clause_a
+        # `flipped_ab`/`flipped_ba` each require both selected clauses to be non-None (c_a/d_b or
+        # c_b/d_a were True to get here) — mypy can't trace that through the boolean flags.
+        assert c_clause is not None and d_clause is not None
         c_local_negated = bool(_NEGATION_ASYMMETRY.search(c_clause))
         d_local_negated = bool(_NEGATION_ASYMMETRY.search(d_clause))
         if c_local_negated or d_local_negated:
