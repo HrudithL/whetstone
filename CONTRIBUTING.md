@@ -258,6 +258,8 @@ The goal is never a literally empty report — it's a round whose comments stop 
 - scope the PR deliberately doesn't cover, or
 - otherwise not clearing the [§10.1](#101-when-to-decide-vs-ask) bar for "worth changing."
 
+**Out-of-scope findings get at most 2–3 corrective rounds.** If a review surfaces out-of-scope comments and the agent's follow-up explicitly asks Codex to confine itself to the PR's scope, but the next round comes back out-of-scope again, do not keep re-requesting review hoping it corrects itself. After 2–3 such rounds, stop, note on the PR that remaining comments are out-of-scope and were not actionable via re-review, and proceed as if the stopping condition were met. Continuing to loop past that point is not caution, it's wasted CI and review budget on a signal that has already shown it won't converge.
+
 Note the outcome briefly on the PR ("remaining comments are stylistic nits / already addressed — stopping here") and move on. This is a judgment call the agent makes itself, the same way it makes any other §10.1 call — it is not a genuine fork to escalate.
 
 The PR is eligible to merge up once **both** are true: the review has reached this stopping point — the requested review (findings or the clean issue comment) has, on its most recent round, either come back clean or surfaced nothing left worth fixing per the criteria above; or, when Codex is unavailable (rate-limited / no signal), the agent's **self-review** posted for your latest commit per the fallback above has been triaged the same way — AND any escalated forks are resolved by the human. None of this requires a spotless report; it requires that the feedback was actually considered each round and acted on where it mattered.
