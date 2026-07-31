@@ -1,0 +1,33 @@
+--- cold/plot.R
++++ warm/plot.R
+@@ -1,21 +1,19 @@
+ library(ggplot2)
+ library(readr)
+ 
+-cars <- read_csv("gtcars.csv")
++gtcars <- read_csv("gtcars.csv")
+ 
+-plot <- ggplot(cars, aes(x = hp, y = msrp, color = ctry_origin)) +
+-  geom_point(size = 3, alpha = 0.85) +
+-  scale_y_continuous(labels = scales::label_dollar(scale = 1e-3, suffix = "K")) +
+-  scale_x_continuous(labels = scales::label_comma()) +
+-  scale_color_brewer(palette = "Set2") +
++plot <- ggplot(gtcars, aes(x = hp, y = msrp, color = ctry_origin)) +
++  geom_point(size = 4.5, alpha = 0.6) +
++  scale_color_brewer(palette = "Accent") +
++  scale_y_continuous(labels = scales::comma) +
+   labs(
+-    title = "Price Climbs with Horsepower Across Sports Cars",
+-    subtitle = "Manufacturer's suggested retail price vs. engine horsepower",
++    title = "Price vs. Horsepower for Sports Cars",
+     x = "Horsepower (hp)",
+-    y = "MSRP (USD)",
++    y = "Price (MSRP)",
+     color = "Country of origin"
+   ) +
+-  theme_minimal(base_size = 13) +
+-  theme(legend.position = "right")
++  theme_minimal() +
++  theme(legend.position = "bottom")
+ 
+ ggsave("plot.png", plot, width = 8, height = 5, dpi = 150)
