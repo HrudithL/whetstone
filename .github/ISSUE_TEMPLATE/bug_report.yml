@@ -1,0 +1,34 @@
+name: Bug report
+description: Something isn't working the way it should.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what actually happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: >
+        Steps to reproduce, ideally including the skill name, the `recall`/`capture`/`revise` calls
+        involved, and any relevant store state.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Whetstone version
+      description: Output of `pip show whetstone-mcp` or `whetstone --version` if available.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS / Python version / MCP host
+      description: e.g. macOS 15 / Python 3.12 / Claude Code
+    validations:
+      required: true

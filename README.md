@@ -1,5 +1,10 @@
 # Whetstone
 
+[![CI](https://github.com/HrudithL/whetstone/actions/workflows/ci.yml/badge.svg)](https://github.com/HrudithL/whetstone/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/whetstone-mcp.svg)](https://pypi.org/project/whetstone-mcp/)
+[![Python versions](https://img.shields.io/pypi/pyversions/whetstone-mcp.svg)](https://pypi.org/project/whetstone-mcp/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Give any AI skill a memory of your taste — so you stop correcting the same things every session.**
 
 Whetstone is a local [MCP](https://modelcontextprotocol.io) server that lets *any* skill improve
