@@ -1,0 +1,44 @@
+--- cold/plot.R
++++ warm/plot.R
+@@ -1,30 +1,22 @@
++library(ggplot2)
+ library(readr)
+ library(dplyr)
+-library(ggplot2)
+ 
+-islands <- read_csv("islands.csv", show_col_types = FALSE)
++islands <- read_csv("islands.csv")
+ 
+-top_islands <- islands |>
+-  slice_max(size, n = 15) |>
++top <- islands %>%
++  arrange(desc(size)) %>%
++  slice_head(n = 15) %>%
+   mutate(name = reorder(name, size))
+ 
+-plot <- ggplot(top_islands, aes(x = size, y = name)) +
+-  geom_col(fill = "#2C6FB3") +
+-  geom_text(aes(label = scales::comma(size)),
+-            hjust = -0.15, size = 3.2, color = "grey30") +
+-  scale_x_continuous(labels = scales::comma,
+-                     expand = expansion(mult = c(0, 0.12))) +
++plot <- ggplot(top, aes(x = name, y = size)) +
++  geom_col(fill = "#3A5A40") +
++  coord_flip() +
+   labs(
+     title = "The 15 Largest Landmasses by Area",
+-    subtitle = "Continents and major islands, ranked from biggest to smallest",
+-    x = "Area (thousands of square miles)",
+-    y = NULL
++    x = NULL,
++    y = "Area (thousands of square miles)"
+   ) +
+-  theme_minimal(base_size = 12) +
+-  theme(
+-    plot.title = element_text(face = "bold"),
+-    panel.grid.major.y = element_blank(),
+-    panel.grid.minor.x = element_blank()
+-  )
++  theme_minimal()
+ 
+ ggsave("plot.png", plot, width = 8, height = 5, dpi = 150)

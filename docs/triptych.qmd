@@ -14,15 +14,16 @@ Each scenario walks through **one skill** and one or more corrections, in three 
    stuck within the run budget yet), that's shown too, not hidden. The raw learned layer Whetstone
    injected is one click away if you want the receipts.
 
-The scenarios span four skills — **Great Tables**, **frontend design**, **plotnine**, and
-**PowerPoint decks** — each carrying one or more arbitrary house-style preferences (most scenarios
-teach two; `plotnine_gtcars_hp_msrp` teaches five). The substrate is the same for all four; only the
-skill and the taught preferences change.
+The scenarios span five skills — **Great Tables**, **frontend design**, **plotnine**, **ggplot2**,
+and **PowerPoint decks** — each carrying one or more arbitrary house-style preferences (most
+scenarios teach one or two; `plotnine_gtcars_hp_msrp` and `ggplot2_gtcars_hp_price` each teach five).
+The substrate is the same for all five — Whetstone doesn't care that ggplot2 is R and the rest are
+Python; only the skill and the taught preferences change.
 
 *The panels render each skill's output natively from the committed artifacts under `harness/out/`:
-Great Tables tables inline, self-contained web pages sandboxed in an iframe, plotnine plots as
-rendered images, and — for binary formats like pptx — the generated build script (the `.pptx` itself
-is committed alongside it).*
+Great Tables tables inline, self-contained web pages sandboxed in an iframe, plotnine and ggplot2
+plots as rendered images, and — for binary formats like pptx — the generated build script (the
+`.pptx` itself is committed alongside it).*
 
 ```{python}
 # | echo: false
@@ -39,6 +40,7 @@ SKILLS = [
     ("great-tables", "Great Tables", "Native HTML tables — real tables, not screenshots."),
     ("frontend-design", "Frontend design", "Self-contained pages, sandboxed in an iframe."),
     ("plotnine", "plotnine", "Grammar-of-graphics plots, rendered as images."),
+    ("ggplot2", "ggplot2 (R)", "Grammar-of-graphics plots in R, rendered as images."),
     ("pptx", "PowerPoint decks", "The generated python-pptx build script (the deck is a binary)."),
 ]
 any_shown = False

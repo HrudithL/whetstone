@@ -1,0 +1,45 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Color-encode country of origin with the ColorBrewer qualitative `Accent` palette via `scale_color_brewer(palette = \"Accent\")`.",
+      "scope": "color encoding",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L2",
+      "rule": "Format the price (msrp) axis as plain comma-separated numbers with no dollar sign, e.g. `scale_y_continuous(labels = scales::comma)`.",
+      "scope": "scales",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L3",
+      "rule": "Place the legend at the bottom with `theme(legend.position = \"bottom\")`.",
+      "scope": "legend placement",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L4",
+      "rule": "Make the scatter points larger, `size = 4.5` in geom_point.",
+      "scope": "geoms",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    },
+    {
+      "id": "L5",
+      "rule": "Make the scatter points translucent, `alpha = 0.6` in geom_point.",
+      "scope": "geoms",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    }
+  ],
+  "issues": []
+}

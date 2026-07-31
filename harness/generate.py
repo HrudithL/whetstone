@@ -108,6 +108,46 @@ def _html_for_check(code: str) -> str:
     return _SLASH_COMMENT_RE.sub(" ", code)
 
 
+def _r_for_check(code: str) -> str:
+    """``code`` with R's ``#``-to-end-of-line comments removed, outside string literals.
+
+    R has no block comments or docstrings, so unlike Python this is a simple quote-aware scan
+    rather than a full parse: track whether we're inside a ``'``/``"`` string (honoring backslash
+    escapes) so a ``#`` inside a quoted string — e.g. a hex color ``"#FF6B00"`` — is never mistaken
+    for a comment start, while a real ``# avoid green`` comment is dropped.
+    """
+    out: list[str] = []
+    quote: str | None = None
+    i, n = 0, len(code)
+    while i < n:
+        ch = code[i]
+        if quote is not None:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:  # keep an escaped char with its backslash, skip both
+                out.append(code[i + 1])
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+            i += 1
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "#":
+            j = code.find("\n", i)
+            if j == -1:
+                break
+            out.append("\n")
+            i = j + 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def code_for_check(code: str, language: str = "python") -> str:
     """Normalize a primary-output artifact for checking, per its skill's ``check_language``.
 
@@ -118,6 +158,8 @@ def code_for_check(code: str, language: str = "python") -> str:
         return _python_for_check(code)
     if language == "html":
         return _html_for_check(code)
+    if language == "r":
+        return _r_for_check(code)
     return code
 
 
@@ -275,6 +317,8 @@ def _stub_carrier(pref: Preference, honor: bool, language: str, n: int) -> str |
         return f"_pref_{n} = [{token!r}]  # {pref.id}"
     if language == "html":
         return f"  .p-{n} {{ content: {token!r}; }}"
+    if language == "r":
+        return f'.pref_{n} <- "{token}"  # {pref.id}'
     return token  # unknown language: bare literal is enough for a substring/regex check
 
 
@@ -286,7 +330,7 @@ def _stub_document(spec: SkillSpec, scenario: Scenario, carriers: list[str]) -> 
             "<!doctype html>\n<html><head><meta charset='utf-8'>\n<style>\n"
             f"{body}\n</style></head>\n<body><h1>stub: {scenario.name}</h1></body></html>\n"
         )
-    if spec.check_language == "python":
+    if spec.check_language in ("python", "r"):  # both use `#` line comments
         return f"# stub {spec.output} for {scenario.name!r} (skill {spec.name!r})\n{body}\n"
     return body + "\n"
 

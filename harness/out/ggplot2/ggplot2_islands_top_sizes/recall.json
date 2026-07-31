@@ -1,0 +1,13 @@
+{
+  "learnings": [
+    {
+      "id": "L1",
+      "rule": "Fill the bars with forest green `#3A5A40`, not the house blue accent.",
+      "scope": "color encoding",
+      "recurrence": 2,
+      "weight": 0.6667,
+      "origin": "skill"
+    }
+  ],
+  "issues": []
+}

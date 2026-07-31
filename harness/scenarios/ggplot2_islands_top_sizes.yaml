@@ -1,0 +1,24 @@
+name: ggplot2_islands_top_sizes
+skill: ggplot2
+difficulty: easy
+prompt: >
+  Chart the largest landmasses in this dataset by area, so the biggest ones are easy to compare.
+data: data/islands.csv
+# SIMPLE task (1 preference) — the low-complexity anchor for the convergence-vs-complexity metric.
+# The R analog of plotnine_islands_top_sizes (same dataset/task), but a distinct preference so it
+# isn't a bare reskin — a fill color rather than a theme choice.
+preferences:
+  - id: fill-forest-green
+    polarity: learning
+    scope: color encoding
+    # Arbitrary house taste, deliberately against the grain: the skill's default single-series
+    # accent is a muted blue (#2C6FB3); forest green is this user's look. Not "right" — the point is
+    # only that once corrected it is tracked and re-applied.
+    body: >
+      Fill the bars with forest green `#3A5A40`, not the house blue accent.
+    feedback: >
+      Fill the bars with #3A5A40 (forest green), not the default blue.
+    check:
+      # Case-insensitive: hex colors are case-insensitive, so #3a5a40 must count as honoring.
+      kind: regex
+      pattern: '(?i)#3a5a40'
