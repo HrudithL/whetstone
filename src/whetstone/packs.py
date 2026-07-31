@@ -29,7 +29,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from .config import Config, load_config
-from .embeddings import get_backend
+from .embeddings import EmbeddingBackend, get_backend
 from .server import _find_conflict, _find_duplicate, _find_issue_conflict
 from .store import index
 from .store.access import (
@@ -41,6 +41,7 @@ from .store.access import (
     save_issue,
     save_learning,
 )
+from .store.entries import IssueEntry, LearningEntry
 from .store.index import entry_text
 from .store.layout import (
     StoreLocation,
@@ -104,7 +105,13 @@ def export_pack(skill: str, out: str | Path | None = None, config: Config | None
     }
 
 
-def _render_manifest(skill, slug, learnings, issues, scopes) -> str:
+def _render_manifest(
+    skill: str,
+    slug: str,
+    learnings: list[LearningEntry],
+    issues: list[IssueEntry],
+    scopes: list[str],
+) -> str:
     scope_list = ", ".join(f'"{_toml_escape(s)}"' for s in scopes)
     return (
         f'skill = "{_toml_escape(skill)}"\n'
@@ -165,8 +172,8 @@ def import_pack(
                 conflicts += outcome == "conflict"
                 if outcome in ("committed", "merged"):
                     index.rebuild_index(loc, backend)  # keep dedup fresh for the next entry
-            for entry in incoming_issues:
-                outcome = _import_one(loc, backend, config, entry, "issue", today, mode)
+            for issue_entry in incoming_issues:
+                outcome = _import_one(loc, backend, config, issue_entry, "issue", today, mode)
                 committed += outcome == "committed"
                 merged += outcome == "merged"
                 conflicts += outcome == "conflict"
@@ -210,7 +217,15 @@ def _wipe(loc: StoreLocation) -> int:
     return removed
 
 
-def _import_one(loc, backend, config, incoming, polarity, today, mode) -> str:
+def _import_one(
+    loc: StoreLocation,
+    backend: EmbeddingBackend,
+    config: Config,
+    incoming: LearningEntry | IssueEntry,
+    polarity: str,
+    today: date,
+    mode: str,
+) -> str:
     """Import one incoming entry; return ``committed``/``merged``/``conflict``/``noop``.
 
     ``replace`` mode skips dedup/conflict (the store was just wiped) and writes a fresh, re-minted
@@ -223,8 +238,11 @@ def _import_one(loc, backend, config, incoming, polarity, today, mode) -> str:
     if mode == "merge":
         duplicate = _find_duplicate(loc, polarity, scope, vec, scope_vec, config)
         if duplicate is not None:
-            if polarity == "learning":
+            if isinstance(incoming, LearningEntry):
                 existing = find_learning(loc, duplicate.id)
+                # `duplicate.id` was just found in this store's index under the held write lock, so
+                # the entry it names cannot have been concurrently removed — always present.
+                assert existing is not None
                 save_learning(
                     loc,
                     replace(
@@ -247,7 +265,7 @@ def _import_one(loc, backend, config, incoming, polarity, today, mode) -> str:
             return "conflict"
 
     new_id = next_id(loc, polarity)
-    if polarity == "learning":
+    if isinstance(incoming, LearningEntry):
         save_learning(loc, replace(incoming, id=new_id, last_seen=today))
     else:
         save_issue(loc, replace(incoming, id=new_id))

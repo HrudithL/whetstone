@@ -23,6 +23,7 @@ import tempfile
 from array import array
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from ..embeddings import EmbeddingBackend
 from .entries import IssueEntry, LearningEntry
@@ -225,7 +226,11 @@ def _collect(
     entry_rows: list[tuple[str, str, str, bytes, int | None, str, str, str | None]],
 ) -> None:
     by_scope: dict[str, list[list[float]]] = {}
-    for entry, vec in zip(entries, entry_vecs, strict=True):
+    # mypy infers `object` (not `LearningEntry | IssueEntry`) for a zip() over a `list[A] | list[B]`
+    # first argument — a known overload-resolution gap, not a real typing ambiguity here (`entries`
+    # is always homogeneous, one concrete type per call).
+    for raw_entry, vec in zip(entries, entry_vecs, strict=True):
+        entry = cast("LearningEntry | IssueEntry", raw_entry)
         by_scope.setdefault(entry.scope, []).append(vec)
         recurrence = getattr(entry, "recurrence", None)
         last_seen = getattr(entry, "last_seen", None)

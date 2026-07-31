@@ -11,8 +11,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import date
+from pathlib import Path
+from typing import TypeVar
 
 from .entries import IssueEntry, LearningEntry
 from .layout import StoreLocation
@@ -25,6 +28,11 @@ from .markdown import (
 from .slug import normalize_scope, scope_filename
 
 _MAX_TITLE = 60
+# Bound to the two concrete entry dataclasses (not their common shape) so a call site's `parse`/
+# `write` pair is always for the SAME entry type — `_remove_matching` below is generic over this,
+# rather than typed as `LearningEntry | IssueEntry` per-argument, which would let a caller mix a
+# `parse_issues` with a `write_learnings` and still type-check.
+_E = TypeVar("_E", LearningEntry, IssueEntry)
 # Git-tracked, per-store monotonic id counters. Persisting the NEXT number to mint per polarity
 # means a removed/promoted/demoted id is never reissued — unlike deriving from the current markdown
 # max, which would reuse the top id after its entry leaves. Committed alongside the markdown it
@@ -73,7 +81,7 @@ def _max_id_number(ids: list[str]) -> int:
     return highest
 
 
-def _next_ids_path(loc: StoreLocation):
+def _next_ids_path(loc: StoreLocation) -> Path:
     return loc.path / _NEXT_IDS_NAME
 
 
@@ -224,6 +232,23 @@ def update_learning_prose(
     return updated
 
 
+def _remove_matching(
+    loc: StoreLocation,
+    directory: Path,
+    parse: Callable[[str], list[_E]],
+    write: Callable[[Path, list[_E]], None],
+    entry_id: str,
+) -> bool:
+    for path in sorted(directory.glob("*.md")):
+        entries = parse(path.read_text(encoding="utf-8"))
+        kept = [e for e in entries if e.id != entry_id]
+        if len(kept) != len(entries):
+            record_id(loc, entry_id)  # remember the id before it leaves the markdown (no reuse)
+            write(path, kept)
+            return True
+    return False
+
+
 def remove_entry(loc: StoreLocation, entry_id: str) -> bool:
     """Delete a learning or issue (by id prefix) from its scope file; True iff it existed.
 
@@ -234,19 +259,11 @@ def remove_entry(loc: StoreLocation, entry_id: str) -> bool:
     path, so it covers ``remove``, ``promote``, and ``demote`` (all delete their source through it).
     """
     if entry_id.startswith("L"):
-        directory, parse, write = loc.learnings_dir, parse_learnings, write_learnings
+        return _remove_matching(loc, loc.learnings_dir, parse_learnings, write_learnings, entry_id)
     elif entry_id.startswith("I"):
-        directory, parse, write = loc.issues_dir, parse_issues, write_issues
+        return _remove_matching(loc, loc.issues_dir, parse_issues, write_issues, entry_id)
     else:
         raise ValueError(f"entry id must start with 'L' or 'I', got {entry_id!r}")
-    for path in sorted(directory.glob("*.md")):
-        entries = parse(path.read_text(encoding="utf-8"))
-        kept = [e for e in entries if e.id != entry_id]
-        if len(kept) != len(entries):
-            record_id(loc, entry_id)  # remember the id before it leaves the markdown (no reuse)
-            write(path, kept)
-            return True
-    return False
 
 
 def promote_learning_to_issue(

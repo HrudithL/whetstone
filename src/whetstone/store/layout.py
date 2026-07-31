@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -27,7 +28,7 @@ from .slug import safe_component
 try:  # POSIX file locking (macOS/Linux, the XDG target). No-op fallback elsewhere.
     import fcntl
 except ImportError:  # pragma: no cover - non-POSIX
-    fcntl = None
+    fcntl = None  # type: ignore[assignment]
 
 _REGISTRY_NAME = "registry.json"
 # The reserved slug for the M5e learned global layer. It is used verbatim as both the "skill" name
@@ -123,7 +124,7 @@ def _ensure_store_gitignore(loc: StoreLocation) -> bool:
 
 
 @contextmanager
-def store_write_lock(loc: StoreLocation):
+def store_write_lock(loc: StoreLocation) -> Iterator[None]:
     """Serialize all mutations of one store (and its index rebuilds) across calls and processes.
 
     ``capture`` runs its whole critical section — duplicate check, id allocation, markdown write,
@@ -138,7 +139,7 @@ def store_write_lock(loc: StoreLocation):
 
 
 @contextmanager
-def store_events_lock(loc: StoreLocation):
+def store_events_lock(loc: StoreLocation) -> Iterator[None]:
     """Serialize appends to one store's ``events.jsonl`` across calls and processes.
 
     A whole-line append can take more than one ``os.write`` on a partial write; this lock keeps the
@@ -182,7 +183,7 @@ def commit_paths(loc: StoreLocation, paths: list[str], message: str) -> None:
 
 
 @contextmanager
-def _file_lock(lock_path: Path):
+def _file_lock(lock_path: Path) -> Iterator[None]:
     """Cross-call/cross-process mutual exclusion via a POSIX ``flock`` on ``lock_path``.
 
     Used to serialize both store creation (the ``is_store`` check + ``git init``/commit) and the
@@ -287,7 +288,7 @@ def read_registry(config: Config | None = None) -> dict[str, dict]:
 
 
 @contextmanager
-def registry_write_lock(config: Config | None = None):
+def registry_write_lock(config: Config | None = None) -> Iterator[None]:
     """Serialize registry read-modify-writes across calls and processes.
 
     This is the SAME lock :func:`_register` takes to add a skill, exposed publicly so a caller
