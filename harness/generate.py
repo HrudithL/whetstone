@@ -271,6 +271,15 @@ async def _deny_networked_bash(tool_name, tool_input, _ctx):  # noqa: ANN001 - S
 # --------------------------------------------------------------------------------------------------
 
 
+# A "stay inside this call, tolerating one level of nested parens" gap — the balanced-paren-aware
+# alternative to a plain `[^)]*` (which stops early at a nested call's own closing paren) or a bare
+# `.{0,N}?` (which, wrongly, also matches straight past this call's OWN closing paren into a
+# sibling call — a real false-positive Codex review caught on PR #55 round 3). Zero-or-more
+# repetitions of "a non-paren char, or one balanced paren pair" always matches the empty string
+# (its own minimal case), so the whole construct is sampler-safe to just drop.
+_BALANCED_PAREN_GAP = r"(?:[^()]|\([^()]*\))*"
+
+
 def _regex_sample(pattern: str) -> str:
     """Best-effort literal that satisfies ``pattern`` (stub-only).
 
@@ -279,11 +288,13 @@ def _regex_sample(pattern: str) -> str:
     *enumeration* class (``["']`` -> its first alternative, e.g. ``"``), a trailing ``\\b`` word
     boundary (dropped — a zero-width assertion, not a literal character; a bare literal token
     embedded in the stub's carrier syntax, e.g. between quotes, already sits at a natural word
-    boundary), and escaped literals.
+    boundary), the named :data:`_BALANCED_PAREN_GAP` idiom (dropped — matches its own zero-
+    repetition case), and escaped literals.
     """
     s = re.sub(r"^\(\?[a-zA-Z]+\)", "", pattern)  # drop a leading (?i)/(?is)/... flag group
     s = s.replace(r"\s*", "").replace(r"\s+", " ")
     s = s.replace(r"\b", "")  # zero-width assertion, not a literal "b" — drop, don't unescape
+    s = s.replace(_BALANCED_PAREN_GAP, "")  # matches empty; drop before the class substitutions
     s = re.sub(r"\[([^\]^-])-[^\]]\]", r"\1", s)  # single range class -> its first char
     s = re.sub(r"\[([^\]]+)\]", lambda m: m.group(1)[0], s)  # enum class -> first alternative char
     s = re.sub(r"\\(.)", r"\1", s)  # unescape \X -> X

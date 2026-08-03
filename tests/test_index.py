@@ -106,6 +106,38 @@ def test_centroid_is_mean_of_entry_vectors(store, backend):
     assert scope.centroid == pytest.approx(expected, abs=1e-6)
 
 
+def test_rebuild_self_heals_an_incompatible_older_schema(store, backend):
+    """A stale index carrying an OLDER schema (e.g. a pre-v2 ``entries`` table missing
+    ``last_seen``) must rebuild cleanly rather than fail inserting into a mismatched table —
+    Codex review finding on PR #55 round 3: ``CREATE TABLE IF NOT EXISTS`` alone would leave the
+    old, incompatible table in place."""
+    import sqlite3
+
+    seed(store, learnings=[make_learning("L1", "First learning.", "scope-a")])
+    index.rebuild_index(store, backend)
+
+    # Simulate a pre-v2 index on disk: drop and recreate `entries` without `last_seen`, matching
+    # the old shape, and make the store's fingerprint stale so a rebuild is actually triggered.
+    conn = sqlite3.connect(str(index.index_path(store)))
+    try:
+        conn.executescript(
+            """
+            DROP TABLE entries;
+            CREATE TABLE entries (
+                id TEXT PRIMARY KEY, polarity TEXT NOT NULL, scope TEXT NOT NULL,
+                vector BLOB NOT NULL, recurrence INTEGER, title TEXT NOT NULL, body TEXT NOT NULL
+            );
+            """
+        )
+        conn.execute("UPDATE meta SET value = 'stale' WHERE key = 'fingerprint'")
+        conn.commit()
+    finally:
+        conn.close()
+
+    index.ensure_index(store, backend)  # must not raise sqlite3.OperationalError
+    assert {e.id for e in index.load_entries(store, "learning")} == {"L1"}
+
+
 def test_ensure_index_rebuilds_when_stale(store, backend):
     seed(store, learnings=[make_learning("L1", "First learning.", "scope-a")])
     index.ensure_index(store, backend)

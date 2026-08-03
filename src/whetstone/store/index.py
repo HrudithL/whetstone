@@ -196,13 +196,10 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_SECONDS)
     try:
-        _create_schema(conn)
-        # Clear the previous rows before inserting the new ones, all inside one transaction — a
-        # reader's own transaction (see retrieve()) blocks this commit until it finishes, so a
-        # concurrent read is never exposed to the brief empty-then-repopulated window.
-        conn.execute("DELETE FROM scopes")
-        conn.execute("DELETE FROM entries")
-        conn.execute("DELETE FROM meta")
+        # Drop+recreate (not just clear rows) so an incompatible old schema self-heals; all inside
+        # one transaction — a reader's own transaction (see retrieve()) blocks this commit until it
+        # finishes, so a concurrent read is never exposed to the empty-then-repopulated window.
+        _recreate_schema(conn)
         conn.executemany(
             "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
             scope_rows,
@@ -261,22 +258,32 @@ def _collect(
         scope_rows.append((polarity, scope, _pack(centroid), _pack(phrase)))
 
 
-def _create_schema(conn: sqlite3.Connection) -> None:
-    """Create the schema if this is a fresh file. ``IF NOT EXISTS``, not unconditional ``CREATE
-    TABLE``: :func:`rebuild_index` now rewrites rows in the SAME persistent file across every
-    rebuild (§ its docstring) instead of always starting from a brand-new one, so this must be
-    idempotent."""
+def _recreate_schema(conn: sqlite3.Connection) -> None:
+    """Drop and recreate the schema, unconditionally.
+
+    :func:`rebuild_index` now rewrites rows in the SAME persistent file across every rebuild (see
+    its docstring) instead of always starting from a brand-new one, so a stale-but-existing file
+    can carry an OLDER schema (e.g. a pre-v2 ``entries`` table missing ``last_seen``) — the
+    versioned fingerprint correctly detects that as stale and triggers a rebuild, but a plain
+    ``CREATE TABLE IF NOT EXISTS`` would then leave the old, incompatible table in place and fail
+    inserting the new rows instead of self-healing. Dropping first makes every rebuild a genuine
+    fresh start regardless of what schema (if any) came before, while the surrounding transaction
+    keeps this invisible to a concurrent reader: nothing commits until the new rows are in.
+    """
     conn.executescript(
         """
-        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
-        CREATE TABLE IF NOT EXISTS scopes (
+        DROP TABLE IF EXISTS meta;
+        DROP TABLE IF EXISTS scopes;
+        DROP TABLE IF EXISTS entries;
+        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE scopes (
             polarity TEXT NOT NULL,
             scope    TEXT NOT NULL,
             centroid BLOB NOT NULL,
             phrase   BLOB NOT NULL,
             PRIMARY KEY (polarity, scope)
         );
-        CREATE TABLE IF NOT EXISTS entries (
+        CREATE TABLE entries (
             id         TEXT PRIMARY KEY,
             polarity   TEXT NOT NULL,
             scope      TEXT NOT NULL,
