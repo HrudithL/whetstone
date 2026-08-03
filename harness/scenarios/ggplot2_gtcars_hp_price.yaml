@@ -22,12 +22,12 @@ preferences:
     feedback: >
       Use the Accent qualitative palette for the country colors.
     check:
-      # Scoped to scale_color_brewer's palette argument specifically — a bare `Accent` substring
-      # check would spuriously pass on any unrelated mention (a title, a variable name, a comment)
-      # (Codex review finding on PR #55 round 5). Same balanced-paren-aware gap as the other
-      # checks in this file.
+      # Scoped to scale_color_brewer's `palette` argument specifically — a bare `Accent` substring
+      # anywhere in the call (round-5 fix) would still spuriously pass on
+      # `scale_color_brewer(name = "Accent", palette = "Set1")`, honoring the wrong palette by
+      # matching the wrong argument (Codex round-7 finding). Requires `palette = "Accent"`.
       kind: regex
-      pattern: 'scale_color_brewer\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*Accent'
+      pattern: 'scale_color_brewer\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*palette\s*=\s*["'']Accent["'']'
   - id: price-plain-commas
     polarity: learning
     scope: scales

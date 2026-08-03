@@ -138,11 +138,8 @@ def _centroid(vectors: list[list[float]], dim: int) -> list[float]:
     return [value / count for value in total]
 
 
-_COMMIT_RETRY_ATTEMPTS = 3
-
-
 def _commit_with_retry(conn: sqlite3.Connection) -> None:
-    """``COMMIT``, retrying a few more times on a lock timeout rather than giving up on the first.
+    """``COMMIT``, retrying on a lock timeout indefinitely rather than giving up.
 
     ``conn``'s own ``timeout=BUSY_TIMEOUT_SECONDS`` already makes SQLite retry internally for up
     to 5s before raising ``sqlite3.OperationalError: database is locked`` — but a reader (see
@@ -150,17 +147,23 @@ def _commit_with_retry(conn: sqlite3.Connection) -> None:
     suspended process) would then make ``COMMIT`` fail outright, propagating the error to
     ``rebuild_index``'s caller (``capture``, ``compact``, ...) even though the markdown/next-id
     write those callers already made is fine — and, worse, inviting a caller-level retry that
-    could double-apply that write (Codex review finding on PR #55). A failed ``COMMIT`` leaves the
-    transaction intact (verified empirically, not just assumed): retrying the SAME ``COMMIT``
-    again, without touching anything else, is safe and just extends the effective wait.
+    could double-apply that write. A failed ``COMMIT`` leaves the transaction intact (verified
+    empirically, not just assumed): retrying the SAME ``COMMIT`` again, without touching anything
+    else, is safe. A bounded retry count (an earlier version of this function tried 3) just moves
+    the same failure mode to a longer, still-arbitrary deadline (Codex review finding on PR #55,
+    round 7) — retrying indefinitely instead matches ``_lock_exclusive``'s own file-lock philosophy
+    (§ its docstring): genuine contention should be waited out, not given up on. The only other
+    writer that could ever hold this file locked is another ``rebuild_index`` call, which
+    ``store_write_lock`` already serializes ahead of this function running at all, so the sole
+    remaining contender is a reader's normally-brief transaction — never another indefinite wait
+    stacked on top of this one.
     """
-    for attempt in range(_COMMIT_RETRY_ATTEMPTS):
+    while True:
         try:
             conn.execute("COMMIT")
             return
         except sqlite3.OperationalError:
-            if attempt == _COMMIT_RETRY_ATTEMPTS - 1:
-                raise
+            continue
 
 
 def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
