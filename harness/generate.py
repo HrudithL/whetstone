@@ -229,6 +229,11 @@ _NETWORK_BASH_TOKENS = (
     "pip install", "pip3 install", "pip download", "uv pip", "conda install",
     "npm ", "npx ", "pnpm", "yarn", "apt", "apt-get", "brew ", "gem install",
     "git clone", "git pull", "git fetch", "git remote",
+    # R's package installers — the ggplot2 skill's equivalent of `pip install`. Matches the R
+    # function call itself (not just an `Rscript`/`R` wrapper token), since it also fires inside a
+    # heredoc or -e string passed to either invocation.
+    "install.packages", "r cmd install", "remotes::install", "devtools::install",
+    "biocmanager::install",
 )
 
 

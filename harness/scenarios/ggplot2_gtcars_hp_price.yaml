@@ -38,9 +38,11 @@ preferences:
     check:
       # Scoped to scale_y_continuous specifically — a bare `scales::comma` substring check would
       # spuriously pass if a cold run comma-formats the horsepower x-axis while still dollar-
-      # formatting the price y-axis (Codex review finding on PR #55).
+      # formatting the price y-axis (Codex review finding on PR #55). A bounded non-greedy gap
+      # (not `[^)]*`) so a nested call before the formatter, e.g. `limits = c(0, NA)`, doesn't
+      # stop the match early (Codex round-2 finding) — `.` matches parens too.
       kind: regex
-      pattern: 'scale_y_continuous\([^)]*scales::comma'
+      pattern: 'scale_y_continuous\(.{0,50}?scales::comma'
   - id: legend-bottom
     polarity: learning
     scope: legend placement
@@ -65,8 +67,11 @@ preferences:
     feedback: >
       Make the points bigger — size = 4.5.
     check:
+      # Scoped to geom_point specifically, not any layer — a bare `size=4.5` substring could
+      # spuriously match a different geom (Codex round-2 finding, same class as points-translucent
+      # below).
       kind: regex
-      pattern: 'size\s*=\s*4\.5\b'
+      pattern: 'geom_point\(.{0,50}?size\s*=\s*4\.5\b'
   - id: points-translucent
     polarity: learning
     scope: geoms
@@ -77,5 +82,8 @@ preferences:
     feedback: >
       Add some transparency to the points — alpha = 0.6.
     check:
+      # Scoped to geom_point specifically — a bare `alpha=0.6` substring would spuriously pass if
+      # e.g. a geom_smooth() layer used that alpha while geom_point() stayed opaque (Codex round-2
+      # finding).
       kind: regex
-      pattern: 'alpha\s*=\s*0\.6'
+      pattern: 'geom_point\(.{0,50}?alpha\s*=\s*0\.6'

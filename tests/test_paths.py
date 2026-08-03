@@ -66,3 +66,32 @@ def test_default_store_root_and_config_path(monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", "/tmp/xdg-config")
     assert paths.default_store_root() == Path("/tmp/xdg-data/whetstone")
     assert paths.config_path() == Path("/tmp/xdg-config/whetstone/config.toml")
+
+
+def test_windows_store_root_prefers_existing_legacy_location(monkeypatch, tmp_path):
+    """An existing pre-migration Windows store (created before the native-path split existed)
+    must keep loading — the native %LOCALAPPDATA% default only applies to a fresh install."""
+    monkeypatch.setattr(paths.sys, "platform", "win32")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("LOCALAPPDATA", raising=False)
+    legacy = tmp_path / ".local" / "share" / "whetstone"
+    legacy.mkdir(parents=True)
+    assert paths.default_store_root() == legacy
+
+
+def test_windows_store_root_uses_native_location_for_a_fresh_install(monkeypatch, tmp_path):
+    monkeypatch.setattr(paths.sys, "platform", "win32")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "AppData" / "Local"))
+    # No legacy directory exists — a brand new install goes straight to the native path.
+    assert paths.default_store_root() == tmp_path / "AppData" / "Local" / "whetstone"
+
+
+def test_windows_config_path_prefers_existing_legacy_location(monkeypatch, tmp_path):
+    monkeypatch.setattr(paths.sys, "platform", "win32")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("APPDATA", raising=False)
+    legacy = tmp_path / ".config" / "whetstone"
+    legacy.mkdir(parents=True)
+    (legacy / "config.toml").write_text("supervision = 'autonomous'\n")
+    assert paths.config_path() == legacy / "config.toml"

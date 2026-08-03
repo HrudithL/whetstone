@@ -14,6 +14,7 @@ by ``attach`` explicitly or by future ``recall``/``capture`` without an explicit
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import subprocess
@@ -199,11 +200,16 @@ def _lock_exclusive(fh: IO[str]) -> None:
     # msvcrt.locking(LK_LOCK) retries internally for ~10s then raises OSError instead of blocking
     # indefinitely like fcntl.flock(LOCK_EX) — loop around it so contention just waits, matching
     # the POSIX side's semantics, rather than surfacing a spurious failure under real contention.
+    # Only retry the actual contention signal (EACCES, per _locking()'s documented errno); any
+    # other errno (e.g. EINVAL from a bad descriptor) is a real, permanent failure — re-raise it
+    # rather than hanging forever retrying something that can never succeed.
     while True:  # pragma: no cover - exercised on Windows CI, not on POSIX
         try:
             msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)
             return
-        except OSError:
+        except OSError as exc:
+            if exc.errno != errno.EACCES:
+                raise
             continue
 
 

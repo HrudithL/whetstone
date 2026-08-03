@@ -17,9 +17,7 @@ similarity is brute-force over these rows (§5.4: no ANN library at this scale).
 from __future__ import annotations
 
 import hashlib
-import os
 import sqlite3
-import tempfile
 from array import array
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +33,10 @@ INDEX_NAME = "index.sqlite"
 # built by an older schema is treated as stale and rebuilt rather than read with a missing column.
 # v2 added the per-entry ``last_seen`` column (the recency input, §4.4).
 _SCHEMA_VERSION = 2
+# How long a connection waits on SQLite's own lock (instead of failing immediately with "database
+# is locked") when it genuinely contends with another connection's transaction — see
+# :func:`rebuild_index`'s module-level rationale for why contention is expected to be brief.
+BUSY_TIMEOUT_SECONDS = 5.0
 
 
 @dataclass
@@ -142,6 +144,17 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
     The parsed entries AND the stored fingerprint are both derived from a single file snapshot, so
     if the markdown is edited (outside Whetstone) mid-rebuild the published fingerprint can never
     advertise fresh over the stale vectors that were actually indexed.
+
+    Rewrites the rows **in place**, inside one transaction, rather than building a separate temp
+    file and ``os.replace``-ing it over the live one. The previous swap-based design relied on a
+    POSIX-only guarantee — replacing a file while another process still has it open is fine on
+    POSIX (the old inode lives on under that open handle) but raises ``PermissionError`` on
+    Windows, which does not allow replacing a file that anything still has open. In-place
+    DELETE+INSERT-then-commit gives the same "a reader never sees a partial rebuild" property
+    through SQLite's own transaction isolation instead: a reader's transaction (see
+    ``retrieve()``'s explicit ``BEGIN``) blocks this commit until it finishes, and any read that
+    starts after this commits sees the new rows atomically — a guarantee that holds identically on
+    every platform, since it never depends on OS-level file-replace semantics.
     """
     learning_files = _snapshot(loc.learnings_dir)
     issue_files = _snapshot(loc.issues_dir)
@@ -181,39 +194,35 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
 
     path = index_path(loc)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Build into a UNIQUE temp file, then atomically swap it in. A reader (a concurrent recall) must
-    # never observe a missing/half-written index.sqlite — os.replace is atomic and the live DB is
-    # never unlinked first.
-    # Temp name matches the per-store .gitignore ("index.sqlite-*") so a crash leftover stays
-    # untracked.
-    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix="index.sqlite-", suffix=".tmp")
-    os.close(fd)  # sqlite opens its own handle to the path
+    conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_SECONDS)
     try:
-        conn = sqlite3.connect(tmp_name)
-        try:
-            _create_schema(conn)
-            conn.executemany(
-                "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
-                scope_rows,
-            )
-            conn.executemany(
-                "INSERT INTO entries "
-                "(id, polarity, scope, vector, recurrence, title, body, last_seen) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                entry_rows,
-            )
-            conn.execute(
-                "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
-                (fingerprint,),
-            )
-            conn.commit()
-        finally:
-            conn.close()
-        os.replace(tmp_name, str(path))
+        _create_schema(conn)
+        # Clear the previous rows before inserting the new ones, all inside one transaction — a
+        # reader's own transaction (see retrieve()) blocks this commit until it finishes, so a
+        # concurrent read is never exposed to the brief empty-then-repopulated window.
+        conn.execute("DELETE FROM scopes")
+        conn.execute("DELETE FROM entries")
+        conn.execute("DELETE FROM meta")
+        conn.executemany(
+            "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
+            scope_rows,
+        )
+        conn.executemany(
+            "INSERT INTO entries "
+            "(id, polarity, scope, vector, recurrence, title, body, last_seen) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            entry_rows,
+        )
+        conn.execute(
+            "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
+            (fingerprint,),
+        )
+        conn.commit()
     except BaseException:
-        if os.path.exists(tmp_name):
-            os.remove(tmp_name)
+        conn.rollback()
         raise
+    finally:
+        conn.close()
 
 
 def _collect(
@@ -253,17 +262,21 @@ def _collect(
 
 
 def _create_schema(conn: sqlite3.Connection) -> None:
+    """Create the schema if this is a fresh file. ``IF NOT EXISTS``, not unconditional ``CREATE
+    TABLE``: :func:`rebuild_index` now rewrites rows in the SAME persistent file across every
+    rebuild (§ its docstring) instead of always starting from a brand-new one, so this must be
+    idempotent."""
     conn.executescript(
         """
-        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
-        CREATE TABLE scopes (
+        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE IF NOT EXISTS scopes (
             polarity TEXT NOT NULL,
             scope    TEXT NOT NULL,
             centroid BLOB NOT NULL,
             phrase   BLOB NOT NULL,
             PRIMARY KEY (polarity, scope)
         );
-        CREATE TABLE entries (
+        CREATE TABLE IF NOT EXISTS entries (
             id         TEXT PRIMARY KEY,
             polarity   TEXT NOT NULL,
             scope      TEXT NOT NULL,
@@ -296,7 +309,7 @@ def rebuild_index_if_stale(loc: StoreLocation, backend: EmbeddingBackend) -> Non
     path = index_path(loc)
     if path.exists():
         try:
-            conn = sqlite3.connect(str(path))
+            conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_SECONDS)
             try:
                 row = conn.execute(
                     "SELECT value FROM meta WHERE key = 'fingerprint'"
@@ -315,13 +328,14 @@ def load_scopes(
 ) -> list[ScopeVectors]:
     """Every scope's centroid + phrase vectors for ``polarity``.
 
-    Pass ``conn`` to read from an already-open connection so several loads share ONE consistent
-    snapshot (an open handle keeps reading its inode across an ``os.replace`` index rebuild); when
-    omitted this opens and closes its own connection.
+    Pass ``conn`` — already inside an explicit transaction, see ``retrieve()`` — to read from an
+    already-open connection so several loads share ONE consistent snapshot (SQLite's own
+    transaction isolation blocks a concurrent rebuild's commit until that transaction ends); when
+    omitted this opens and closes its own single-statement connection.
     """
     close = conn is None
     if conn is None:
-        conn = sqlite3.connect(str(index_path(loc)))
+        conn = sqlite3.connect(str(index_path(loc)), timeout=BUSY_TIMEOUT_SECONDS)
     try:
         rows = conn.execute(
             "SELECT scope, centroid, phrase FROM scopes WHERE polarity = ?", (polarity,)
@@ -345,7 +359,7 @@ def load_entries(
     """
     close = conn is None
     if conn is None:
-        conn = sqlite3.connect(str(index_path(loc)))
+        conn = sqlite3.connect(str(index_path(loc)), timeout=BUSY_TIMEOUT_SECONDS)
     try:
         rows = conn.execute(
             "SELECT id, polarity, scope, vector, recurrence, title, body, last_seen "

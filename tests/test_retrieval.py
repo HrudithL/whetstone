@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from dataclasses import replace
 from datetime import date
 
@@ -199,25 +200,54 @@ def test_empty_store_retrieves_empty(store, backend, config):
 
 
 def test_load_helpers_share_one_snapshot_across_a_rebuild(store, backend):
-    # retrieve() reads all rows through ONE open connection so a concurrent index rebuild (atomic
-    # os.replace) cannot straddle it. An already-open connection keeps reading its inode across the
-    # replace, so it sees a single consistent snapshot; a fresh connection sees the new file.
-    _prepare(store, backend, learnings=[make_learning("L1", "First learning.", "styling")])
+    """A reader's explicit transaction (exactly what ``retrieve()`` opens) stays pinned to its own
+    snapshot for its whole duration, and a concurrent rebuild's commit genuinely BLOCKS until that
+    transaction ends — real thread-based concurrency, because what's under test is actual SQLite-
+    level lock exclusion, not just statement ordering.
 
-    conn = sqlite3.connect(str(index.index_path(store)))
+    This replaced an earlier version of this test that relied on ``rebuild_index``'s old
+    temp-file-plus-``os.replace`` design: an open connection kept reading its original file's inode
+    even after another connection swapped a new file in at the same path, a POSIX-only guarantee
+    (Windows raises ``PermissionError`` replacing a file anything still has open — the bug this
+    redesign fixes). ``rebuild_index`` now rewrites rows in place, inside one transaction, so the
+    guarantee it gives a reader is SQLite's own transaction isolation instead: reads inside one
+    still-open transaction are pinned to what existed when that transaction began, and the writer's
+    commit is delayed (not simply invisible) until the reader's transaction ends.
+    """
+    _prepare(store, backend, learnings=[make_learning("L1", "First learning.", "styling")])
+    seed(store, learnings=[make_learning("L2", "Second learning.", "styling")])  # markdown only
+
+    conn = sqlite3.connect(str(index.index_path(store)), timeout=index.BUSY_TIMEOUT_SECONDS)
+    rebuild_started = threading.Event()
+    rebuild_finished = threading.Event()
+
+    def rebuild() -> None:
+        rebuild_started.set()
+        index.rebuild_index(store, backend)  # blocks on `conn`'s open transaction, see below
+        rebuild_finished.set()
+
+    thread = threading.Thread(target=rebuild)
     try:
+        conn.execute("BEGIN")
         before = index.load_entries(store, "learning", conn)
         assert {e.id for e in before} == {"L1"}
 
-        # Rebuild with a second entry (os.replace swaps the file to a new inode).
-        seed(store, learnings=[make_learning("L2", "Second learning.", "styling")])
-        index.rebuild_index(store, backend)
+        thread.start()
+        rebuild_started.wait(timeout=5)
+        # The writer thread has started but must still be blocked on this transaction's lock —
+        # give it a moment to actually attempt (and fail to complete) its commit.
+        assert not rebuild_finished.wait(timeout=0.3)
 
-        # The still-open connection reads its original snapshot; a fresh one sees the rebuild.
+        # Still inside the SAME transaction: still only L1, even though the writer is mid-attempt.
         assert {e.id for e in index.load_entries(store, "learning", conn)} == {"L1"}
-        assert {e.id for e in index.load_entries(store, "learning")} == {"L1", "L2"}
     finally:
-        conn.close()
+        conn.close()  # ends the transaction, releasing the lock the writer was waiting on
+
+    thread.join(timeout=index.BUSY_TIMEOUT_SECONDS + 5)
+    assert not thread.is_alive()
+    assert rebuild_finished.is_set()
+    # A fresh connection (or a new transaction) now sees the completed rebuild.
+    assert {e.id for e in index.load_entries(store, "learning")} == {"L1", "L2"}
 
 
 def test_weight_reflects_recurrence(store, backend, config):
