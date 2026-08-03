@@ -138,8 +138,11 @@ def _centroid(vectors: list[list[float]], dim: int) -> list[float]:
     return [value / count for value in total]
 
 
+_CONTENDED_SQLITE_CODES = (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED)
+
+
 def _commit_with_retry(conn: sqlite3.Connection) -> None:
-    """``COMMIT``, retrying on a lock timeout indefinitely rather than giving up.
+    """``COMMIT``, retrying indefinitely on genuine contention rather than giving up.
 
     ``conn``'s own ``timeout=BUSY_TIMEOUT_SECONDS`` already makes SQLite retry internally for up
     to 5s before raising ``sqlite3.OperationalError: database is locked`` — but a reader (see
@@ -150,19 +153,27 @@ def _commit_with_retry(conn: sqlite3.Connection) -> None:
     could double-apply that write. A failed ``COMMIT`` leaves the transaction intact (verified
     empirically, not just assumed): retrying the SAME ``COMMIT`` again, without touching anything
     else, is safe. A bounded retry count (an earlier version of this function tried 3) just moves
-    the same failure mode to a longer, still-arbitrary deadline (Codex review finding on PR #55,
-    round 7) — retrying indefinitely instead matches ``_lock_exclusive``'s own file-lock philosophy
-    (§ its docstring): genuine contention should be waited out, not given up on. The only other
-    writer that could ever hold this file locked is another ``rebuild_index`` call, which
-    ``store_write_lock`` already serializes ahead of this function running at all, so the sole
-    remaining contender is a reader's normally-brief transaction — never another indefinite wait
-    stacked on top of this one.
+    the same failure mode to a longer, still-arbitrary deadline — retrying indefinitely instead
+    matches ``_lock_exclusive``'s own file-lock philosophy (§ its docstring): genuine contention
+    should be waited out, not given up on. The only other writer that could ever hold this file
+    locked is another ``rebuild_index`` call, already serialized ahead of this by
+    ``store_write_lock``, so the sole remaining contender is a reader's normally-brief transaction
+    — never another indefinite wait stacked on top of this one.
+
+    A first version of this retried on ANY ``OperationalError`` (Codex review finding on PR #55,
+    round 8): a permanent failure — a full disk, a genuine I/O error — would then hang forever
+    instead of surfacing, with the caller still holding ``store_write_lock`` the whole time,
+    blocking every other operation on the store too. ``sqlite_errorcode`` (Python 3.11+, matching
+    this project's floor) distinguishes SQLite's own ``SQLITE_BUSY``/``SQLITE_LOCKED`` — the
+    documented contention signals — from everything else, which is re-raised.
     """
     while True:
         try:
             conn.execute("COMMIT")
             return
-        except sqlite3.OperationalError:
+        except sqlite3.OperationalError as exc:
+            if exc.sqlite_errorcode not in _CONTENDED_SQLITE_CODES:
+                raise
             continue
 
 

@@ -233,7 +233,7 @@ _NETWORK_BASH_TOKENS = (
     # function call itself (not just an `Rscript`/`R` wrapper token), since it also fires inside a
     # heredoc or -e string passed to either invocation.
     "install.packages", "r cmd install", "remotes::install", "devtools::install",
-    "biocmanager::install",
+    "biocmanager::install", "pak::pkg_install", "pak::pak(", "pak::repo_",
 )
 
 

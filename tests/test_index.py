@@ -138,6 +138,40 @@ def test_rebuild_self_heals_an_incompatible_older_schema(store, backend):
     assert {e.id for e in index.load_entries(store, "learning")} == {"L1"}
 
 
+def test_commit_with_retry_reraises_a_non_contention_operational_error():
+    """A permanent failure (a full disk, a real I/O error) must surface immediately, not retry
+    forever — Codex review finding on PR #55 round 8: an earlier version retried on ANY
+    ``sqlite3.OperationalError``, which would hang indefinitely on a genuine failure while the
+    caller (``capture``, ``compact``, ...) still holds ``store_write_lock``, blocking every other
+    operation on the store too."""
+
+    class _FakeConn:
+        def execute(self, sql: str) -> None:
+            exc = sqlite3.OperationalError("disk I/O error")
+            exc.sqlite_errorcode = sqlite3.SQLITE_IOERR
+            raise exc
+
+    with pytest.raises(sqlite3.OperationalError):
+        index._commit_with_retry(_FakeConn())  # type: ignore[arg-type]
+
+
+def test_commit_with_retry_retries_genuine_contention_then_succeeds():
+    class _FakeConn:
+        def __init__(self) -> None:
+            self.attempts = 0
+
+        def execute(self, sql: str) -> None:
+            self.attempts += 1
+            if self.attempts < 3:
+                exc = sqlite3.OperationalError("database is locked")
+                exc.sqlite_errorcode = sqlite3.SQLITE_BUSY
+                raise exc
+
+    conn = _FakeConn()
+    index._commit_with_retry(conn)  # type: ignore[arg-type]
+    assert conn.attempts == 3
+
+
 def test_schema_recreation_stays_invisible_until_the_whole_rebuild_commits(store, backend):
     """A concurrent reader must never observe the schema dropped-and-recreated but not yet
     repopulated — Codex review finding on PR #55 round 4: ``sqlite3.Connection.executescript``
