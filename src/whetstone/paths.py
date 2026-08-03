@@ -38,27 +38,36 @@ def xdg_config_home() -> Path:
     return Path.home() / ".config"
 
 
-def _legacy_windows_home(*parts: str) -> Path:
-    """The path Windows would have resolved to before native dirs existed.
+def _legacy_windows_data_home() -> Path:
+    """What ``xdg_data_home`` would have resolved to on Windows before the native-path split.
 
-    Before this platform split, ``xdg_data_home``/``xdg_config_home`` ran the same POSIX-style
-    ``~/.local/share``/``~/.config`` logic unconditionally on every OS (no ``sys.platform`` branch
-    existed at all) — so a store created on Windows pre-migration lives at
-    ``~/.local/share/whetstone``, not ``%LOCALAPPDATA%\\whetstone``.
+    Before that split, ``xdg_data_home`` ran the same POSIX-style logic unconditionally on every
+    OS (no ``sys.platform`` branch existed at all) — including honoring ``$XDG_DATA_HOME`` if a
+    user had set it. A legacy-location check that only probes the hardcoded ``~/.local/share``
+    default would miss exactly that user (Codex review finding on PR #55 round 4): replicate the
+    full old algorithm, env override included, not just its fallback branch.
     """
-    return Path.home().joinpath(*parts)
+    value = os.environ.get("XDG_DATA_HOME")
+    return Path(value).expanduser() if value else Path.home() / ".local" / "share"
+
+
+def _legacy_windows_config_home() -> Path:
+    """The config-home equivalent of :func:`_legacy_windows_data_home`."""
+    value = os.environ.get("XDG_CONFIG_HOME")
+    return Path(value).expanduser() if value else Path.home() / ".config"
 
 
 def default_store_root() -> Path:
     """The default per-skill store root: ``<data-home>/whetstone``.
 
-    On Windows, if a store already exists at the pre-migration legacy location
-    (``~/.local/share/whetstone``) but not yet at the native one, the legacy location wins — an
-    existing user's learned preferences must not silently appear to vanish after an upgrade.
+    On Windows, if a store already exists at the pre-migration legacy location — honoring
+    ``$XDG_DATA_HOME`` if it was set, else ``~/.local/share`` — but not yet at the native one, the
+    legacy location wins — an existing user's learned preferences must not silently appear to
+    vanish after an upgrade.
     """
     native = xdg_data_home() / "whetstone"
     if sys.platform == "win32" and not native.exists():
-        legacy = _legacy_windows_home(".local", "share", "whetstone")
+        legacy = _legacy_windows_data_home() / "whetstone"
         if legacy.exists():
             return legacy
     return native
@@ -68,11 +77,12 @@ def config_path() -> Path:
     """The config file path: ``<config-home>/whetstone/config.toml``.
 
     Same legacy-location fallback as :func:`default_store_root`, for the same reason: an existing
-    Windows config file must keep loading after the native-path migration.
+    Windows config file (and any ``$XDG_CONFIG_HOME``-relative ``store_root`` it defines) must
+    keep loading after the native-path migration.
     """
     native = xdg_config_home() / "whetstone" / "config.toml"
     if sys.platform == "win32" and not native.exists():
-        legacy = _legacy_windows_home(".config", "whetstone", "config.toml")
+        legacy = _legacy_windows_config_home() / "whetstone" / "config.toml"
         if legacy.exists():
             return legacy
     return native

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sqlite3
 import subprocess
+import threading
 
 import pytest
 
@@ -111,8 +113,6 @@ def test_rebuild_self_heals_an_incompatible_older_schema(store, backend):
     ``last_seen``) must rebuild cleanly rather than fail inserting into a mismatched table —
     Codex review finding on PR #55 round 3: ``CREATE TABLE IF NOT EXISTS`` alone would leave the
     old, incompatible table in place."""
-    import sqlite3
-
     seed(store, learnings=[make_learning("L1", "First learning.", "scope-a")])
     index.rebuild_index(store, backend)
 
@@ -135,6 +135,49 @@ def test_rebuild_self_heals_an_incompatible_older_schema(store, backend):
         conn.close()
 
     index.ensure_index(store, backend)  # must not raise sqlite3.OperationalError
+    assert {e.id for e in index.load_entries(store, "learning")} == {"L1"}
+
+
+def test_schema_recreation_stays_invisible_until_the_whole_rebuild_commits(store, backend):
+    """A concurrent reader must never observe the schema dropped-and-recreated but not yet
+    repopulated — Codex review finding on PR #55 round 4: ``sqlite3.Connection.executescript``
+    implicitly commits its DDL regardless of the connection's ``isolation_level`` or an
+    already-open transaction, so the earlier ``_recreate_schema`` (via ``executescript``) briefly
+    exposed a genuinely empty index to any other connection before ``rebuild_index``'s inserts
+    landed — a correctness regression from the round-3 fix, not a pre-existing bug. Real
+    thread-based concurrency, same reasoning as
+    ``test_load_helpers_share_one_snapshot_across_a_rebuild`` in test_retrieval.py: this tests
+    actual SQLite-level visibility, not statement ordering.
+    """
+    seed(store, learnings=[make_learning("L1", "First learning.", "scope-a")])
+    index.rebuild_index(store, backend)
+
+    reader = sqlite3.connect(str(index.index_path(store)))
+    started = threading.Event()
+    finished = threading.Event()
+    seen_during_rebuild: list[set[str]] = []
+
+    def rebuild() -> None:
+        started.set()
+        index.rebuild_index(store, backend)
+        finished.set()
+
+    thread = threading.Thread(target=rebuild)
+    try:
+        thread.start()
+        started.wait(timeout=5)
+        # Poll the reader while the rebuild is (likely) in flight: every observation must be
+        # either the pre-rebuild rows or the fully-rebuilt rows — never a schema-recreated-but-
+        # empty in-between state, which would show up as a query error or an empty result mixed
+        # in among real ones.
+        while not finished.is_set():
+            rows = reader.execute("SELECT id FROM entries WHERE polarity = 'learning'").fetchall()
+            seen_during_rebuild.append({r[0] for r in rows})
+    finally:
+        thread.join(timeout=5)
+        reader.close()
+
+    assert all(seen == {"L1"} for seen in seen_during_rebuild)
     assert {e.id for e in index.load_entries(store, "learning")} == {"L1"}
 
 

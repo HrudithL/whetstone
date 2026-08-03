@@ -271,13 +271,16 @@ async def _deny_networked_bash(tool_name, tool_input, _ctx):  # noqa: ANN001 - S
 # --------------------------------------------------------------------------------------------------
 
 
-# A "stay inside this call, tolerating one level of nested parens" gap — the balanced-paren-aware
-# alternative to a plain `[^)]*` (which stops early at a nested call's own closing paren) or a bare
-# `.{0,N}?` (which, wrongly, also matches straight past this call's OWN closing paren into a
-# sibling call — a real false-positive Codex review caught on PR #55 round 3). Zero-or-more
-# repetitions of "a non-paren char, or one balanced paren pair" always matches the empty string
-# (its own minimal case), so the whole construct is sampler-safe to just drop.
-_BALANCED_PAREN_GAP = r"(?:[^()]|\([^()]*\))*"
+# A "stay inside this call, tolerating nested parens" gap — the balanced-paren-aware alternative to
+# a plain `[^)]*` (which stops early at a nested call's own closing paren — round-2 finding) or a
+# bare `.{0,N}?` (which, wrongly, also matches straight past this call's OWN closing paren into a
+# sibling call — round-3 finding). `re` has no recursive matching, so this is a BOUNDED nesting
+# depth, not arbitrary — depth 2 (one call nested inside another, e.g. `c(0, max(x))`) comfortably
+# covers realistic `labels = scales::...` arguments; a 3rd level would need extending this list.
+# Each entry always matches its own zero-repetition case, so every depth is sampler-safe to drop.
+_BALANCED_PAREN_GAP_1 = r"(?:[^()]|\([^()]*\))*"
+_BALANCED_PAREN_GAP_2 = r"(?:[^()]|\((?:[^()]|\([^()]*\))*\))*"
+_BALANCED_PAREN_GAPS = (_BALANCED_PAREN_GAP_2, _BALANCED_PAREN_GAP_1)  # longer first: no substring
 
 
 def _regex_sample(pattern: str) -> str:
@@ -288,13 +291,14 @@ def _regex_sample(pattern: str) -> str:
     *enumeration* class (``["']`` -> its first alternative, e.g. ``"``), a trailing ``\\b`` word
     boundary (dropped — a zero-width assertion, not a literal character; a bare literal token
     embedded in the stub's carrier syntax, e.g. between quotes, already sits at a natural word
-    boundary), the named :data:`_BALANCED_PAREN_GAP` idiom (dropped — matches its own zero-
-    repetition case), and escaped literals.
+    boundary), the named :data:`_BALANCED_PAREN_GAPS` idioms (dropped — each matches its own
+    zero-repetition case), and escaped literals.
     """
     s = re.sub(r"^\(\?[a-zA-Z]+\)", "", pattern)  # drop a leading (?i)/(?is)/... flag group
     s = s.replace(r"\s*", "").replace(r"\s+", " ")
     s = s.replace(r"\b", "")  # zero-width assertion, not a literal "b" — drop, don't unescape
-    s = s.replace(_BALANCED_PAREN_GAP, "")  # matches empty; drop before the class substitutions
+    for gap in _BALANCED_PAREN_GAPS:  # matches empty; drop before the class substitutions below
+        s = s.replace(gap, "")
     s = re.sub(r"\[([^\]^-])-[^\]]\]", r"\1", s)  # single range class -> its first char
     s = re.sub(r"\[([^\]]+)\]", lambda m: m.group(1)[0], s)  # enum class -> first alternative char
     s = re.sub(r"\\(.)", r"\1", s)  # unescape \X -> X
@@ -339,7 +343,12 @@ def _stub_carrier(pref: Preference, honor: bool, language: str, n: int) -> str |
     if language == "html":
         return f"  .p-{n} {{ content: {token!r}; }}"
     if language == "r":
-        return f'.pref_{n} <- "{token}"  # {pref.id}'
+        # `!r}` (not a hand-rolled `"{token}"`), matching the python/html carriers above — a token
+        # containing its own quote character (a real case once a check's sample itself embeds
+        # quoted text, e.g. `fill = "#3a5a40"`) must come out properly escaped, or `_r_for_check`'s
+        # quote-tracking scanner closes the string early and treats the rest as a real comment.
+        # Python's repr() quoting/escaping rules are also valid R string-literal syntax.
+        return f".pref_{n} <- {token!r}  # {pref.id}"
     return token  # unknown language: bare literal is enough for a substring/regex check
 
 

@@ -194,11 +194,16 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
 
     path = index_path(loc)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_SECONDS)
+    # isolation_level=None (manual transaction control): `executescript`/DDL statements otherwise
+    # commit implicitly regardless of any surrounding transaction (a Python sqlite3 module quirk,
+    # not a SQLite one — verified empirically, see PR #55 review), which would let a concurrent
+    # reader observe the schema dropped-and-recreated but not yet repopulated. Explicit BEGIN +
+    # individual (not `executescript`) DDL statements + the inserts + COMMIT keeps the whole
+    # rebuild — schema recreation included — inside one real transaction.
+    conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_SECONDS, isolation_level=None)
     try:
-        # Drop+recreate (not just clear rows) so an incompatible old schema self-heals; all inside
-        # one transaction — a reader's own transaction (see retrieve()) blocks this commit until it
-        # finishes, so a concurrent read is never exposed to the empty-then-repopulated window.
+        conn.execute("BEGIN")
+        # Drop+recreate (not just clear rows) so an incompatible old schema self-heals.
         _recreate_schema(conn)
         conn.executemany(
             "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
@@ -214,9 +219,9 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
             "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
             (fingerprint,),
         )
-        conn.commit()
+        conn.execute("COMMIT")
     except BaseException:
-        conn.rollback()
+        conn.execute("ROLLBACK")
         raise
     finally:
         conn.close()
@@ -269,20 +274,32 @@ def _recreate_schema(conn: sqlite3.Connection) -> None:
     inserting the new rows instead of self-healing. Dropping first makes every rebuild a genuine
     fresh start regardless of what schema (if any) came before, while the surrounding transaction
     keeps this invisible to a concurrent reader: nothing commits until the new rows are in.
+
+    Deliberately individual :meth:`~sqlite3.Connection.execute` calls, not one
+    :meth:`~sqlite3.Connection.executescript` — ``executescript`` implicitly commits before AND
+    (empirically verified, not just documented) after running, regardless of the connection's
+    ``isolation_level`` or an already-open transaction, which would commit this schema swap on its
+    own and expose a momentarily-empty index to a concurrent reader before the caller's inserts run.
+    Plain ``execute`` calls stay inside whatever transaction the caller (``rebuild_index``, with
+    ``isolation_level=None``) already opened.
     """
-    conn.executescript(
+    conn.execute("DROP TABLE IF EXISTS meta")
+    conn.execute("DROP TABLE IF EXISTS scopes")
+    conn.execute("DROP TABLE IF EXISTS entries")
+    conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+    conn.execute(
         """
-        DROP TABLE IF EXISTS meta;
-        DROP TABLE IF EXISTS scopes;
-        DROP TABLE IF EXISTS entries;
-        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE scopes (
             polarity TEXT NOT NULL,
             scope    TEXT NOT NULL,
             centroid BLOB NOT NULL,
             phrase   BLOB NOT NULL,
             PRIMARY KEY (polarity, scope)
-        );
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE entries (
             id         TEXT PRIMARY KEY,
             polarity   TEXT NOT NULL,
@@ -292,7 +309,7 @@ def _recreate_schema(conn: sqlite3.Connection) -> None:
             title      TEXT NOT NULL,
             body       TEXT NOT NULL,
             last_seen  TEXT
-        );
+        )
         """
     )
 

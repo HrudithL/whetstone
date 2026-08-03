@@ -85,6 +85,23 @@ def test_windows_store_root_prefers_existing_legacy_location(monkeypatch, tmp_pa
     assert paths.default_store_root() == legacy
 
 
+def test_windows_store_root_prefers_a_legacy_xdg_data_home_override(monkeypatch, tmp_path):
+    """A pre-migration Windows user who had explicitly set $XDG_DATA_HOME (not just relied on the
+    ~/.local/share default) must also keep loading their store — the legacy check has to replicate
+    the OLD algorithm's env-var precedence, not just its fallback branch (Codex round-4 finding)."""
+    monkeypatch.setattr(paths.sys, "platform", "win32")
+    monkeypatch.setattr(paths.Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.delenv("LOCALAPPDATA", raising=False)
+    custom_xdg = tmp_path / "custom-xdg-data"
+    monkeypatch.setenv("XDG_DATA_HOME", str(custom_xdg))
+    legacy = custom_xdg / "whetstone"
+    legacy.mkdir(parents=True)
+    # A ~/.local/share/whetstone dir must NOT be what's returned even if it happens to exist too —
+    # the env override takes precedence, exactly as it did before the native-path split.
+    (tmp_path / ".local" / "share" / "whetstone").mkdir(parents=True)
+    assert paths.default_store_root() == legacy
+
+
 def test_windows_store_root_uses_native_location_for_a_fresh_install(monkeypatch, tmp_path):
     monkeypatch.setattr(paths.sys, "platform", "win32")
     monkeypatch.setattr(paths.Path, "home", classmethod(lambda cls: tmp_path))

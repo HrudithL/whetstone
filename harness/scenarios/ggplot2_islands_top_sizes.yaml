@@ -19,6 +19,12 @@ preferences:
     feedback: >
       Fill the bars with #3A5A40 (forest green), not the default blue.
     check:
-      # Case-insensitive: hex colors are case-insensitive, so #3a5a40 must count as honoring.
+      # Scoped to geom_col's `fill` argument specifically — a bare hex substring check would
+      # spuriously pass if the color appeared on a different argument/geom (e.g.
+      # geom_col(color = "#3A5A40") while the fill stayed default) without the bars themselves
+      # actually being filled forest green (Codex review finding on PR #55 round 4). Balanced-
+      # paren-aware gap (harness/generate.py's _BALANCED_PAREN_GAPS) for the same reason as the
+      # gtcars scenario's geom_point-scoped checks. Case-insensitive: hex colors are
+      # case-insensitive, so #3a5a40 must count as honoring.
       kind: regex
-      pattern: '(?i)#3a5a40'
+      pattern: '(?i)geom_col\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*fill\s*=\s*["'']#3a5a40["'']'

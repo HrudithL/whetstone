@@ -38,12 +38,15 @@ preferences:
     check:
       # Scoped to scale_y_continuous specifically — a bare `scales::comma` substring check would
       # spuriously pass if a cold run comma-formats the horsepower x-axis while still dollar-
-      # formatting the price y-axis (Codex round-1 finding). Balanced-paren-aware gap (not
-      # `[^)]*`, which stops early at a nested call like `limits = c(0, NA)` — round-2 finding;
-      # not a bare `.{0,N}?` either, which wrongly crosses this call's OWN closing paren into an
-      # unrelated sibling scale_x_continuous(...) call — round-3 finding).
+      # formatting the price y-axis (Codex round-1 finding). Balanced-paren-aware gap tolerating
+      # 2 levels of nesting (not `[^)]*`, which stops early at a nested call like
+      # `limits = c(0, NA)` — round-2 finding; not a bare `.{0,N}?` either, which wrongly crosses
+      # this call's OWN closing paren into an unrelated sibling scale_x_continuous(...) call —
+      # round-3 finding; not a 1-level-only balanced gap either, which still misses a 2-deep
+      # nested call like `c(0, max(msrp))` — round-4 finding. `re` has no recursive matching, so
+      # this is a bounded depth, not arbitrary — see harness/generate.py's _BALANCED_PAREN_GAPS.
       kind: regex
-      pattern: 'scale_y_continuous\((?:[^()]|\([^()]*\))*scales::comma'
+      pattern: 'scale_y_continuous\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*scales::comma'
   - id: legend-bottom
     polarity: learning
     scope: legend placement
@@ -72,7 +75,7 @@ preferences:
       # spuriously match a different geom (Codex round-2 finding, same class as points-translucent
       # below).
       kind: regex
-      pattern: 'geom_point\((?:[^()]|\([^()]*\))*size\s*=\s*4\.5\b'
+      pattern: 'geom_point\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*size\s*=\s*4\.5\b'
   - id: points-translucent
     polarity: learning
     scope: geoms
@@ -87,4 +90,4 @@ preferences:
       # e.g. a geom_smooth() layer used that alpha while geom_point() stayed opaque (Codex round-2
       # finding).
       kind: regex
-      pattern: 'geom_point\((?:[^()]|\([^()]*\))*alpha\s*=\s*0\.6'
+      pattern: 'geom_point\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*alpha\s*=\s*0\.6'
