@@ -22,8 +22,12 @@ preferences:
     feedback: >
       Use the Accent qualitative palette for the country colors.
     check:
-      kind: code_contains
-      pattern: Accent
+      # Scoped to scale_color_brewer's palette argument specifically — a bare `Accent` substring
+      # check would spuriously pass on any unrelated mention (a title, a variable name, a comment)
+      # (Codex review finding on PR #55 round 5). Same balanced-paren-aware gap as the other
+      # checks in this file.
+      kind: regex
+      pattern: 'scale_color_brewer\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*Accent'
   - id: price-plain-commas
     polarity: learning
     scope: scales
@@ -45,8 +49,12 @@ preferences:
       # round-3 finding; not a 1-level-only balanced gap either, which still misses a 2-deep
       # nested call like `c(0, max(msrp))` — round-4 finding. `re` has no recursive matching, so
       # this is a bounded depth, not arbitrary — see harness/generate.py's _BALANCED_PAREN_GAPS.
+      # Accepts both the older `scales::comma` and the newer `scales::label_comma()` factory
+      # spelling — both produce identical output, and the committed cold artifact already shows
+      # the agent naturally reaching for label_comma() elsewhere, so rejecting it here would be a
+      # false negative, not a real miss (round-5 finding).
       kind: regex
-      pattern: 'scale_y_continuous\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*scales::comma'
+      pattern: 'scale_y_continuous\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*scales::(?:comma\b|label_comma\(\))'
   - id: legend-bottom
     polarity: learning
     scope: legend placement

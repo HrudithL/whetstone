@@ -24,7 +24,10 @@ preferences:
       # geom_col(color = "#3A5A40") while the fill stayed default) without the bars themselves
       # actually being filled forest green (Codex review finding on PR #55 round 4). Balanced-
       # paren-aware gap (harness/generate.py's _BALANCED_PAREN_GAPS) for the same reason as the
-      # gtcars scenario's geom_point-scoped checks. Case-insensitive: hex colors are
-      # case-insensitive, so #3a5a40 must count as honoring.
+      # gtcars scenario's geom_point-scoped checks. Accepts either geom_col() or geom_bar() — the
+      # ggplot2 skill's own SKILL.md permits both for a ranking/amount plot, and the round-4 review
+      # found a live agent using geom_bar(stat = "identity", ...) for this exact task (round-5
+      # finding). Case-insensitive: hex colors are case-insensitive, so #3a5a40 must count as
+      # honoring.
       kind: regex
-      pattern: '(?i)geom_col\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*fill\s*=\s*["'']#3a5a40["'']'
+      pattern: '(?i)(?:geom_col|geom_bar)\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*fill\s*=\s*["'']#3a5a40["'']'

@@ -138,6 +138,31 @@ def _centroid(vectors: list[list[float]], dim: int) -> list[float]:
     return [value / count for value in total]
 
 
+_COMMIT_RETRY_ATTEMPTS = 3
+
+
+def _commit_with_retry(conn: sqlite3.Connection) -> None:
+    """``COMMIT``, retrying a few more times on a lock timeout rather than giving up on the first.
+
+    ``conn``'s own ``timeout=BUSY_TIMEOUT_SECONDS`` already makes SQLite retry internally for up
+    to 5s before raising ``sqlite3.OperationalError: database is locked`` — but a reader (see
+    ``retrieve()``) holding its transaction open for longer than that (a large store, slow I/O, a
+    suspended process) would then make ``COMMIT`` fail outright, propagating the error to
+    ``rebuild_index``'s caller (``capture``, ``compact``, ...) even though the markdown/next-id
+    write those callers already made is fine — and, worse, inviting a caller-level retry that
+    could double-apply that write (Codex review finding on PR #55). A failed ``COMMIT`` leaves the
+    transaction intact (verified empirically, not just assumed): retrying the SAME ``COMMIT``
+    again, without touching anything else, is safe and just extends the effective wait.
+    """
+    for attempt in range(_COMMIT_RETRY_ATTEMPTS):
+        try:
+            conn.execute("COMMIT")
+            return
+        except sqlite3.OperationalError:
+            if attempt == _COMMIT_RETRY_ATTEMPTS - 1:
+                raise
+
+
 def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
     """Regenerate ``index.sqlite`` from the markdown store (fully idempotent).
 
@@ -219,7 +244,7 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
             "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
             (fingerprint,),
         )
-        conn.execute("COMMIT")
+        _commit_with_retry(conn)
     except BaseException:
         conn.execute("ROLLBACK")
         raise

@@ -282,6 +282,17 @@ _BALANCED_PAREN_GAP_1 = r"(?:[^()]|\([^()]*\))*"
 _BALANCED_PAREN_GAP_2 = r"(?:[^()]|\((?:[^()]|\([^()]*\))*\))*"
 _BALANCED_PAREN_GAPS = (_BALANCED_PAREN_GAP_2, _BALANCED_PAREN_GAP_1)  # longer first: no substring
 
+# A non-capturing *alternation* a scenario check uses to accept more than one equally-valid
+# spelling (e.g. `scales::comma` vs the newer `scales::label_comma()`, or `geom_col` vs
+# `geom_bar` — both names the ggplot2 skill itself permits for a ranking/amount plot). Regex
+# alternation only needs ONE branch to match, so resolving to a specific branch's literal text is
+# always a valid sample — these are named (not generically parsed) because each alternative can
+# itself contain parens (`label_comma\(\)`), which a plain "split on `|`" can't safely bound.
+_ALTERNATIONS: tuple[tuple[str, str], ...] = (
+    (r"scales::(?:comma\b|label_comma\(\))", "scales::comma"),
+    (r"(?:geom_col|geom_bar)", "geom_col"),
+)
+
 
 def _regex_sample(pattern: str) -> str:
     """Best-effort literal that satisfies ``pattern`` (stub-only).
@@ -292,10 +303,13 @@ def _regex_sample(pattern: str) -> str:
     boundary (dropped — a zero-width assertion, not a literal character; a bare literal token
     embedded in the stub's carrier syntax, e.g. between quotes, already sits at a natural word
     boundary), the named :data:`_BALANCED_PAREN_GAPS` idioms (dropped — each matches its own
-    zero-repetition case), and escaped literals.
+    zero-repetition case), the named :data:`_ALTERNATIONS` idioms (resolved to one branch's
+    literal text), and escaped literals.
     """
     s = re.sub(r"^\(\?[a-zA-Z]+\)", "", pattern)  # drop a leading (?i)/(?is)/... flag group
     s = s.replace(r"\s*", "").replace(r"\s+", " ")
+    for alt, literal in _ALTERNATIONS:  # before the \b strip below: some alternatives contain \b
+        s = s.replace(alt, literal)
     s = s.replace(r"\b", "")  # zero-width assertion, not a literal "b" — drop, don't unescape
     for gap in _BALANCED_PAREN_GAPS:  # matches empty; drop before the class substitutions below
         s = s.replace(gap, "")
