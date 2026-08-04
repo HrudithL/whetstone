@@ -1,3 +1,21 @@
+# Contributing
+
+## For human contributors
+
+1. Fork and clone the repo, then `pip install -e '.[dev]'` (add `,embeddings` if you're touching
+   retrieval — see the README's "Optional: higher-quality recall" section).
+2. Branch off `main`.
+3. Make your change. Run `ruff check .` and `pytest -m "not embeddings"` before opening a PR (add
+   `pytest -m embeddings` too if you touched anything semantic — retrieval, dedup, conflict detection).
+4. Open a PR against `main` using the PR template. Small, focused PRs are easier to review.
+
+The rest of this document is the **Agent Playbook** — the branch/PR/review ceremony this project's
+maintainer uses when building with an autonomous coding agent. It's not a requirement for human
+contributors; read it if you're curious how the project has actually been built, but the four steps
+above are what matter for a normal PR.
+
+---
+
 # Contributing Guide (Agent Playbook)
 
 This guide is a **drop-in template** for any GitHub repository. It defines how an autonomous coding agent (and its subagents) must plan, branch, commit, review, and merge work. It is written in imperative voice: every "MUST" / "MUST NOT" is a hard rule.
@@ -239,6 +257,8 @@ The goal is never a literally empty report — it's a round whose comments stop 
 - purely stylistic/cosmetic with no behavior or clarity impact,
 - scope the PR deliberately doesn't cover, or
 - otherwise not clearing the [§10.1](#101-when-to-decide-vs-ask) bar for "worth changing."
+
+**Out-of-scope findings get at most 2–3 corrective rounds.** If a review surfaces out-of-scope comments and the agent's follow-up explicitly asks Codex to confine itself to the PR's scope, but the next round comes back out-of-scope again, do not keep re-requesting review hoping it corrects itself. After 2–3 such rounds, stop, note on the PR that remaining comments are out-of-scope and were not actionable via re-review, and proceed as if the stopping condition were met. Continuing to loop past that point is not caution, it's wasted CI and review budget on a signal that has already shown it won't converge.
 
 Note the outcome briefly on the PR ("remaining comments are stylistic nits / already addressed — stopping here") and move on. This is a judgment call the agent makes itself, the same way it makes any other §10.1 call — it is not a genuine fork to escalate.
 

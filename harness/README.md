@@ -71,6 +71,9 @@ artifacts. (`--stub` routes its output + store to throwaway temp dirs, so it nev
 **Prerequisites for a real run** (beyond the pip extras):
 
 - The **Claude Code CLI** on `PATH` (`claude-agent-sdk` drives it) — `npm i -g @anthropic-ai/claude-code`.
+- **R with `ggplot2`/`tidyverse` on `PATH`** for `skill: ggplot2` scenarios — R isn't pip-installable,
+  so unlike the Python skills there's no venv-pinned dependency; install it however you normally would
+  (e.g. `brew install r` + `Rscript -e 'install.packages("tidyverse")'`).
 - A **headless Chrome/Chromium** binary *only if* you export `table.png` snapshots: great-tables'
   PNG export renders through headless Chrome. The site itself renders great-tables **natively as
   HTML** in Quarto (the whole point — real tables, not screenshots), so the `table.png` artifacts in

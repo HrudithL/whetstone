@@ -293,11 +293,15 @@ def retrieve(
     embedded = backend.embed(clauses)
     query = embedded[0]  # the full intent, unchanged — MMR ranking/relevance/fallback use only this
 
-    # All four reads share ONE open connection so a concurrent capture/revise index rebuild (atomic
-    # os.replace) can't straddle them — the open handle keeps reading its snapshot's inode, so every
-    # query sees a single consistent index version rather than a mix of pre-/post-rebuild rows.
-    conn = sqlite3.connect(str(index.index_path(loc)))
+    # All four reads share ONE open connection, inside one explicit transaction, so a concurrent
+    # capture/revise index rebuild can't straddle them: SQLite's own transaction isolation blocks
+    # the rebuild's commit until this transaction ends, so every query here sees a single
+    # consistent index version rather than a mix of pre-/post-rebuild rows. (Previously this relied
+    # on an open handle surviving an os.replace rebuild — a POSIX-only guarantee; explicit BEGIN +
+    # SQLite locking gives the same property on every platform, see index.rebuild_index.)
+    conn = sqlite3.connect(str(index.index_path(loc)), timeout=index.BUSY_TIMEOUT_SECONDS)
     try:
+        conn.execute("BEGIN")
         learning_scopes = index.load_scopes(loc, "learning", conn)
         issue_scopes = index.load_scopes(loc, "issue", conn)
         learnings = index.load_entries(loc, "learning", conn)

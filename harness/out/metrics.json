@@ -1,6 +1,6 @@
 {
   "backend": "sentence-transformers",
-  "generated_at": "2026-07-29T05:09:57.380890+00:00",
+  "generated_at": "2026-07-31T20:10:00.784268+00:00",
   "scenarios": {
     "landing_hero": {
       "scenario": "landing_hero",
@@ -250,6 +250,208 @@
           "reinforcement_rate": 0.8,
           "reinforcements": 8,
           "learnings_created": 2
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "ggplot2_gtcars_hp_price": {
+      "scenario": "ggplot2_gtcars_hp_price",
+      "skill": "ggplot2",
+      "output": "plot.R",
+      "difficulty": "hard",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "palette-accent": {
+          "polarity": "learning",
+          "scope": "color encoding",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "price-plain-commas": {
+          "polarity": "learning",
+          "scope": "scales",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "legend-bottom": {
+          "polarity": "learning",
+          "scope": "legend placement",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "points-large": {
+          "polarity": "learning",
+          "scope": "geoms",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        },
+        "points-translucent": {
+          "polarity": "learning",
+          "scope": "geoms",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "ggplot2-ggplot2_gtcars_hp_price",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 3.3333,
+        "captures_by_status": {
+          "committed": 5,
+          "reinforced": 10,
+          "noop": 0,
+          "conflict": 0,
+          "possible_contradiction": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 10,
+          "learnings_created": 5
+        },
+        "learnings_survived_pct": {
+          "value": 1.0,
+          "note": null
+        },
+        "capture_rate": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs the denominator 'turns that contained a correction', which ordinary usage does not label. Computed by the M3 showcase harness (scripted critiques)."
+        },
+        "regressions_prevented": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): needs ground truth for 'a recalled issue was in scope and not reintroduced', which requires the M3 showcase harness."
+        },
+        "retrieval_precision": {
+          "value": null,
+          "note": "Showcase-only (\u00a711/\u00a712): derived from embedding match scores against a labeled (elaborated-intent -> relevant-scopes) calibration set (M3), which ordinary usage lacks."
+        }
+      }
+    },
+    "ggplot2_islands_top_sizes": {
+      "scenario": "ggplot2_islands_top_sizes",
+      "skill": "ggplot2",
+      "output": "plot.R",
+      "difficulty": "easy",
+      "generator": "agent",
+      "params": {
+        "max_runs": 5,
+        "stick_streak": 2
+      },
+      "runs": 3,
+      "preferences": {
+        "fill-forest-green": {
+          "polarity": "learning",
+          "scope": "color encoding",
+          "cold_honored": false,
+          "runs_to_stick": 2,
+          "value_over_time": [
+            {
+              "run": 2,
+              "weight": 0.5,
+              "recurrence": 1
+            },
+            {
+              "run": 3,
+              "weight": 0.6667,
+              "recurrence": 2
+            }
+          ]
+        }
+      },
+      "usage_kpis": {
+        "skill": "ggplot2-ggplot2_islands_top_sizes",
+        "runs": 3,
+        "avg_learnings_applied_per_run": 0.6667,
+        "captures_by_status": {
+          "committed": 1,
+          "reinforced": 2,
+          "noop": 0,
+          "conflict": 0,
+          "possible_contradiction": 0
+        },
+        "repeat_correction_proxy": {
+          "reinforcement_rate": 0.6667,
+          "reinforcements": 2,
+          "learnings_created": 1
         },
         "learnings_survived_pct": {
           "value": 1.0,
@@ -1300,6 +1502,15 @@
       "corrected_and_stuck": 5,
       "median_runs_to_stick": 2
     },
+    "ggplot2": {
+      "scenarios": 2,
+      "preferences_total": 6,
+      "preferences_wrong_in_cold": 6,
+      "preferences_stuck": 6,
+      "stuck_rate": 1.0,
+      "corrected_and_stuck": 6,
+      "median_runs_to_stick": 2.0
+    },
     "great-tables": {
       "scenarios": 6,
       "preferences_total": 12,
@@ -1329,12 +1540,12 @@
     }
   },
   "aggregate": {
-    "scenarios": 15,
-    "preferences_total": 32,
-    "preferences_wrong_in_cold": 29,
-    "preferences_stuck": 31,
-    "stuck_rate": 0.9688,
-    "corrected_and_stuck": 28,
+    "scenarios": 17,
+    "preferences_total": 38,
+    "preferences_wrong_in_cold": 35,
+    "preferences_stuck": 37,
+    "stuck_rate": 0.9737,
+    "corrected_and_stuck": 34,
     "median_runs_to_stick": 2
   },
   "showcase_only_kpis": {
@@ -1442,7 +1653,7 @@
     },
     "calibration_source": {
       "backend": "sentence-transformers",
-      "generated_at": "2026-07-29T05:08:07.979254+00:00",
+      "generated_at": "2026-07-29T05:28:21.326640+00:00",
       "labels": "harness/calibration/labels.yaml"
     }
   }

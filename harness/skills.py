@@ -33,7 +33,7 @@ from dataclasses import dataclass
 
 # How honors() normalizes the primary output before matching. Extend deliberately: a new language
 # needs a stripper in generate.code_for_check AND a stub carrier in generate._stub_carrier.
-CHECK_LANGUAGES = ("python", "html")
+CHECK_LANGUAGES = ("python", "html", "r")
 
 
 @dataclass(frozen=True)
@@ -130,10 +130,29 @@ _PLOTNINE = SkillSpec(
 )
 
 
+_GGPLOT2 = SkillSpec(
+    name="ggplot2",
+    output="plot.R",
+    check_language="r",  # R source → the `#`-comment stripper (harness.generate._r_for_check)
+    required_artifacts=("plot.png",),  # the script must actually render the PNG via ggsave()
+    intent_lead="a ggplot2 plot",
+    intent_dimensions=(
+        "geom / chart family, color palette and encoding, axis scales and number/date formatting, "
+        "theme and gridlines, legend placement, and figure size and dpi"
+    ),
+    prompt_tail=(
+        "The data is in `{data}` in the current directory. Write an R script `plot.R` that reads "
+        "the data, builds the requested plot with `ggplot2`, then renders it to `plot.png` with "
+        '`ggsave("plot.png", plot, ...)`. Run the script with `Rscript plot.R` to confirm it '
+        "works. Create no files other than `plot.R` and the `plot.png` it writes."
+    ),
+)
+
+
 # Registry. Additional skills are registered in their own slices as they are vendored under
 # harness/skill/. Keyed by the scenario's `skill:` field.
 SPECS: dict[str, SkillSpec] = {
-    s.name: s for s in (_GREAT_TABLES, _FRONTEND_DESIGN, _PPTX, _PLOTNINE)
+    s.name: s for s in (_GREAT_TABLES, _FRONTEND_DESIGN, _PPTX, _PLOTNINE, _GGPLOT2)
 }
 
 

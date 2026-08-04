@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sqlite3
 import subprocess
+import threading
 
 import pytest
 
@@ -104,6 +106,113 @@ def test_centroid_is_mean_of_entry_vectors(store, backend):
     entries = index.load_entries(store, "learning")
     expected = [(a + b) / 2 for a, b in zip(entries[0].vector, entries[1].vector, strict=True)]
     assert scope.centroid == pytest.approx(expected, abs=1e-6)
+
+
+def test_rebuild_self_heals_an_incompatible_older_schema(store, backend):
+    """A stale index carrying an OLDER schema (e.g. a pre-v2 ``entries`` table missing
+    ``last_seen``) must rebuild cleanly rather than fail inserting into a mismatched table —
+    Codex review finding on PR #55 round 3: ``CREATE TABLE IF NOT EXISTS`` alone would leave the
+    old, incompatible table in place."""
+    seed(store, learnings=[make_learning("L1", "First learning.", "scope-a")])
+    index.rebuild_index(store, backend)
+
+    # Simulate a pre-v2 index on disk: drop and recreate `entries` without `last_seen`, matching
+    # the old shape, and make the store's fingerprint stale so a rebuild is actually triggered.
+    conn = sqlite3.connect(str(index.index_path(store)))
+    try:
+        conn.executescript(
+            """
+            DROP TABLE entries;
+            CREATE TABLE entries (
+                id TEXT PRIMARY KEY, polarity TEXT NOT NULL, scope TEXT NOT NULL,
+                vector BLOB NOT NULL, recurrence INTEGER, title TEXT NOT NULL, body TEXT NOT NULL
+            );
+            """
+        )
+        conn.execute("UPDATE meta SET value = 'stale' WHERE key = 'fingerprint'")
+        conn.commit()
+    finally:
+        conn.close()
+
+    index.ensure_index(store, backend)  # must not raise sqlite3.OperationalError
+    assert {e.id for e in index.load_entries(store, "learning")} == {"L1"}
+
+
+def test_commit_with_retry_reraises_a_non_contention_operational_error():
+    """A permanent failure (a full disk, a real I/O error) must surface immediately, not retry
+    forever — Codex review finding on PR #55 round 8: an earlier version retried on ANY
+    ``sqlite3.OperationalError``, which would hang indefinitely on a genuine failure while the
+    caller (``capture``, ``compact``, ...) still holds ``store_write_lock``, blocking every other
+    operation on the store too."""
+
+    class _FakeConn:
+        def execute(self, sql: str) -> None:
+            exc = sqlite3.OperationalError("disk I/O error")
+            exc.sqlite_errorcode = sqlite3.SQLITE_IOERR
+            raise exc
+
+    with pytest.raises(sqlite3.OperationalError):
+        index._commit_with_retry(_FakeConn())  # type: ignore[arg-type]
+
+
+def test_commit_with_retry_retries_genuine_contention_then_succeeds():
+    class _FakeConn:
+        def __init__(self) -> None:
+            self.attempts = 0
+
+        def execute(self, sql: str) -> None:
+            self.attempts += 1
+            if self.attempts < 3:
+                exc = sqlite3.OperationalError("database is locked")
+                exc.sqlite_errorcode = sqlite3.SQLITE_BUSY
+                raise exc
+
+    conn = _FakeConn()
+    index._commit_with_retry(conn)  # type: ignore[arg-type]
+    assert conn.attempts == 3
+
+
+def test_schema_recreation_stays_invisible_until_the_whole_rebuild_commits(store, backend):
+    """A concurrent reader must never observe the schema dropped-and-recreated but not yet
+    repopulated — Codex review finding on PR #55 round 4: ``sqlite3.Connection.executescript``
+    implicitly commits its DDL regardless of the connection's ``isolation_level`` or an
+    already-open transaction, so the earlier ``_recreate_schema`` (via ``executescript``) briefly
+    exposed a genuinely empty index to any other connection before ``rebuild_index``'s inserts
+    landed — a correctness regression from the round-3 fix, not a pre-existing bug. Real
+    thread-based concurrency, same reasoning as
+    ``test_load_helpers_share_one_snapshot_across_a_rebuild`` in test_retrieval.py: this tests
+    actual SQLite-level visibility, not statement ordering.
+    """
+    seed(store, learnings=[make_learning("L1", "First learning.", "scope-a")])
+    index.rebuild_index(store, backend)
+
+    reader = sqlite3.connect(str(index.index_path(store)))
+    started = threading.Event()
+    finished = threading.Event()
+    seen_during_rebuild: list[set[str]] = []
+
+    def rebuild() -> None:
+        started.set()
+        index.rebuild_index(store, backend)
+        finished.set()
+
+    thread = threading.Thread(target=rebuild)
+    try:
+        thread.start()
+        started.wait(timeout=5)
+        # Poll the reader while the rebuild is (likely) in flight: every observation must be
+        # either the pre-rebuild rows or the fully-rebuilt rows — never a schema-recreated-but-
+        # empty in-between state, which would show up as a query error or an empty result mixed
+        # in among real ones.
+        while not finished.is_set():
+            rows = reader.execute("SELECT id FROM entries WHERE polarity = 'learning'").fetchall()
+            seen_during_rebuild.append({r[0] for r in rows})
+    finally:
+        thread.join(timeout=5)
+        reader.close()
+
+    assert all(seen == {"L1"} for seen in seen_during_rebuild)
+    assert {e.id for e in index.load_entries(store, "learning")} == {"L1"}
 
 
 def test_ensure_index_rebuilds_when_stale(store, backend):

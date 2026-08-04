@@ -131,6 +131,7 @@ SKILL_META = {
     "great-tables": ("Great Tables", "Publication-ready data tables"),
     "frontend-design": ("Frontend design", "Self-contained web pages"),
     "plotnine": ("plotnine", "Grammar-of-graphics plots"),
+    "ggplot2": ("ggplot2 (R)", "Grammar-of-graphics plots, in R"),
     "pptx": ("PowerPoint decks", "python-pptx presentations"),
 }
 
@@ -271,9 +272,9 @@ display(HTML(f"""
     </div>
 
     <p class="ws-section-lead" style="margin-top:1.75rem;font-size:0.98rem;">
-      <strong>Scope.</strong> v1 covers the <strong>visual</strong> skill class across four skills. The
-      <strong>code</strong> and <strong>context</strong> classes — the same substrate applied to a
-      code-improvement skill and a context-organizing skill — are coming next.
+      <strong>Scope.</strong> v1 covers the <strong>visual</strong> skill class across five skills,
+      in both Python and R. The <strong>code</strong> and <strong>context</strong> classes — the same
+      substrate applied to a code-improvement skill and a context-organizing skill — are coming next.
     </p>
   </div>
 </section>

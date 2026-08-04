@@ -108,6 +108,47 @@ def _html_for_check(code: str) -> str:
     return _SLASH_COMMENT_RE.sub(" ", code)
 
 
+def _r_for_check(code: str) -> str:
+    """``code`` with R's ``#``-to-end-of-line comments removed, outside string literals.
+
+    R has no block comments or docstrings, so unlike Python this is a simple quote-aware scan
+    rather than a full parse: track whether we're inside a ``'``/``"``/`` ` `` string or backtick
+    identifier (honoring backslash escapes) so a ``#`` inside one — e.g. a hex color ``"#FF6B00"``
+    or a non-syntactic column name `` `rank#` `` — is never mistaken for a comment start, while a
+    real ``# avoid green`` comment is dropped.
+    """
+    out: list[str] = []
+    quote: str | None = None
+    i, n = 0, len(code)
+    while i < n:
+        ch = code[i]
+        if quote is not None:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:  # keep an escaped char with its backslash, skip both
+                out.append(code[i + 1])
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+            i += 1
+            continue
+        if ch in ("'", '"', "`"):
+            quote = ch
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "#":
+            j = code.find("\n", i)
+            if j == -1:
+                break
+            out.append("\n")
+            i = j + 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def code_for_check(code: str, language: str = "python") -> str:
     """Normalize a primary-output artifact for checking, per its skill's ``check_language``.
 
@@ -118,6 +159,8 @@ def code_for_check(code: str, language: str = "python") -> str:
         return _python_for_check(code)
     if language == "html":
         return _html_for_check(code)
+    if language == "r":
+        return _r_for_check(code)
     return code
 
 
@@ -186,6 +229,11 @@ _NETWORK_BASH_TOKENS = (
     "pip install", "pip3 install", "pip download", "uv pip", "conda install",
     "npm ", "npx ", "pnpm", "yarn", "apt", "apt-get", "brew ", "gem install",
     "git clone", "git pull", "git fetch", "git remote",
+    # R's package installers — the ggplot2 skill's equivalent of `pip install`. Matches the R
+    # function call itself (not just an `Rscript`/`R` wrapper token), since it also fires inside a
+    # heredoc or -e string passed to either invocation.
+    "install.packages", "r cmd install", "remotes::install", "devtools::install",
+    "biocmanager::install", "pak::pkg_install", "pak::pak(", "pak::repo_",
 )
 
 
@@ -223,17 +271,50 @@ async def _deny_networked_bash(tool_name, tool_input, _ctx):  # noqa: ANN001 - S
 # --------------------------------------------------------------------------------------------------
 
 
+# A "stay inside this call, tolerating nested parens" gap — the balanced-paren-aware alternative to
+# a plain `[^)]*` (which stops early at a nested call's own closing paren — round-2 finding) or a
+# bare `.{0,N}?` (which, wrongly, also matches straight past this call's OWN closing paren into a
+# sibling call — round-3 finding). `re` has no recursive matching, so this is a BOUNDED nesting
+# depth, not arbitrary — depth 2 (one call nested inside another, e.g. `c(0, max(x))`) comfortably
+# covers realistic `labels = scales::...` arguments; a 3rd level would need extending this list.
+# Each entry always matches its own zero-repetition case, so every depth is sampler-safe to drop.
+_BALANCED_PAREN_GAP_1 = r"(?:[^()]|\([^()]*\))*"
+_BALANCED_PAREN_GAP_2 = r"(?:[^()]|\((?:[^()]|\([^()]*\))*\))*"
+_BALANCED_PAREN_GAPS = (_BALANCED_PAREN_GAP_2, _BALANCED_PAREN_GAP_1)  # longer first: no substring
+
+# A non-capturing *alternation* a scenario check uses to accept more than one equally-valid
+# spelling (e.g. `scales::comma` vs the newer `scales::label_comma()`, or `geom_col` vs
+# `geom_bar` — both names the ggplot2 skill itself permits for a ranking/amount plot). Regex
+# alternation only needs ONE branch to match, so resolving to a specific branch's literal text is
+# always a valid sample — these are named (not generically parsed) because each alternative can
+# itself contain parens (`label_comma\(\)`), which a plain "split on `|`" can't safely bound.
+_ALTERNATIONS: tuple[tuple[str, str], ...] = (
+    (r"scales::(?:comma\b|label_comma\(\))", "scales::comma"),
+    (r"(?:geom_col|geom_bar)", "geom_col"),
+)
+
+
 def _regex_sample(pattern: str) -> str:
-    """Best-effort literal that satisfies ``pattern`` (stub-only; verified against real scenarios).
+    """Best-effort literal that satisfies ``pattern`` (stub-only).
 
     Handles the small regex vocabulary the scenarios use: a leading inline-flag group (``(?i)``),
-    ``\\s*``/``\\s+``, a single character *range* class (``[1-9]`` -> ``1``), and escaped literals.
-    The stub asserts the result actually matches, so an unsupported pattern fails loudly rather than
-    silently producing a non-honoring line.
+    ``\\s*``/``\\s+``, a single character *range* class (``[1-9]`` -> ``1``), a character
+    *enumeration* class (``["']`` -> its first alternative, e.g. ``"``), a trailing ``\\b`` word
+    boundary (dropped — a zero-width assertion, not a literal character; a bare literal token
+    embedded in the stub's carrier syntax, e.g. between quotes, already sits at a natural word
+    boundary), the named :data:`_BALANCED_PAREN_GAPS` idioms (dropped — each matches its own
+    zero-repetition case), the named :data:`_ALTERNATIONS` idioms (resolved to one branch's
+    literal text), and escaped literals.
     """
     s = re.sub(r"^\(\?[a-zA-Z]+\)", "", pattern)  # drop a leading (?i)/(?is)/... flag group
     s = s.replace(r"\s*", "").replace(r"\s+", " ")
+    for alt, literal in _ALTERNATIONS:  # before the \b strip below: some alternatives contain \b
+        s = s.replace(alt, literal)
+    s = s.replace(r"\b", "")  # zero-width assertion, not a literal "b" — drop, don't unescape
+    for gap in _BALANCED_PAREN_GAPS:  # matches empty; drop before the class substitutions below
+        s = s.replace(gap, "")
     s = re.sub(r"\[([^\]^-])-[^\]]\]", r"\1", s)  # single range class -> its first char
+    s = re.sub(r"\[([^\]]+)\]", lambda m: m.group(1)[0], s)  # enum class -> first alternative char
     s = re.sub(r"\\(.)", r"\1", s)  # unescape \X -> X
     return s
 
@@ -275,6 +356,13 @@ def _stub_carrier(pref: Preference, honor: bool, language: str, n: int) -> str |
         return f"_pref_{n} = [{token!r}]  # {pref.id}"
     if language == "html":
         return f"  .p-{n} {{ content: {token!r}; }}"
+    if language == "r":
+        # `!r}` (not a hand-rolled `"{token}"`), matching the python/html carriers above — a token
+        # containing its own quote character (a real case once a check's sample itself embeds
+        # quoted text, e.g. `fill = "#3a5a40"`) must come out properly escaped, or `_r_for_check`'s
+        # quote-tracking scanner closes the string early and treats the rest as a real comment.
+        # Python's repr() quoting/escaping rules are also valid R string-literal syntax.
+        return f".pref_{n} <- {token!r}  # {pref.id}"
     return token  # unknown language: bare literal is enough for a substring/regex check
 
 
@@ -286,7 +374,7 @@ def _stub_document(spec: SkillSpec, scenario: Scenario, carriers: list[str]) -> 
             "<!doctype html>\n<html><head><meta charset='utf-8'>\n<style>\n"
             f"{body}\n</style></head>\n<body><h1>stub: {scenario.name}</h1></body></html>\n"
         )
-    if spec.check_language == "python":
+    if spec.check_language in ("python", "r"):  # both use `#` line comments
         return f"# stub {spec.output} for {scenario.name!r} (skill {spec.name!r})\n{body}\n"
     return body + "\n"
 

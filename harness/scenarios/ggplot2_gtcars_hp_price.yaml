@@ -1,0 +1,101 @@
+name: ggplot2_gtcars_hp_price
+skill: ggplot2
+difficulty: hard
+prompt: >
+  Plot how price relates to horsepower for these sports cars, and show the country of origin.
+data: data/gtcars.csv
+# COMPLEX task (5 simultaneous preferences) — the high-complexity anchor for the
+# convergence-vs-complexity metric, mirroring plotnine_gtcars_hp_msrp's role for the R skill. Each
+# preference is genuinely ggplot2-idiomatic (real-R theme()/scale_* syntax, not a Python reskin) and
+# distinct from the plotnine version's checks so the two aren't testing the same exact correction.
+preferences:
+  - id: palette-accent
+    polarity: learning
+    scope: color encoding
+    # The skill picks a qualitative palette for categorical hues by default; a cold run's own
+    # natural choice for this task tends to land on a common one (Set1/Set2/Dark2), so this asks
+    # for the much less commonly reached-for `Accent` palette instead — a real, valid ColorBrewer
+    # qualitative palette, just not one a model spontaneously picks for this task.
+    body: >
+      Color-encode country of origin with the ColorBrewer qualitative `Accent` palette via
+      `scale_color_brewer(palette = "Accent")`.
+    feedback: >
+      Use the Accent qualitative palette for the country colors.
+    check:
+      # Scoped to scale_color_brewer's `palette` argument specifically — a bare `Accent` substring
+      # anywhere in the call (round-5 fix) would still spuriously pass on
+      # `scale_color_brewer(name = "Accent", palette = "Set1")`, honoring the wrong palette by
+      # matching the wrong argument (Codex round-7 finding). Requires `palette = "Accent"`.
+      kind: regex
+      pattern: 'scale_color_brewer\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*palette\s*=\s*["'']Accent["'']'
+  - id: price-plain-commas
+    polarity: learning
+    scope: scales
+    # Against the grain: a price axis's natural pull is toward a "$" prefix (a cold run reaches for
+    # it on its own, dollar-sign or K/M-abbreviated). This user's taste runs the other way — plain
+    # comma-separated numbers, no currency symbol — which a cold run does not produce unprompted.
+    body: >
+      Format the price (msrp) axis as plain comma-separated numbers with no dollar sign, e.g.
+      `scale_y_continuous(labels = scales::comma)`.
+    feedback: >
+      Drop the dollar sign on the price axis — just comma-separated numbers, scales::comma.
+    check:
+      # Scoped to scale_y_continuous specifically — a bare `scales::comma` substring check would
+      # spuriously pass if a cold run comma-formats the horsepower x-axis while still dollar-
+      # formatting the price y-axis (Codex round-1 finding). Balanced-paren-aware gap tolerating
+      # 2 levels of nesting (not `[^)]*`, which stops early at a nested call like
+      # `limits = c(0, NA)` — round-2 finding; not a bare `.{0,N}?` either, which wrongly crosses
+      # this call's OWN closing paren into an unrelated sibling scale_x_continuous(...) call —
+      # round-3 finding; not a 1-level-only balanced gap either, which still misses a 2-deep
+      # nested call like `c(0, max(msrp))` — round-4 finding. `re` has no recursive matching, so
+      # this is a bounded depth, not arbitrary — see harness/generate.py's _BALANCED_PAREN_GAPS.
+      # Accepts both the older `scales::comma` and the newer `scales::label_comma()` factory
+      # spelling — both produce identical output, and the committed cold artifact already shows
+      # the agent naturally reaching for label_comma() elsewhere, so rejecting it here would be a
+      # false negative, not a real miss (round-5 finding).
+      kind: regex
+      pattern: 'scale_y_continuous\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*scales::(?:comma\b|label_comma\(\))'
+  - id: legend-bottom
+    polarity: learning
+    scope: legend placement
+    # The skill's default legend position is "right"; bottom is this user's taste. Real ggplot2
+    # syntax uses `legend.position` inside theme(), not a bare keyword argument.
+    body: >
+      Place the legend at the bottom with `theme(legend.position = "bottom")`.
+    feedback: >
+      Move the legend to the bottom, not the right.
+    check:
+      kind: regex
+      pattern: 'legend\.position\s*=\s*["'']bottom["'']'
+  - id: points-large
+    polarity: learning
+    scope: geoms
+    # Arbitrary taste: larger points than ggplot2's default. The skill pins no point size — but a
+    # cold run's own natural choice for this dataset landed on size=3 (a common default), so the
+    # preference must ask for something clearly past that or the check would spuriously already
+    # pass on the cold run (the exact false-positive class documented in scenarios/README.md).
+    body: >
+      Make the scatter points larger, `size = 4.5` in geom_point.
+    feedback: >
+      Make the points bigger — size = 4.5.
+    check:
+      # Scoped to geom_point specifically, not any layer — a bare `size=4.5` substring could
+      # spuriously match a different geom (Codex round-2 finding, same class as points-translucent
+      # below).
+      kind: regex
+      pattern: 'geom_point\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*size\s*=\s*4\.5\b'
+  - id: points-translucent
+    polarity: learning
+    scope: geoms
+    # Arbitrary taste: translucent points. gtcars is not dense enough for the skill's overplotting
+    # guidance to reach for alpha on its own, so this is a genuine learned preference.
+    body: >
+      Make the scatter points translucent, `alpha = 0.6` in geom_point.
+    feedback: >
+      Add some transparency to the points — alpha = 0.6.
+    check:
+      # Scoped to geom_point specifically — a bare `alpha=0.6` substring would spuriously pass if
+      # e.g. a geom_smooth() layer used that alpha while geom_point() stayed opaque (Codex round-2
+      # finding).
+      kind: regex
+      pattern: 'geom_point\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*alpha\s*=\s*0\.6'

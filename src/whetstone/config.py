@@ -113,16 +113,22 @@ class Config:
 
 
 def _coerce(name: str, raw: object) -> object:
-    """Coerce a raw string/TOML value to the type of the ``Config`` field ``name``."""
+    """Coerce a raw string/TOML value to the type of the ``Config`` field ``name``.
+
+    ``raw`` is genuinely heterogeneous (a TOML-typed value or an env string) dispatched at runtime
+    by a field-name -> type registry (``_FIELD_TYPES``) rather than by static type, so the two
+    `int`/`float` conversions below aren't expressible as a normal type-narrowed call — a TOML int
+    field can arrive as an `int` (TOML) or a numeric `str` (env var), both valid `int()` input.
+    """
     field_type = _FIELD_TYPES[name]
     if field_type is bool:
         if isinstance(raw, bool):
             return raw
         return str(raw).strip().lower() in ("1", "true", "yes", "on")
     if field_type is int:
-        return int(raw)
+        return int(raw)  # type: ignore[call-overload]
     if field_type is float:
-        return float(raw)
+        return float(raw)  # type: ignore[arg-type]
     if field_type is Path:
         return Path(str(raw)).expanduser()
     return str(raw)
@@ -176,4 +182,8 @@ def load_config(path: Path | None = None) -> Config:
         if env_key in os.environ:
             values[f.name] = _coerce(f.name, os.environ[env_key])
 
-    return Config(**values)
+    # Same dynamic-dispatch situation as `_coerce`: `values` is built up key-by-key from a
+    # field-name -> type registry, so its static type is necessarily the untyped `dict[str,
+    # object]` a `Config(**values)` call can't statically verify against the dataclass's concrete
+    # per-field types — each individual value was already coerced to the right type above.
+    return Config(**values)  # type: ignore[arg-type]

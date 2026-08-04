@@ -17,12 +17,11 @@ similarity is brute-force over these rows (§5.4: no ANN library at this scale).
 from __future__ import annotations
 
 import hashlib
-import os
 import sqlite3
-import tempfile
 from array import array
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from ..embeddings import EmbeddingBackend
 from .entries import IssueEntry, LearningEntry
@@ -34,6 +33,10 @@ INDEX_NAME = "index.sqlite"
 # built by an older schema is treated as stale and rebuilt rather than read with a missing column.
 # v2 added the per-entry ``last_seen`` column (the recency input, §4.4).
 _SCHEMA_VERSION = 2
+# How long a connection waits on SQLite's own lock (instead of failing immediately with "database
+# is locked") when it genuinely contends with another connection's transaction — see
+# :func:`rebuild_index`'s module-level rationale for why contention is expected to be brief.
+BUSY_TIMEOUT_SECONDS = 5.0
 
 
 @dataclass
@@ -135,12 +138,62 @@ def _centroid(vectors: list[list[float]], dim: int) -> list[float]:
     return [value / count for value in total]
 
 
+_CONTENDED_SQLITE_CODES = (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED)
+
+
+def _commit_with_retry(conn: sqlite3.Connection) -> None:
+    """``COMMIT``, retrying indefinitely on genuine contention rather than giving up.
+
+    ``conn``'s own ``timeout=BUSY_TIMEOUT_SECONDS`` already makes SQLite retry internally for up
+    to 5s before raising ``sqlite3.OperationalError: database is locked`` — but a reader (see
+    ``retrieve()``) holding its transaction open for longer than that (a large store, slow I/O, a
+    suspended process) would then make ``COMMIT`` fail outright, propagating the error to
+    ``rebuild_index``'s caller (``capture``, ``compact``, ...) even though the markdown/next-id
+    write those callers already made is fine — and, worse, inviting a caller-level retry that
+    could double-apply that write. A failed ``COMMIT`` leaves the transaction intact (verified
+    empirically, not just assumed): retrying the SAME ``COMMIT`` again, without touching anything
+    else, is safe. A bounded retry count (an earlier version of this function tried 3) just moves
+    the same failure mode to a longer, still-arbitrary deadline — retrying indefinitely instead
+    matches ``_lock_exclusive``'s own file-lock philosophy (§ its docstring): genuine contention
+    should be waited out, not given up on. The only other writer that could ever hold this file
+    locked is another ``rebuild_index`` call, already serialized ahead of this by
+    ``store_write_lock``, so the sole remaining contender is a reader's normally-brief transaction
+    — never another indefinite wait stacked on top of this one.
+
+    A first version of this retried on ANY ``OperationalError`` (Codex review finding on PR #55,
+    round 8): a permanent failure — a full disk, a genuine I/O error — would then hang forever
+    instead of surfacing, with the caller still holding ``store_write_lock`` the whole time,
+    blocking every other operation on the store too. ``sqlite_errorcode`` (Python 3.11+, matching
+    this project's floor) distinguishes SQLite's own ``SQLITE_BUSY``/``SQLITE_LOCKED`` — the
+    documented contention signals — from everything else, which is re-raised.
+    """
+    while True:
+        try:
+            conn.execute("COMMIT")
+            return
+        except sqlite3.OperationalError as exc:
+            if exc.sqlite_errorcode not in _CONTENDED_SQLITE_CODES:
+                raise
+            continue
+
+
 def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
     """Regenerate ``index.sqlite`` from the markdown store (fully idempotent).
 
     The parsed entries AND the stored fingerprint are both derived from a single file snapshot, so
     if the markdown is edited (outside Whetstone) mid-rebuild the published fingerprint can never
     advertise fresh over the stale vectors that were actually indexed.
+
+    Rewrites the rows **in place**, inside one transaction, rather than building a separate temp
+    file and ``os.replace``-ing it over the live one. The previous swap-based design relied on a
+    POSIX-only guarantee — replacing a file while another process still has it open is fine on
+    POSIX (the old inode lives on under that open handle) but raises ``PermissionError`` on
+    Windows, which does not allow replacing a file that anything still has open. In-place
+    DELETE+INSERT-then-commit gives the same "a reader never sees a partial rebuild" property
+    through SQLite's own transaction isolation instead: a reader's transaction (see
+    ``retrieve()``'s explicit ``BEGIN``) blocks this commit until it finishes, and any read that
+    starts after this commits sees the new rows atomically — a guarantee that holds identically on
+    every platform, since it never depends on OS-level file-replace semantics.
     """
     learning_files = _snapshot(loc.learnings_dir)
     issue_files = _snapshot(loc.issues_dir)
@@ -180,39 +233,37 @@ def rebuild_index(loc: StoreLocation, backend: EmbeddingBackend) -> None:
 
     path = index_path(loc)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Build into a UNIQUE temp file, then atomically swap it in. A reader (a concurrent recall) must
-    # never observe a missing/half-written index.sqlite — os.replace is atomic and the live DB is
-    # never unlinked first.
-    # Temp name matches the per-store .gitignore ("index.sqlite-*") so a crash leftover stays
-    # untracked.
-    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix="index.sqlite-", suffix=".tmp")
-    os.close(fd)  # sqlite opens its own handle to the path
+    # isolation_level=None (manual transaction control): `executescript`/DDL statements otherwise
+    # commit implicitly regardless of any surrounding transaction (a Python sqlite3 module quirk,
+    # not a SQLite one — verified empirically, see PR #55 review), which would let a concurrent
+    # reader observe the schema dropped-and-recreated but not yet repopulated. Explicit BEGIN +
+    # individual (not `executescript`) DDL statements + the inserts + COMMIT keeps the whole
+    # rebuild — schema recreation included — inside one real transaction.
+    conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_SECONDS, isolation_level=None)
     try:
-        conn = sqlite3.connect(tmp_name)
-        try:
-            _create_schema(conn)
-            conn.executemany(
-                "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
-                scope_rows,
-            )
-            conn.executemany(
-                "INSERT INTO entries "
-                "(id, polarity, scope, vector, recurrence, title, body, last_seen) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                entry_rows,
-            )
-            conn.execute(
-                "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
-                (fingerprint,),
-            )
-            conn.commit()
-        finally:
-            conn.close()
-        os.replace(tmp_name, str(path))
+        conn.execute("BEGIN")
+        # Drop+recreate (not just clear rows) so an incompatible old schema self-heals.
+        _recreate_schema(conn)
+        conn.executemany(
+            "INSERT INTO scopes (polarity, scope, centroid, phrase) VALUES (?, ?, ?, ?)",
+            scope_rows,
+        )
+        conn.executemany(
+            "INSERT INTO entries "
+            "(id, polarity, scope, vector, recurrence, title, body, last_seen) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            entry_rows,
+        )
+        conn.execute(
+            "INSERT INTO meta (key, value) VALUES ('fingerprint', ?)",
+            (fingerprint,),
+        )
+        _commit_with_retry(conn)
     except BaseException:
-        if os.path.exists(tmp_name):
-            os.remove(tmp_name)
+        conn.execute("ROLLBACK")
         raise
+    finally:
+        conn.close()
 
 
 def _collect(
@@ -225,7 +276,11 @@ def _collect(
     entry_rows: list[tuple[str, str, str, bytes, int | None, str, str, str | None]],
 ) -> None:
     by_scope: dict[str, list[list[float]]] = {}
-    for entry, vec in zip(entries, entry_vecs, strict=True):
+    # mypy infers `object` (not `LearningEntry | IssueEntry`) for a zip() over a `list[A] | list[B]`
+    # first argument — a known overload-resolution gap, not a real typing ambiguity here (`entries`
+    # is always homogeneous, one concrete type per call).
+    for raw_entry, vec in zip(entries, entry_vecs, strict=True):
+        entry = cast("LearningEntry | IssueEntry", raw_entry)
         by_scope.setdefault(entry.scope, []).append(vec)
         recurrence = getattr(entry, "recurrence", None)
         last_seen = getattr(entry, "last_seen", None)
@@ -247,17 +302,43 @@ def _collect(
         scope_rows.append((polarity, scope, _pack(centroid), _pack(phrase)))
 
 
-def _create_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript(
+def _recreate_schema(conn: sqlite3.Connection) -> None:
+    """Drop and recreate the schema, unconditionally.
+
+    :func:`rebuild_index` now rewrites rows in the SAME persistent file across every rebuild (see
+    its docstring) instead of always starting from a brand-new one, so a stale-but-existing file
+    can carry an OLDER schema (e.g. a pre-v2 ``entries`` table missing ``last_seen``) — the
+    versioned fingerprint correctly detects that as stale and triggers a rebuild, but a plain
+    ``CREATE TABLE IF NOT EXISTS`` would then leave the old, incompatible table in place and fail
+    inserting the new rows instead of self-healing. Dropping first makes every rebuild a genuine
+    fresh start regardless of what schema (if any) came before, while the surrounding transaction
+    keeps this invisible to a concurrent reader: nothing commits until the new rows are in.
+
+    Deliberately individual :meth:`~sqlite3.Connection.execute` calls, not one
+    :meth:`~sqlite3.Connection.executescript` — ``executescript`` implicitly commits before AND
+    (empirically verified, not just documented) after running, regardless of the connection's
+    ``isolation_level`` or an already-open transaction, which would commit this schema swap on its
+    own and expose a momentarily-empty index to a concurrent reader before the caller's inserts run.
+    Plain ``execute`` calls stay inside whatever transaction the caller (``rebuild_index``, with
+    ``isolation_level=None``) already opened.
+    """
+    conn.execute("DROP TABLE IF EXISTS meta")
+    conn.execute("DROP TABLE IF EXISTS scopes")
+    conn.execute("DROP TABLE IF EXISTS entries")
+    conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+    conn.execute(
         """
-        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE scopes (
             polarity TEXT NOT NULL,
             scope    TEXT NOT NULL,
             centroid BLOB NOT NULL,
             phrase   BLOB NOT NULL,
             PRIMARY KEY (polarity, scope)
-        );
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE entries (
             id         TEXT PRIMARY KEY,
             polarity   TEXT NOT NULL,
@@ -267,7 +348,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             title      TEXT NOT NULL,
             body       TEXT NOT NULL,
             last_seen  TEXT
-        );
+        )
         """
     )
 
@@ -291,7 +372,7 @@ def rebuild_index_if_stale(loc: StoreLocation, backend: EmbeddingBackend) -> Non
     path = index_path(loc)
     if path.exists():
         try:
-            conn = sqlite3.connect(str(path))
+            conn = sqlite3.connect(str(path), timeout=BUSY_TIMEOUT_SECONDS)
             try:
                 row = conn.execute(
                     "SELECT value FROM meta WHERE key = 'fingerprint'"
@@ -310,13 +391,14 @@ def load_scopes(
 ) -> list[ScopeVectors]:
     """Every scope's centroid + phrase vectors for ``polarity``.
 
-    Pass ``conn`` to read from an already-open connection so several loads share ONE consistent
-    snapshot (an open handle keeps reading its inode across an ``os.replace`` index rebuild); when
-    omitted this opens and closes its own connection.
+    Pass ``conn`` — already inside an explicit transaction, see ``retrieve()`` — to read from an
+    already-open connection so several loads share ONE consistent snapshot (SQLite's own
+    transaction isolation blocks a concurrent rebuild's commit until that transaction ends); when
+    omitted this opens and closes its own single-statement connection.
     """
     close = conn is None
     if conn is None:
-        conn = sqlite3.connect(str(index_path(loc)))
+        conn = sqlite3.connect(str(index_path(loc)), timeout=BUSY_TIMEOUT_SECONDS)
     try:
         rows = conn.execute(
             "SELECT scope, centroid, phrase FROM scopes WHERE polarity = ?", (polarity,)
@@ -340,7 +422,7 @@ def load_entries(
     """
     close = conn is None
     if conn is None:
-        conn = sqlite3.connect(str(index_path(loc)))
+        conn = sqlite3.connect(str(index_path(loc)), timeout=BUSY_TIMEOUT_SECONDS)
     try:
         rows = conn.execute(
             "SELECT id, polarity, scope, vector, recurrence, title, body, last_seen "

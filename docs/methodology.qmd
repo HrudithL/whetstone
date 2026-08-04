@@ -31,8 +31,9 @@ is verifiable without spend.
 ## What "honored" means
 
 Each preference carries a deterministic **check** against the generated primary output — `table.py`
-for great-tables, `index.html` for frontend-design, `plot.py` for plotnine, `deck.py` for pptx
-(comment- and docstring-stripped so prose can't fool it): a substring, a regex, or their absence.
+for great-tables, `index.html` for frontend-design, `plot.py` for plotnine, `plot.R` for ggplot2,
+`deck.py` for pptx (comments — and, for Python, docstrings — stripped so prose can't fool it): a
+substring, a regex, or their absence.
 That check — not a subjective judgement — decides whether a run honored the preference.
 
 ## The two metrics
@@ -110,7 +111,8 @@ body = []
 # once `python -m harness.run --agent` has populated its `out/` artifacts, so a scenario can appear
 # here (describing what it teaches and how compliance is checked) before it appears there. The
 # `check` column is the exact test that will be run against that scenario's primary output
-# (`table.py` for great-tables, `index.html` for frontend-design, `deck.py` for pptx).
+# (`table.py` for great-tables, `index.html` for frontend-design, `plot.py`/`plot.R` for
+# plotnine/ggplot2, `deck.py` for pptx).
 for s in scenarios_meta():
     for p in s["preferences"]:
         chk = f"{html.escape(p['check']['kind'])} · <code>{html.escape(p['check']['pattern'])}</code>"
@@ -146,10 +148,11 @@ written straight from the tool calls.
 
 ## Coming next
 
-v1 is the **visual** skill class, shown across four skills (Great Tables, frontend design, plotnine,
-and PowerPoint decks). The same substrate — attach, recall, capture, revise — applies unchanged to a
-**code-improvement** skill (objective ground truth: tests, lint, types) and a **context-organizing**
-skill; those are the next classes.
+v1 is the **visual** skill class, shown across five skills (Great Tables, frontend design, plotnine,
+ggplot2, and PowerPoint decks) and two languages (Python and R) — the substrate doesn't care which.
+The same substrate — attach, recall, capture, revise — applies unchanged to a **code-improvement**
+skill (objective ground truth: tests, lint, types) and a **context-organizing** skill; those are the
+next classes.
 
 ## Reproduce it
 
